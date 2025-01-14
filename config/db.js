@@ -3,6 +3,7 @@ import { MONGODB_URI } from './index.js';
 import { green, blue } from 'colorette';
 
 const connectDB = async () => {
+  console.log('conecting');
   try {
     await connect(MONGODB_URI);
     console.info(
