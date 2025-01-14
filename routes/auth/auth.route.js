@@ -22,6 +22,7 @@ class AuthRoute {
       validate,
       this.controller.createAccount
     );
+    this.router.get(`${this.path}/google-login`, this.controller.googleLogin);
     // this.router.post(
     //   `${this.path}/apple`,
     //   dtoValidationMiddleware(createUserDto, 'body', 'missing params'),
