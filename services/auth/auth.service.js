@@ -122,85 +122,181 @@ class AuthService {
   }
 
   async handleGoogleLogin(code) {
-    // Exchange the authorization code for tokens
-    // const oauthRequest = {
-    //   url: new URL('https://oauth2.googleapis.com/token'),
-    //   params: {
-    //     client_id: GOOGLE_CLIENT_ID,
-    //     client_secret: GOOGLE_CLIENT_SECRET,
-    //     code,
-    //     grant_type: 'authorization_code',
-    //     redirect_uri: CALLBACK_URL,
-    //   },
-    // };
+    try {
+      // Exchange authorization code for access token and id token
+      const response = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        null,
+        {
+          params: {
+            code,
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            grant_type: 'authorization_code',
+            redirect_uri: CALLBACK_URL,
+          },
+        }
+      );
 
-    // const accessToken = response.data.access_token;
-    // console.log('Access Token:', accessToken);
+      // Use access_token or id_token to fetch user profile
+      const { access_token, id_token } = response.data;
+      console.log('Access Token:', access_token);
+      console.log('ID Token:', id_token);
 
-    // const oauthResponse = await axios.post(oauthRequest.url.toString(), null, {
-    //   params: oauthRequest.params,
-    // });
+      // Step 2: Use access_token to fetch user profile
+      const userInfoResponse = await axios.get(
+        'https://www.googleapis.com/oauth2/v1/userinfo',
+        {
+          headers: { Authorization: `Bearer ${access_token}` },
+        }
+      );
+      console.log(userInfoResponse);
 
-    const response = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      grant_type: 'authorization_code',
-      redirect_uri: CALLBACK_URL,
-    });
-      
-    const accessToken = response.data;
-    console.log('Access Token here:', accessToken);
+      console.log('User Info:', userInfoResponse.data);
 
-    // const { id_token } = response.data;
+      const { email, name, verified_email, id } = userInfoResponse.data;
 
-    // if (!id_token) {
-    //   throw new HttpException(400, 'Invalid Google response');
-    // }
+      // Step 3: Check if the user exists in the database
+      let user = await UserModel.findOne({ email });
 
-    // Verify the Google ID token and get user info
-    const userInfo = await this.verifyGoogleIdToken(accessToken);
+      console.log('User found in DB:', user);
 
-    
-    // Update or create the user in your database
-    let user = await UserModel.findOne({ email: userInfo.email });
+      if (!user) {
+        // Create a new user if not found
+        console.log('User not found, creating a new user');
+        user = new UserModel({
+          email,
+          name,
+          username: email.split('@')[0], // Set username from email
+          googleUserId: id, // Store the Google User ID
+          isEmailVerified: verified_email, // Email verification status
+        });
+      } else {
+        // Update existing user details if needed
+        console.log('User found, updating details');
+        user.name = name || user.name;
+        user.googleUserId = id || user.googleUserId; // Update Google User ID if needed
+        user.isEmailVerified = verified_email; // Ensure the email verification status is updated
+        user.username = email.split('@')[0]; // Update the username from the email
+      }
 
-    if (!user) {
-      // Create a new user if not found
-      user = new UserModel({
-        email: userInfo.email,
-        name: userInfo.name,
-        // username: userInfo.email.split('@')[0], // Default username
-        // Add other default fields if needed
+      // Save the user to the database
+      await user.save();
+
+      console.log('User saved/updated:', user);
+
+      // Return the user data
+      //   return {
+      //     email: user.email,
+      //     name: user.name,
+      //     googleUserId: user.googleUserId,
+      //     isEmailVerified: user.isEmailVerified,
+      //     username: user.username,
+      //   };
+      const token = Jwt.sign({ email: user.email }, JWT_SECRET, {
+        expiresIn: '7d',
       });
-    } else {
-      // Update existing user details if needed
-      user.name = userInfo.name || user.name;
+
+      // Return the JWT token to the frontend
+      res.status(200).json({ token });
+    } catch (error) {
+      console.error('Error handling Google login:', error);
+      throw new HttpException(500, 'Failed to handle Google login');
     }
-
-    user.googleVerified = userInfo.verifiedEmail;
-    await user.save();
-
-    return {
-      email: user.email,
-      name: user.name,
-      googleVerified: user.googleVerified,
-    };
   }
 
-  async verifyGoogleIdToken(idToken) {
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    return {
-      email: payload.email,
-      name: payload.name,
-      verifiedEmail: payload.email_verified,
-    };
+  // Function to verify ID token using Google APIs (Optional: You can verify the ID token for extra security)
+  async verifyGoogleIdToken(id_token) {
+    try {
+      const response = await axios.get(
+        `https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${id_token}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying ID token:', error);
+      throw new HttpException(400, 'Invalid ID token');
+    }
   }
+
+  //   async handleGoogleLogin(code) {
+  //     // Exchange the authorization code for tokens
+  //     // const oauthRequest = {
+  //     //   url: new URL('https://oauth2.googleapis.com/token'),
+  //     //   params: {
+  //     //     client_id: GOOGLE_CLIENT_ID,
+  //     //     client_secret: GOOGLE_CLIENT_SECRET,
+  //     //     code,
+  //     //     grant_type: 'authorization_code',
+  //     //     redirect_uri: CALLBACK_URL,
+  //     //   },
+  //     // };
+
+  //     // const accessToken = response.data.access_token;
+  //     // console.log('Access Token:', accessToken);
+
+  //     // const oauthResponse = await axios.post(oauthRequest.url.toString(), null, {
+  //     //   params: oauthRequest.params,
+  //     // });
+
+  //     const response = await axios.post('https://oauth2.googleapis.com/token', {
+  //       code,
+  //       client_id: GOOGLE_CLIENT_ID,
+  //       client_secret: GOOGLE_CLIENT_SECRET,
+  //       grant_type: 'authorization_code',
+  //       redirect_uri: CALLBACK_URL,
+  //     });
+
+  //     const accessToken = response.data;
+  //     console.log('Access Token here:', accessToken);
+
+  //     // const { id_token } = response.data;
+
+  //     // if (!id_token) {
+  //     //   throw new HttpException(400, 'Invalid Google response');
+  //     // }
+
+  //     // Verify the Google ID token and get user info
+  //     const userInfo = await this.verifyGoogleIdToken(accessToken);
+
+  //     // Update or create the user in your database
+  //     let user = await UserModel.findOne({ email: userInfo.email });
+
+  //     if (!user) {
+  //       // Create a new user if not found
+  //       user = new UserModel({
+  //         email: userInfo.email,
+  //         name: userInfo.name,
+  //         // username: userInfo.email.split('@')[0], // Default username
+  //         // Add other default fields if needed
+  //       });
+  //     } else {
+  //       // Update existing user details if needed
+  //       user.name = userInfo.name || user.name;
+  //     }
+
+  //     user.googleVerified = userInfo.verifiedEmail;
+  //     await user.save();
+
+  //     return {
+  //       email: user.email,
+  //       name: user.name,
+  //       googleVerified: user.googleVerified,
+  //     };
+  //   }
+
+  //   async verifyGoogleIdToken(idToken) {
+  //     const ticket = await client.verifyIdToken({
+  //       idToken,
+  //       audience: GOOGLE_CLIENT_ID,
+  //     });
+
+  //     const payload = ticket.getPayload();
+  //     return {
+  //       email: payload.email,
+  //       name: payload.name,
+  //       verifiedEmail: payload.email_verified,
+  //     };
+  //   }
 
   //   async handleGoogleLogin(code) {
   //     const oauthRequest = {

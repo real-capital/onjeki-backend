@@ -3,6 +3,11 @@ import AuthService from '../../services/auth/auth.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 // import { verifyGoogleToken } from '../../utils/googleAuth.js';
+import {
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    CALLBACK_URL,
+  } from '../../config/index.js';
 
 const authService = new AuthService();
 
@@ -65,9 +70,20 @@ class AuthController {
   //     }
   //   }
 
+  async startGoogleLogin(req, res) {
+    const redirectUri = CALLBACK_URL; // The URL to which Google will redirect the user after login
+    const googleAuthUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${GOOGLE_CLIENT_ID}&` +
+      `redirect_uri=${redirectUri}&` +
+      `response_type=code&` +
+      `scope=openid profile email`;
+
+    res.json({ url: googleAuthUrl });
+  }
   async googleLogin(req, res, next) {
     try {
-      const { code } = req.query; // Extract the code from the query parameters
+      const { code } = req.query; // Extract the authorization code from query parameters
 
       if (!code) {
         return res.status(400).json({
@@ -84,12 +100,10 @@ class AuthController {
         data: userData,
       });
     } catch (error) {
-        console.log(error);
+      console.error(error);
       next(error);
     }
   }
 }
-
-
 
 export default AuthController;
