@@ -4,10 +4,10 @@ import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 // import { verifyGoogleToken } from '../../utils/googleAuth.js';
 import {
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    CALLBACK_URL,
-  } from '../../config/index.js';
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  CALLBACK_URL,
+} from '../../config/index.js';
 
 const authService = new AuthService();
 
@@ -21,7 +21,11 @@ class AuthController {
 
     try {
       const response = await authService.createAccount(req.body);
-      res.status(StatusCodes.OK).json({ message: response });
+      res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
+        status: 'success',
+        message: response,
+      });
     } catch (error) {
       next(error);
     }
@@ -36,7 +40,9 @@ class AuthController {
 
     try {
       const { token, name } = await authService.validateOtp(req.body);
-      res.status(StatusCodes.OK).json({ token, name });
+      res
+        .status(StatusCodes.OK)
+        .json({ statusCode: StatusCodes.OK, status: 'success', token, name });
     } catch (error) {
       next(error);
     }

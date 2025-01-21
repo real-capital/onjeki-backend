@@ -7,6 +7,6 @@ const notificationSchema = new Schema({
     date: { type: Date, required: true }
 });
 
-const notificationModel = model("Notification", notificationSchema);
+const NotificationModel = model("Notification", notificationSchema);
 
-export default notificationModel;
+export default NotificationModel;

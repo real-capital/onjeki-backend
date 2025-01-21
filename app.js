@@ -1,95 +1,3 @@
-// import 'reflect-metadata';
-// import helmet from 'helmet';
-// import express from 'express';
-// import bodyParser from 'body-parser';
-// import dotenv from 'dotenv';
-// import cors from 'cors';
-// import mongoSanitize from 'express-mongo-sanitize';
-// import xss from 'xss-clean';
-// import hpp from 'hpp';
-
-// import connectDB from '../config/db.js'; // No curly braces for default export
-// import { AppError } from '../middleware/handleError.js';
-// import HttpResponse from '../response/HttpResponse.js';
-
-// // Load environment variables
-// dotenv.config();
-
-// // App Init
-// const app = express();
-
-// // Trust the first hop of the proxy
-// app.set('trust proxy', 1);
-
-// // Middlewares
-// app.use(hpp());
-// app.use(helmet());
-// app.use(cors());
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(mongoSanitize());
-// app.use(xss());
-
-// // Define API version prefix
-// const apiVersion = '/api/v1';
-
-// // App Home Route
-// app.get('/', (req, res) => {
-//   res.send('Welcome to the Onjeki API');
-// });
-
-// // Calling the db connection function.
-// connectDB();
-
-// // Register Routes
-// // require("../routes/index.routes")(app);
-
-// // Global error handling middleware
-// app.use((err, req, res, next) => {
-//   if (err instanceof AppError) {
-//     // Handle known errors (AppError)
-//     const response = err.toHttpResponse();
-//     return res.status(err.statusCode).json(response); // Status code from the error
-//   }
-
-//   // Handle unknown errors (default to 500)
-//   console.error(err); // Log the error details for debugging
-//   const response = new AppError(
-//     500,
-//     'Something went wrong',
-//     err,
-//     'UNKNOWN_ERROR'
-//   ).toHttpResponse();
-//   return res.status(500).json(response); // Default 500 for unknown errors
-// });
-
-// // 404 Route not found handler
-// app.all('*', (req, res, next) => {
-//   const error = new AppError(
-//     404,
-//     `Can't find ${req.originalUrl} on this server`,
-//     null,
-//     'RESOURCE_NOT_FOUND'
-//   );
-//   next(error); // Pass to the global error handler
-// });
-
-// // uncaughtException handler
-// process.on('uncaughtException', async (error) => {
-//   console.log('UNCAUGHT EXCEPTION! 💥 Server Shutting down...');
-//   console.log(error.name, error.message);
-//   process.exit(1); // Exit process
-// });
-
-// // unhandledRejection handler
-// process.on('unhandledRejection', async (error) => {
-//   console.log('UNHANDLED REJECTION! 💥 Server Shutting down...');
-//   console.log(error.name, error.message);
-//   process.exit(1); // Exit process
-// });
-
-// export default app;
-
 import express from 'express';
 import cors from 'cors';
 import 'express-async-errors';
@@ -110,6 +18,8 @@ import { AppError } from './middlewares/handleError.js';
 import { logger } from './utils/logger.js';
 import HttpException from './utils/exception.js';
 import morganMiddleware from './middlewares/morgan.middleware.js';
+import { handleMulterError } from './middlewares/upload.middleware.js';
+import rateLimit from 'express-rate-limit';
 
 // Load environment variables
 dotenv.config();
@@ -137,21 +47,38 @@ class app {
 
   // Initialize Middlewares
   initializeMiddlewares() {
-    this.app.use(morganMiddleware); // Request logging middleware
-    this.app.use(helmet()); // Security middleware
     this.app.use(cors()); // CORS middleware
+    this.app.use(express.json({ limit: '10mb' }));
     this.app.use(bodyParser.json()); // JSON body parser
-    this.app.use(bodyParser.urlencoded({ extended: true })); // URL-encoded body parser
+    this.app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL-encoded body parser
+    this.app.use(helmet()); // Security middleware
     this.app.use(mongoSanitize()); // Sanitize user inputs
     this.app.use(xss()); // Prevent XSS attacks
     this.app.use(hpp()); // Prevent HTTP parameter pollution
+    this.app.use(morganMiddleware); // Request logging middleware
+
+    // this.app.use();
+    // this.app.use(
+    //   rateLimit({
+    //     windowMs: 15 * 60 * 1000, // 15 minutes
+    //     max: 100, // limit each IP to 100 requests per windowMs
+    //   })
+    // );
   }
 
   // Initialize Routes
   initializeRoutes(routes) {
     routes.forEach((route) => {
       this.app.use('/api/v1', route.router); // Register each route with version prefix
+      this.app.use(
+        '/api/v1',
+        rateLimit({
+          windowMs: 15 * 60 * 1000, // 15 minutes
+          max: 100, // limit each IP to 100 requests per windowMs
+        })
+      ); // Register each route with version prefix
     });
+    this.app.use(handleMulterError);
   }
 
   // Initialize Error Handling
@@ -219,16 +146,20 @@ class app {
   }
 }
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.log('Uncaught Exception:', error);
-  process.exit(1); // Exit process
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.log(err);
+  logger.error(err);
+  process.exit(1);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (error) => {
-  console.log('Unhandled Rejection:', error);
-  process.exit(1); // Exit process
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.log(err);
+  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  logger.error(err);
+  process.exit(1);
 });
 
 // Initialize the app with routes

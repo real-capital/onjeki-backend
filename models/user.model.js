@@ -19,7 +19,7 @@ const userSchema = new Schema(
       { type: mongoose.Schema.Types.ObjectId, ref: 'notificationModel' },
     ],
     inbox: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OtherModel' }],
-    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Properties' }],
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
   },
   {
     timestamps: true,

@@ -45,6 +45,6 @@ adminSchema.methods.isPasswordMatch = async function (password) {
     return await bcrypt.compare(password, this.password);
 };
 
-const AdminModel = model("admin", adminSchema);
+const AdminModel = model("Admin", adminSchema);
 
 export default AdminModel;

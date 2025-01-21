@@ -1,6 +1,7 @@
 import { body, validationResult } from 'express-validator';
 import HttpException from '../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
+import { EHouseSpace, EPurpose } from '../enum/house.enum.js';
 
 // Middleware to validate create account
 const validateCreateAccount = [
@@ -27,4 +28,32 @@ const validate = (req, res, next) => {
   next();
 };
 
-export { validateCreateAccount, validateOtp, validate };
+const validatePropertyCreation = [
+  body('type').isIn(Object.values(EPurpose)),
+  body('space').isIn(Object.values(EHouseSpace)),
+  body('title').notEmpty(),
+  body('description').notEmpty(),
+  body('price').isNumeric(),
+  body('location').isObject(),
+  body('location.country').notEmpty(),
+  body('location.city').notEmpty(),
+  body('bedrooms').isNumeric(),
+  body('bathrooms').isNumeric(),
+  body('guests').isNumeric(),
+];
+
+const validateBookingCreation = [
+  body('property').isMongoId(),
+  body('startDate').isISO8601(),
+  body('endDate').isISO8601(),
+  body('guests').isObject(),
+  body('guests.adults').isNumeric(),
+];
+
+export {
+  validateCreateAccount,
+  validateOtp,
+  validate,
+  validatePropertyCreation,
+  validateBookingCreation,
+};

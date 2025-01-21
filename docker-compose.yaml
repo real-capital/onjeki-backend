@@ -1,0 +1,139 @@
+# # docker-compose.yml
+# version: '3.8'
+
+# services:
+#   api:
+#     build: .
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       - NODE_ENV=production
+#       - MONGODB_URI=${MONGODB_URI}
+#     depends_on:
+#       - redis
+#     networks:
+#       - app-network
+
+#   redis:
+#     image: redis:alpine
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - app-network
+
+# networks:
+#   app-network:
+#     driver: bridge
+
+# # Dockerfile
+# FROM node:16-alpine
+
+# WORKDIR /usr/src/app
+
+# COPY package*.json ./
+
+# RUN npm install --production
+
+# COPY . .
+
+# EXPOSE 8000
+
+# CMD ["npm", "start"]
+
+# # nginx/nginx.conf
+# server {
+#     listen 80;
+#     server_name api.yourdomain.com;
+
+#     location / {
+#         proxy_pass http://api:8000;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection 'upgrade';
+#         proxy_set_header Host $host;
+#         proxy_cache_bypass $http_upgrade;
+#     }
+# }
+
+
+
+
+# # .github/workflows/main.yml
+# name: CI/CD Pipeline
+
+# on:
+#   push:
+#     branches: [ main, develop ]
+#   pull_request:
+#     branches: [ main, develop ]
+
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
+    
+#     services:
+#       mongodb:
+#         image: mongo:4.4
+#         ports:
+#           - 27017:27017
+#       redis:
+#         image: redis
+#         ports:
+#           - 6379:6379
+
+#     steps:
+#       - uses: actions/checkout@v2
+      
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v2
+#         with:
+#           node-version: '16'
+          
+#       - name: Install dependencies
+#         run: npm ci
+        
+#       - name: Run tests
+#         run: npm test
+#         env:
+#           MONGODB_URI: mongodb://localhost:27017/test
+#           REDIS_HOST: localhost
+#           REDIS_PORT: 6379
+          
+#       - name: Upload coverage
+#         uses: codecov/codecov-action@v2
+
+#   deploy:
+#     needs: test
+#     runs-on: ubuntu-latest
+#     if: github.ref == 'refs/heads/main'
+    
+#     steps:
+#       - uses: actions/checkout@v2
+      
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}
+          
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+        
+#       - name: Build and push Docker image
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           ECR_REPOSITORY: real-estate-api
+#           IMAGE_TAG: ${{ github.sha }}
+#         run: |
+#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+#       - name: Deploy to ECS
+#         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+#         with:
+#           task-definition: task-definition.json
+#           service: real-estate-service
+#           cluster: real-estate-cluster
+#           wait-for-service-stability: true

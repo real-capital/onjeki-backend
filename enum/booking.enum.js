@@ -1,7 +1,8 @@
 const BookingStatus = Object.freeze({
-    BOOKED: "Booked",
-    CANCELED: "Canceled",
-    PENDING: "Pending"
+  BOOKED: 'Booked',
+  CANCELED: 'Canceled',
+  PENDING: 'Pending',
+  COMPLETED: 'Completed',
 });
 
 export { BookingStatus };

@@ -1,0 +1,248 @@
+// services/image-metadata.service.js
+import cloudinary from '../config/cloudinary.js';
+import { createHash } from 'crypto';
+
+class ImageMetadataService {
+  async extractMetadata(publicId) {
+    try {
+      const result = await cloudinary.api.resource(publicId, {
+        image_metadata: true,
+        colors: true,
+        faces: true,
+        quality_analysis: true
+      });
+
+      return {
+        basic: {
+          format: result.format,
+          size: result.bytes,
+          created: result.created_at,
+          dimensions: {
+            width: result.width,
+            height: result.height,
+            aspect_ratio: result.aspect_ratio
+          }
+        },
+        colors: result.colors,
+        predominant: result.predominant,
+        faces: result.faces,
+        quality: result.quality_analysis,
+        tags: result.tags
+      };
+    } catch (error) {
+      throw new Error(`Metadata extraction failed: ${error.message}`);
+    }
+  }
+
+  generateImageHash(buffer) {
+    return createHash('sha256').update(buffer).digest('hex');
+  }
+
+  async findDuplicates(publicId) {
+    try {
+      const result = await cloudinary.api.resources_by_context(
+        'image_hash',
+        await this.getImageHash(publicId)
+      );
+      return result.resources;
+    } catch (error) {
+      throw new Error(`Duplicate check failed: ${error.message}`);
+    }
+  }
+}
+
+// services/image-moderation.service.js
+class ImageModerationService {
+  async moderateImage(publicId) {
+    try {
+      const result = await cloudinary.api.update(publicId, {
+        moderation: 'aws_rek'
+      });
+
+      return {
+        status: result.moderation[0].status,
+        flags: result.moderation[0].flags,
+        confidence: result.moderation[0].confidence
+      };
+    } catch (error) {
+      throw new Error(`Moderation failed: ${error.message}`);
+    }
+  }
+
+  async autoTag(publicId) {
+    try {
+      const result = await cloudinary.uploader.explicit(publicId, {
+        detection: 'aws_rek',
+        auto_tagging: 0.6
+      });
+
+      return {
+        tags: result.tags,
+        detection: result.info.detection
+      };
+    } catch (error) {
+      throw new Error(`Auto-tagging failed: ${error.message}`);
+    }
+  }
+}
+
+// services/image-search.service.js
+class ImageSearchService {
+  async searchByTags(tags, options = {}) {
+    const defaultOptions = {
+      max_results: 30,
+      tags: true,
+      context: true,
+      metadata: true
+    };
+
+    try {
+      const result = await cloudinary.search
+        .expression(`resource_type:image AND tags=${tags.join(' OR ')}`)
+        .with_field('context')
+        .with_field('tags')
+        .max_results(options.max_results || defaultOptions.max_results)
+        .execute();
+
+      return result.resources;
+    } catch (error) {
+      throw new Error(`Search failed: ${error.message}`);
+    }
+  }
+
+  async searchSimilar(publicId) {
+    try {
+      const metadata = await new ImageMetadataService().extractMetadata(publicId);
+      const dominantColors = metadata.colors.map(color => color[0]);
+
+      return this.searchByVisualFeatures(dominantColors);
+    } catch (error) {
+      throw new Error(`Similar image search failed: ${error.message}`);
+    }
+  }
+
+  async searchByVisualFeatures(features) {
+    // Implement visual similarity search using dominant colors or other features
+    // This is a simplified example
+    try {
+      const result = await cloudinary.search
+        .expression('resource_type:image')
+        .with_field('colors')
+        .max_results(20)
+        .execute();
+
+      return result.resources.filter(resource => 
+        resource.colors.some(color => 
+          features.includes(color[0])
+        )
+      );
+    } catch (error) {
+      throw new Error(`Visual search failed: ${error.message}`);
+    }
+  }
+}
+
+// controllers/image-management.controller.js
+class ImageManagementController {
+  constructor() {
+    this.metadataService = new ImageMetadataService();
+    this.moderationService = new ImageModerationService();
+    this.searchService = new ImageSearchService();
+  }
+
+  async analyzeImage(req, res) {
+    try {
+      const { publicId } = req.params;
+      
+      const [metadata, moderation, tags] = await Promise.all([
+        this.metadataService.extractMetadata(publicId),
+        this.moderationService.moderateImage(publicId),
+        this.moderationService.autoTag(publicId)
+      ]);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          metadata,
+          moderation,
+          tags
+        }
+      });
+    } catch (error) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
+  async searchImages(req, res) {
+    try {
+      const { tags, similar_to } = req.query;
+
+      let searchResults;
+      if (tags) {
+        searchResults = await this.searchService.searchByTags(tags.split(','));
+      } else if (similar_to) {
+        searchResults = await this.searchService.searchSimilar(similar_to);
+      } else {
+        throw new Error('Invalid search parameters');
+      }
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: searchResults
+      });
+    } catch (error) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+
+  async checkDuplicates(req, res) {
+    try {
+      const { publicId } = req.params;
+      const duplicates = await this.metadataService.findDuplicates(publicId);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: duplicates
+      });
+    } catch (error) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+  }
+}
+
+// routes/image-management.routes.js
+import { Router } from 'express';
+import ImageManagementController from '../controllers/image-management.controller.js';
+import { isAuthenticated } from '../middleware/auth.middleware.js';
+
+const router = Router();
+const controller = new ImageManagementController();
+
+router.get(
+  '/analyze/:publicId',
+  isAuthenticated,
+  controller.analyzeImage
+);
+
+router.get(
+  '/search',
+  isAuthenticated,
+  controller.searchImages
+);
+
+router.get(
+  '/duplicates/:publicId',
+  isAuthenticated,
+  controller.checkDuplicates
+);
+
+export default router;

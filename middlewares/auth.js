@@ -1,19 +1,37 @@
+const { default: UserModel } = require('../models/user.model');
 const Jwt = require('../utils/jwt'); // Adjust the path as necessary
 const { ERole } = require('./config'); // Enum or role definitions (adjust path as needed)
 
-const isAuthenticated = (req, res, next) => {
+const isAuthenticated = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
 
   if (!token) {
-    return res.status(401).json({ error: 'You need to login first' });
+    return res.status(StatusCodes.UNAUTHORIZED).json({
+      status: 'error',
+      message: 'Authentication required',
+    });
   }
 
   try {
     const decoded = Jwt.verifyJwt(token); // Verify token and get decoded data (user info)
-    req.user = decoded; // Add user info to request object
+    const user = await UserModel.findById(decoded.id);
+
+    if (!user) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        status: 'error',
+        message: 'User not found',
+      });
+    }
+
+    req.user = user;
+
+    // req.user = decoded; // Add user info to request object
     next(); // Token is valid, proceed to the next middleware or route handler
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+     return res.status(StatusCodes.UNAUTHORIZED).json({
+      status: 'error',
+      message: 'Invalid token'
+    });
   }
 };
 
