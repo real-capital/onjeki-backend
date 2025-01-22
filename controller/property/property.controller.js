@@ -1,6 +1,6 @@
 // controllers/property.controller.js
 import { validationResult } from 'express-validator';
-import PropertyService from '../../services/property.service.js';
+import PropertyService from '../../services/property/property.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 
@@ -24,6 +24,45 @@ class PropertyController {
       res.status(StatusCodes.CREATED).json({
         status: 'success',
         data: property,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPropertyNearBy(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      // Destructure latitude, longitude, and radius from the query params
+      const { latitude, longitude, radius } = req.query;
+
+      // Ensure latitude, longitude, and radius are provided
+      if (!latitude || !longitude || !radius) {
+        return next(
+          new HttpException(
+            StatusCodes.BAD_REQUEST,
+            'Latitude, longitude, and radius are required.'
+          )
+        );
+      }
+
+      // Call the service to get properties nearby
+      const properties = await propertyService.getPropertyNearBy(
+        latitude,
+        longitude,
+        radius
+      );
+      // if (properties.length == 0) {
+        
+      // }
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: properties,
       });
     } catch (error) {
       next(error);

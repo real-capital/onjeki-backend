@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import PropertyController from '../../controller/property/property.controller.js';
 
 import { validate } from '../../middlewares/validation.js';
@@ -22,12 +23,12 @@ class PropertyRoute {
       validate,
       this.controller.searchProperties
     );
-    // this.router.get(
-    //   `${this.path}/:id`,
-    //   //   validateCreateProperty,
-    //   validate,
-    //   this.controller.getP
-    // );
+    this.router.get(
+      `${this.path}/nearby`,
+      //   validateCreateProperty,
+      validate,
+      this.controller.getPropertyNearBy
+    );
   }
 }
 

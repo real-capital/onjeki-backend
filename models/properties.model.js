@@ -1,5 +1,5 @@
 import mongoose, { Schema, model } from 'mongoose';
-import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum'; // Assuming these enums are defined somewhere
+import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js'; // Assuming these enums are defined somewhere
 
 const propertySchema = new Schema(
   {

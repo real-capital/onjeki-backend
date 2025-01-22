@@ -3,6 +3,7 @@ import App from "./app.js";
 // import TestRoute from "./routes/test.route";
 // import UtilsRoute from "./routes/utils/utils.route";
 import AuthRoute from './routes/auth/auth.route.js';
+import PropertyRoute from './routes/property/property.route.js';
 // import SaleRoute from './routes/Sale/sales.route';
 // import RentalRoute from './routes/Rental/rental.route';
 // import buildingRoute from './routes/buildings/building.route';
@@ -16,7 +17,9 @@ const app = new App([
 //   new TestRoute(),
 //   new UtilsRoute(),
   new AuthRoute(),
-//   new SaleRoute(),
+  new PropertyRoute(),
+  
+  // new SaleRoute(),
 //   new RentalRoute(),
 //   new LayoverRoute(),
 //   new buildingRoute(),

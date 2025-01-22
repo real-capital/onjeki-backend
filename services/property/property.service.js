@@ -174,6 +174,37 @@ class PropertyService {
     return query;
   }
 
+  async getPropertyNearBy(latitude, longitude, radius) {
+    // Validate and parse the latitude, longitude, and radius
+    if (!latitude || !longitude || !radius) {
+      throw new Error('Latitude, longitude, and radius are required.');
+    }
+
+    // Convert to float and set default radius to 5000 meters (5km) if not provided
+    const parsedLatitude = parseFloat(latitude);
+    const parsedLongitude = parseFloat(longitude);
+    const parsedRadius = parseInt(radius) || 5000; // Default to 5 km if no radius provided
+
+    // Find properties within the specified radius using the geospatial $near operator
+    const properties = await PropertyModel.find({
+      'location.coordinates': {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parsedLongitude, parsedLatitude], // Longitude, Latitude in [long, lat] order
+          },
+          $maxDistance: parsedRadius, // Max distance in meters
+        },
+      },
+    });
+    if (properties.length == 0) {
+      return 'Empty Properties';
+    }
+
+    // Return the found properties
+    return properties;
+  }
+
   // Add more methods as needed
 }
 
