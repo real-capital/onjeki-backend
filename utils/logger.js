@@ -1,26 +1,19 @@
 import { existsSync, mkdirSync } from 'fs';
 import path, { join } from 'path';
 import winston from 'winston';
-import { LOG_DIR } from '../config/index.js'; // Use a specific file from the config directory
+import { LOG_DIR as CONFIG_LOG_DIR } from '../config/index.js'; // Use a specific file from the config directory
 
 import { fileURLToPath } from 'url';
 
 // Workaround for ES module __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const LOG_DIR = process.env.LOG_DIR || '/tmp/logs';
-const dir = join(__dirname, LOG_DIR) || join( '/tmp/logs');
+// Use the provided LOG_DIR from config or fallback to `/tmp/logs`
+const LOG_DIR = CONFIG_LOG_DIR || '/tmp/logs';
+const dir = join(__dirname, LOG_DIR);
 
 if (!existsSync(dir)) {
   mkdirSync(dir, { recursive: true }); // Ensure directory is created
-}
-
-
-// Log directory path
-// const dir = join(__dirname, LOG_DIR);
-
-if (!existsSync(dir)) {
-  mkdirSync(dir);
 }
 // Define your severity levels.
 // With them, You can create log files,
