@@ -12,6 +12,7 @@ const userSchema = new Schema(
     otp: { type: Types.ObjectId, ref: 'Otp' },
     googleUserId: { type: String, unique: true, sparse: true }, // Store Google User ID
     isEmailVerified: { type: Boolean, default: false }, // Email verification status
+    newToListing: { type: Boolean, default: true }, 
     phoneNo: { type: String },
     bookings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
     criteria: [{ type: String }],
