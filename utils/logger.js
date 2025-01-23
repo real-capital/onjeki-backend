@@ -1,23 +1,21 @@
 import { existsSync, mkdirSync } from 'fs';
 import path, { join } from 'path';
 import winston from 'winston';
-import { LOG_DIR as CONFIG_LOG_DIR } from '../config/index.js'; // Use a specific file from the config directory
-
 import { fileURLToPath } from 'url';
 
 // Workaround for ES module __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Use the provided LOG_DIR from config or fallback to `/tmp/logs`
-const LOG_DIR = CONFIG_LOG_DIR || '/tmp/logs';
-const dir = join(__dirname, LOG_DIR);
+// Use the writable `/tmp/logs` directory for Vercel or fallback if needed
+const LOG_DIR = '/tmp/logs';
+const dir = join(LOG_DIR);
 
+// Create the directory if it doesn't exist
 if (!existsSync(dir)) {
-  mkdirSync(dir, { recursive: true }); // Ensure directory is created
+  mkdirSync(dir, { recursive: true });
 }
+
 // Define your severity levels.
-// With them, You can create log files,
-// see or hide levels based on the running ENV.
 const levels = {
   error: 0,
   warn: 1,
@@ -26,19 +24,13 @@ const levels = {
   debug: 4,
 };
 
-// This method set the current severity based on
-// the current NODE_ENV: show all the log levels
-// if the server was run in development mode; otherwise,
-// if it was run in production, show only warn and error messages.
+// Determine the log level based on the environment
 const level = () => {
   const env = process.env.NODE_ENV || 'development';
-  const isDevelopment = env === 'development';
-  return isDevelopment ? 'debug' : 'warn';
+  return env === 'development' ? 'debug' : 'warn';
 };
 
-// Define different colors for each level.
-// Colors make the log message more visible,
-// adding the ability to focus or ignore messages.
+// Define colors for each level
 const colors = {
   error: 'red',
   warn: 'yellow',
@@ -47,64 +39,52 @@ const colors = {
   debug: 'white',
 };
 
-// Tell winston that you want to link the colors
-// defined above to the severity levels.
 winston.addColors(colors);
 
-// Chose the aspect of your log customizing the log format.
+// Define the log format
 const format = winston.format.combine(
-  // Add the message timestamp with the preferred format
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  // Tell Winston that the logs must be colored
   winston.format.colorize({ all: true }),
-  // Define the format of the message showing the timestamp, the level and the message
-  winston.format.printf(
-    (info) => `${info.timestamp} [${info.level}]: ${info.message}`
-  )
-);
-const custformat = winston.format.combine(
-  // Add the message timestamp with the preferred format
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  // Tell Winston that the logs must be colored
-  // Define the format of the message showing the timestamp, the level and the message
   winston.format.printf(
     (info) => `${info.timestamp} [${info.level}]: ${info.message}`
   )
 );
 
-// Define which transports the logger must use to print out messages.
-// In this example, we are using three different transports
+const custformat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+  winston.format.printf(
+    (info) => `${info.timestamp} [${info.level}]: ${info.message}`
+  )
+);
+
+// Define transports for logging
 const transports = [
-  // Allow the use the console to print the messages
   new winston.transports.Console({
     format,
   }),
-  // Allow to print all the error level messages inside the error.log file
   new winston.transports.File({
     dirname: dir,
     filename: 'error.log',
     level: 'error',
     format: custformat,
   }),
-  // Allow to print all the error message inside the all.log file
-  // (also the error log that are also printed inside the error.log(
   new winston.transports.File({
     dirname: dir,
-    format: custformat,
     filename: 'all.log',
+    format: custformat,
   }),
 ];
 
-// Create the logger instance that has to be exported
-// and used to log messages.
+// Create the logger instance
 const logger = winston.createLogger({
   level: level(),
   levels,
   transports,
 });
+
 const stream = {
   write: (message) => {
-    logger.info(message.substring(0, message.lastIndexOf('\n')));
+    logger.info(message.trim());
   },
 };
 
