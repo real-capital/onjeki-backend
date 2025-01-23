@@ -8,12 +8,19 @@ import { fileURLToPath } from 'url';
 // Workaround for ES module __dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Log directory path
-const dir = join(__dirname, LOG_DIR);
+const LOG_DIR = process.env.LOG_DIR || '/tmp/logs';
+const dir = join(LOG_DIR);
 
 if (!existsSync(dir)) {
-  mkdirSync(dir);
+  mkdirSync(dir, { recursive: true }); // Ensure directory is created
 }
+
+// Log directory path
+// const dir = join(__dirname, LOG_DIR);
+
+// if (!existsSync(dir)) {
+//   mkdirSync(dir);
+// }
 // Define your severity levels.
 // With them, You can create log files,
 // see or hide levels based on the running ENV.
@@ -74,23 +81,19 @@ const custformat = winston.format.combine(
 // Define which transports the logger must use to print out messages.
 // In this example, we are using three different transports
 const transports = [
-  // Allow the use the console to print the messages
   new winston.transports.Console({
     format,
   }),
-  // Allow to print all the error level messages inside the error.log file
   new winston.transports.File({
     dirname: dir,
     filename: 'error.log',
     level: 'error',
     format: custformat,
   }),
-  // Allow to print all the error message inside the all.log file
-  // (also the error log that are also printed inside the error.log(
   new winston.transports.File({
     dirname: dir,
-    format: custformat,
     filename: 'all.log',
+    format: custformat,
   }),
 ];
 
