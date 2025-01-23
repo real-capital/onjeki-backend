@@ -70,13 +70,13 @@ class app {
   initializeRoutes(routes) {
     routes.forEach((route) => {
       this.app.use('/api/v1', route.router); // Register each route with version prefix
-      this.app.use(
-        '/api/v1',
-        rateLimit({
-          windowMs: 15 * 60 * 1000, // 15 minutes
-          max: 100, // limit each IP to 100 requests per windowMs
-        })
-      ); // Register each route with version prefix
+      // this.app.use(
+      //   '/api/v1/auth',
+      //   rateLimit({
+      //     windowMs: 15 * 60 * 1000, // 15 minutes
+      //     max: 100, // limit each IP to 100 requests per windowMs
+      //   })
+      // ); // Register each route with version prefix
     });
     this.app.use(handleMulterError);
   }

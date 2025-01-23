@@ -20,7 +20,9 @@ class AuthController {
     }
 
     try {
+      console.log(req.body);
       const response = await authService.createAccount(req.body);
+      console.log(response);
       res.status(StatusCodes.OK).json({
         statusCode: StatusCodes.OK,
         status: 'success',
