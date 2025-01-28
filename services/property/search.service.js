@@ -38,8 +38,8 @@ class SearchService {
     const query = {};
 
     // Purpose filter (Layover, Rent, Sale)
-    if (filters.purpose) {
-      query.type = filters.purpose;
+    if (filters.type) {
+      query.type = filters.type;
     }
 
     // Price range filter
