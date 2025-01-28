@@ -186,7 +186,7 @@ class PropertyService {
             model: 'Category',
           },
         })
-        .populate('buildingType', 'name')
+        .populate('buildingType')
         .populate('owner', 'name email')
         .lean(); // Use lean() for better performance if you don't need Mongoose documents
 
