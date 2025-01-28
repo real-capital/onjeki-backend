@@ -45,15 +45,19 @@ class PropertyController {
       next(error);
     }
   };
-
   getPropertyById = async (req, res, next) => {
     try {
-      const property = await propertyService.getPropertyById(req.params.id);
+      const { id } = req.params;
+      console.log('Fetching property with ID:', id);
+
+      const property = await propertyService.getPropertyById(id);
+
       res.status(StatusCodes.OK).json({
         status: 'success',
         data: property,
       });
     } catch (error) {
+      // Let the error middleware handle it
       next(error);
     }
   };
@@ -180,12 +184,11 @@ class PropertyController {
   //   };
   // };
 
-
   // searchProperties = async (req, res, next) => {
   //   try {
   //     const { filters, pagination, sort } = this.parseSearchParams(req);
   //     console.log('Search Filters:', filters);
-      
+
   //     const result = await searchService.searchProperties(filters, pagination, sort);
 
   //     res.status(StatusCodes.OK).json({
@@ -289,15 +292,18 @@ class PropertyController {
   //   };
   // };
 
-
   searchProperties = async (req, res, next) => {
     try {
       console.log('Search request query:', req.query);
-      
+
       const { filters, pagination, sort } = this.parseSearchParams(req);
       console.log('Parsed search parameters:', { filters, pagination, sort });
 
-      const result = await searchService.searchProperties(filters, pagination, sort);
+      const result = await searchService.searchProperties(
+        filters,
+        pagination,
+        sort
+      );
 
       res.status(StatusCodes.OK).json({
         status: 'success',
@@ -305,8 +311,8 @@ class PropertyController {
         metadata: {
           filters,
           pagination,
-          sort
-        }
+          sort,
+        },
       });
     } catch (error) {
       console.error('Controller error:', error);
@@ -362,7 +368,7 @@ class PropertyController {
 
     // Amenities
     if (amenities) {
-      filters.amenities = amenities.split(',').map(id => id.trim());
+      filters.amenities = amenities.split(',').map((id) => id.trim());
     }
 
     // Numeric filters
@@ -380,12 +386,10 @@ class PropertyController {
         limit: Number(limit),
       },
       sort: {
-        [sortBy]: sortOrder === 'asc' ? 1 : -1
-      }
+        [sortBy]: sortOrder === 'asc' ? 1 : -1,
+      },
     };
   };
 }
-
-
 
 export default PropertyController;

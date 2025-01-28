@@ -4,6 +4,7 @@ import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 import UploadService from '../upload/upload.service.js';
 import { EListStatus } from '../../enum/house.enum.js';
+import mongoose from 'mongoose';
 
 // const uploadService = new UploadService();
 
@@ -153,17 +154,52 @@ class PropertyService {
     }
   }
 
+  // async getPropertyById(propertyId) {
+  //   try {
+  //     const property = await PropertyModel.findById(propertyId);
+  //     if (!property) {
+  //       throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
+  //     }
+  //     return property;
+  //   } catch (error) {
+  //     console.log(error);
+  //     throw new HttpException(
+  //       StatusCodes.INTERNAL_SERVER_ERROR,
+  //       'Error fetching property'
+  //     );
+  //   }
+  // }
+
   async getPropertyById(propertyId) {
     try {
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid property ID');
+      }
+
       const property = await PropertyModel.findById(propertyId)
         .populate('amenities')
-        // .populate('buildingType')
-        .populate('owner', 'name email');
+        .populate({
+          path: 'amenities',
+          populate: {
+            path: 'category',
+            model: 'Category',
+          },
+        })
+        .populate('buildingType', 'name')
+        .populate('owner', 'name email')
+        .lean(); // Use lean() for better performance if you don't need Mongoose documents
+
       if (!property) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
       }
+
       return property;
     } catch (error) {
+      console.error('Error in getPropertyById:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Error fetching property'
@@ -192,10 +228,12 @@ class PropertyService {
           .skip(skip)
           .limit(pagination.limit)
           .lean(),
-        PropertyModel.countDocuments(query)
+        PropertyModel.countDocuments(query),
       ]);
 
-      console.log(`Found ${properties.length} properties out of ${total} total`);
+      console.log(
+        `Found ${properties.length} properties out of ${total} total`
+      );
 
       return {
         properties,
@@ -204,8 +242,8 @@ class PropertyService {
           limit: pagination.limit,
           total,
           pages: Math.ceil(total / pagination.limit),
-          hasMore: skip + properties.length < total
-        }
+          hasMore: skip + properties.length < total,
+        },
       };
     } catch (error) {
       console.error('Search error:', error);
