@@ -1,5 +1,5 @@
 import mongoose, { Schema, model } from 'mongoose';
-import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js'; // Assuming these enums are defined somewhere
+import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js';
 
 const propertySchema = new Schema(
   {
@@ -10,12 +10,13 @@ const propertySchema = new Schema(
     },
     type: {
       type: String,
-      enum: Object.values(EPurpose), // Assuming EPurpose is an enum
+      enum: Object.values(EPurpose),
       required: true,
     },
     listStatus: {
       type: String,
-      enum: Object.values(EListStatus), // Assuming EListStatus is an enum
+      enum: Object.values(EListStatus),
+      default: EListStatus.UNDER_REVIEW,
     },
     buildingType: {
       type: mongoose.Schema.Types.ObjectId,
@@ -24,7 +25,7 @@ const propertySchema = new Schema(
     amenities: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Amenity' }],
     space: {
       type: String,
-      enum: Object.values(EHouseSpace), // Assuming EHouseSpace is an enum
+      enum: Object.values(EHouseSpace),
     },
     usedCurrentLocation: { type: Boolean },
     rules: {
@@ -42,32 +43,45 @@ const propertySchema = new Schema(
       town: { type: String },
       flatOrFloor: { type: String },
       postCode: { type: String },
-      //   pointer: {
-      //     latitude: { type: Number },
-      //     longitude: { type: Number },
-      //   },
       coordinates: {
-        type: { type: String, default: 'Point' },
-        coordinates: [Number], // [longitude, latitude]
-      },
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point',
+          required: true
+        },
+        coordinates: {
+          type: [Number],  // [longitude, latitude]
+          required: true,
+          validate: {
+            validator: function(v) {
+              return Array.isArray(v) && v.length === 2 &&
+                     v[0] >= -180 && v[0] <= 180 && // longitude
+                     v[1] >= -90 && v[1] <= 90;     // latitude
+            },
+            message: props => `${props.value} is not a valid coordinate pair!`
+          }
+        }
+      }
     },
     bedrooms: { type: Number },
     bathrooms: { type: Number },
     guests: { type: Number },
     bed: { type: Number },
-    // photo: { type: [Object] },
-    media: {
+    photo: {
       images: [
         {
           url: String,
           caption: String,
           isPrimary: Boolean,
+          publicId: String,
         },
       ],
       videos: [
         {
           url: String,
           caption: String,
+          publicId: String,
         },
       ],
     },
@@ -117,6 +131,20 @@ const propertySchema = new Schema(
 
 // Index for location-based queries
 propertySchema.index({ 'location.coordinates': '2dsphere' });
+
+// Pre-save middleware to ensure coordinates are in the correct format
+propertySchema.pre('save', function(next) {
+  if (this.location && this.location.pointer) {
+    // Convert old pointer format to new coordinates format
+    this.location.coordinates = {
+      type: 'Point',
+      coordinates: this.location.pointer.pointer
+    };
+    // Remove old pointer format
+    delete this.location.pointer;
+  }
+  next();
+});
 
 const PropertyModel = model('Property', propertySchema);
 

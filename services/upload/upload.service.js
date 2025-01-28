@@ -30,25 +30,60 @@ class UploadService {
     }
   }
 
-  async uploadMultipleImages(files, folder = 'properties') {
+  static async uploadMultipleImages(images, folder) {
     try {
-      const uploadPromises = files.map((file) =>
-        this.uploadImage(file, folder)
-      );
+      if (!images || !Array.isArray(images)) {
+        throw new Error('No images provided or invalid format');
+      }
+
+      const uploadPromises = images.map(async (image) => {
+        const result = await cloudinary.uploader.upload(image.path, {
+          folder: folder,
+        });
+        return {
+          public_id: result.public_id,
+          secure_url: result.secure_url,
+          originalname: image.originalname,
+        };
+      });
+
       return await Promise.all(uploadPromises);
     } catch (error) {
-      throw new Error(`Error uploading multiple images: ${error.message}`);
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        `Error uploading images: ${error.message}`
+      );
+    }
+  }
+  static async deleteImage(publicId) {
+    try {
+      if (!publicId) {
+        throw new Error('No publicId provided for image deletion');
+      }
+
+      const result = await cloudinary.uploader.destroy(publicId);
+
+      if (result.result !== 'ok') {
+        throw new Error(`Failed to delete image: ${result.result}`);
+      }
+
+      return result;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        `Error deleting image: ${error.message}`
+      );
     }
   }
 
-  async deleteImage(publicId) {
-    try {
-      const result = await cloudinary.uploader.destroy(publicId);
-      return result;
-    } catch (error) {
-      throw new Error(`Error deleting image: ${error.message}`);
-    }
-  }
+  // async deleteImage(publicId) {
+  //   try {
+  //     const result = await cloudinary.uploader.destroy(publicId);
+  //     return result;
+  //   } catch (error) {
+  //     throw new Error(`Error deleting image: ${error.message}`);
+  //   }
+  // }
 
   // Generate different image variants
   async generateImageVariants(publicId, config = {}) {

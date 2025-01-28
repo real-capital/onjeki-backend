@@ -1,5 +1,5 @@
 // services/search.service.js
-import PropModel from '../../models/property.model.js';
+import PropertyModel from '../../models/properties.model.js';
 // import { EPurpose } from '../enum/house.enum.js';
 
 class SearchService {
@@ -10,14 +10,14 @@ class SearchService {
 
     try {
       const [properties, total] = await Promise.all([
-        PropModel.find(query)
+        PropertyModel.find(query)
           .populate('amenities')
           .populate('buildingType')
-          .populate('user', 'name email')
+          .populate('owner', 'name email')
           .skip(skip)
           .limit(limit)
           .sort(sorting),
-        PropModel.countDocuments(query)
+        PropertyModel.countDocuments(query),
       ]);
 
       return {
@@ -26,11 +26,11 @@ class SearchService {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
-      throw new Error('Error searching properties');
+      throw new Error(error);
     }
   }
 
@@ -58,15 +58,17 @@ class SearchService {
               type: 'Point',
               coordinates: [
                 filters.location.coordinates.longitude,
-                filters.location.coordinates.latitude
-              ]
+                filters.location.coordinates.latitude,
+              ],
             },
-            $maxDistance: filters.location.radius || 5000 // 5km default radius
-          }
+            $maxDistance: filters.location.radius || 5000, // 5km default radius
+          },
         };
       } else {
-        if (filters.location.city) query['location.city'] = new RegExp(filters.location.city, 'i');
-        if (filters.location.country) query['location.country'] = new RegExp(filters.location.country, 'i');
+        if (filters.location.city)
+          query['location.city'] = new RegExp(filters.location.city, 'i');
+        if (filters.location.country)
+          query['location.country'] = new RegExp(filters.location.country, 'i');
       }
     }
 
@@ -92,7 +94,8 @@ class SearchService {
 
     // Additional filters
     if (filters.instantBooking) query.instantBooking = filters.instantBooking;
-    if (filters.isFurnished !== undefined) query.isFurnished = filters.isFurnished;
+    if (filters.isFurnished !== undefined)
+      query.isFurnished = filters.isFurnished;
     if (filters.isNew !== undefined) query.isNew = filters.isNew;
 
     return query;

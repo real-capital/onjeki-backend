@@ -16,4 +16,7 @@ const EHouseSpace = Object.freeze({
     ENTIRE_PLACE: "Entire Place"
 });
 
+
+
+
 export { EPurpose, EListStatus, EHouseSpace };

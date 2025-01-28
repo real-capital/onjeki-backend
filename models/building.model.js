@@ -1,15 +1,19 @@
-import mongoose, { model, Schema } from "mongoose";
+// models/building.model.js
+import mongoose, { Schema, model } from 'mongoose';
 
-const buildingSchema = new Schema({
+const buildingSchema = new Schema(
+  {
     buildingType: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true,
     },
-}, {
-    timestamps: true
-});
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const buildingModel = model("Building", buildingSchema);
+const BuildingModel = model('Building', buildingSchema);
 
-export default buildingModel;
+export default BuildingModel;

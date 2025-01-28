@@ -1,9 +1,11 @@
-const { default: UserModel } = require('../models/user.model');
-const Jwt = require('../utils/jwt'); // Adjust the path as necessary
-const { ERole } = require('./config'); // Enum or role definitions (adjust path as needed)
+import { StatusCodes } from 'http-status-codes';
+import User from '../models/user.model.js';
+import Jwt from '../utils/jwt.js'; // Adjust the path if necessary
+// import { ERole } from './config.js'; // Adjust the path if necessary
 
-const isAuthenticated = async (req, res, next) => {
+export const isAuthenticated = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
+  console.log(token);
 
   if (!token) {
     return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -12,9 +14,12 @@ const isAuthenticated = async (req, res, next) => {
     });
   }
 
+
   try {
     const decoded = Jwt.verifyJwt(token); // Verify token and get decoded data (user info)
-    const user = await UserModel.findById(decoded.id);
+    console.log(decoded);
+    const user = await User.findById(decoded.id);
+    console.log(user);
 
     if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -28,15 +33,15 @@ const isAuthenticated = async (req, res, next) => {
     // req.user = decoded; // Add user info to request object
     next(); // Token is valid, proceed to the next middleware or route handler
   } catch (error) {
-     return res.status(StatusCodes.UNAUTHORIZED).json({
+    return res.status(StatusCodes.UNAUTHORIZED).json({
       status: 'error',
-      message: 'Invalid token'
+      message: 'Invalid token',
     });
   }
 };
 
 // Middleware to check the role
-const hasRole = (requiredRoles) => {
+export const hasRole = (requiredRoles) => {
   return (req, res, next) => {
     const userRole = req.user?.role;
 
@@ -50,4 +55,4 @@ const hasRole = (requiredRoles) => {
   };
 };
 
-module.exports = { isAuthenticated, hasRole };
+// module.exports = { isAuthenticated, hasRole };

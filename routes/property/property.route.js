@@ -1,31 +1,48 @@
-import { Router } from 'express';
+// routes/property/property.route.js
+import express from 'express';
+import { Route } from '../../interfaces/route.interface.js';
 import PropertyController from '../../controller/property/property.controller.js';
-
 import { validate } from '../../middlewares/validation.js';
-class PropertyRoute {
+import { isAuthenticated } from '../../middlewares/auth.js';
+import { validateSearchQuery } from '../../validation/validateSearch.js';
+
+class PropertyRoute extends Route {
   constructor() {
-    this.path = '/properties';
-    this.router = Router();
-    this.controller = new PropertyController();
+    super(express.Router()); // Initialize the parent class
+    this.path = '/properties'; // Set the base path
+    this.controller = new PropertyController(); // Instantiate the controller
     this.initializeRoute();
   }
+
   initializeRoute() {
+    // Define routes
     this.router.post(
       `${this.path}/create`,
-      //   validateCreateProperty,
+      isAuthenticated,
       validate,
       this.controller.createProperty
     );
 
     this.router.get(
-      `${this.path}/`,
-      //   validateCreateProperty,
-      validate,
+      `${this.path}/search`,
+      validateSearchQuery,
       this.controller.searchProperties
     );
+
+    this.router.get(
+      `${this.path}/getAll`,
+      validate,
+      this.controller.getAllProperties
+    );
+
+    this.router.get(
+      `${this.path}/property/:id`,
+      validate,
+      this.controller.getPropertyById
+    );
+
     this.router.get(
       `${this.path}/nearby`,
-      //   validateCreateProperty,
       validate,
       this.controller.getPropertyNearBy
     );

@@ -3,28 +3,32 @@ import PropertyModel from '../../models/properties.model.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 import UploadService from '../upload/upload.service.js';
+import { EListStatus } from '../../enum/house.enum.js';
 
 // const uploadService = new UploadService();
 
 class PropertyService {
   async createProperty(propertyData, userId) {
+    let uploadedImages = [];
     try {
       // Handle image uploads if present
-      if (propertyData.images) {
+      if (propertyData.images && Array.isArray(propertyData.images)) {
         const uploadedImages = await UploadService.uploadMultipleImages(
           propertyData.images,
           `properties/${userId}`
         );
 
-        propertyData.photo = await Promise.all(
-          uploadedImages.map(async (image) => ({
-            publicId: image.public_id,
-            url: image.secure_url,
-            variants: await UploadService.generateImageVariants(
-              image.public_id
-            ),
-          }))
-        );
+        propertyData.photo = {
+          images: await Promise.all(
+            uploadedImages.map(async (image) => ({
+              url: image.secure_url,
+              caption: image.originalname || '',
+              isPrimary: false,
+              publicId: image.public_id,
+            }))
+          ),
+          videos: [],
+        };
       }
 
       const property = new PropertyModel({
@@ -35,56 +39,94 @@ class PropertyService {
       return property;
     } catch (error) {
       // If there's an error, cleanup any uploaded images
-      if (propertyData.photo) {
-        await Promise.all(
-          propertyData.photo.map((img) =>
-            UploadService.deleteImage(img.publicId)
-          )
-        );
-      }
-      throw error;
+      // if (propertyData.photo && propertyData.photo.images) {
+      //   try {
+      //     await Promise.all(
+      //       propertyData.photo.images.map((img) =>
+      //         UploadService.deleteImage(img.publicId)
+      //       )
+      //     );
+      //   } catch (cleanupError) {
+      //     console.error('Error cleaning up images:', cleanupError);
+      //   }
+      // }
 
-      //   throw new HttpException(
-      //     StatusCodes.BAD_REQUEST,
-      //     'Error creating property'
-      //   );
+      // If there's an error, cleanup any uploaded images
+      if (uploadedImages.length > 0) {
+        try {
+          await Promise.all(
+            uploadedImages.map(async (img) => {
+              if (img.public_id) {
+                await UploadService.deleteImage(img.public_id);
+              }
+            })
+          );
+        } catch (cleanupError) {
+          console.error('Error cleaning up images:', cleanupError);
+        }
+      }
+
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        error.message || 'Error creating property'
+      );
     }
   }
 
   async updatePropertyImages(propertyId, newImages, userId) {
-    const property = await PropModel.findOne({
-      _id: propertyId,
-      user: userId,
-    });
+    try {
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
 
-    if (!property) {
-      throw new Error('Property not found');
+      if (!property) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
+      }
+
+      // Upload new images
+      const uploadedImages = await UploadService.uploadMultipleImages(
+        newImages,
+        `properties/${userId}`
+      );
+
+      // Add new images to property
+      const formattedImages = await Promise.all(
+        uploadedImages.map(async (image) => ({
+          url: image.secure_url,
+          caption: image.originalname || '',
+          isPrimary: false,
+          publicId: image.public_id,
+        }))
+      );
+
+      // Initialize photo object if it doesn't exist
+      if (!property.photo) {
+        property.photo = {
+          images: [],
+          videos: [],
+        };
+      }
+
+      // Add new images to existing ones
+      property.photo.images = [
+        ...(property.photo.images || []),
+        ...formattedImages,
+      ];
+
+      await property.save();
+      return property;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        error.message || 'Error updating property images'
+      );
     }
-
-    // Upload new images
-    const uploadedImages = await UploadService.uploadMultipleImages(
-      newImages,
-      `properties/${userId}`
-    );
-
-    // Add new images to property
-    const formattedImages = await Promise.all(
-      uploadedImages.map(async (image) => ({
-        publicId: image.public_id,
-        url: image.secure_url,
-        variants: await UploadService.generateImageVariants(image.public_id),
-      }))
-    );
-
-    property.photo = [...property.photo, ...formattedImages];
-    await property.save();
-
-    return property;
   }
 
-  async getProperties(filters = {}, pagination = { page: 1, limit: 10 }) {
+  async getAllProperties(filters = {}, pagination = { page: 1, limit: 10 }) {
     try {
-      const query = this.buildPropertyQuery(filters);
+      const query = this.buildSearchQuery(filters);
       const skip = (pagination.page - 1) * pagination.limit;
 
       const properties = await PropertyModel.find(query)
@@ -107,150 +149,384 @@ class PropertyService {
         },
       };
     } catch (error) {
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
+    }
+  }
+
+  async getPropertyById(propertyId) {
+    try {
+      const property = await PropertyModel.findById(propertyId)
+        .populate('amenities')
+        // .populate('buildingType')
+        .populate('owner', 'name email');
+      if (!property) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
+      }
+      return property;
+    } catch (error) {
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        'Error fetching properties'
+        'Error fetching property'
+      );
+    }
+  }
+
+  async searchProperties(filters, pagination, sort) {
+    try {
+      console.log('Received filters:', filters);
+      console.log('Pagination:', pagination);
+      console.log('Sort:', sort);
+
+      const query = this.buildSearchQuery(filters);
+      console.log('Built query:', JSON.stringify(query, null, 2));
+
+      const skip = (pagination.page - 1) * pagination.limit;
+
+      // Execute query with pagination
+      const [properties, total] = await Promise.all([
+        PropertyModel.find(query)
+          .populate('owner', 'name email')
+          .populate('buildingType')
+          .populate('amenities')
+          .sort(sort)
+          .skip(skip)
+          .limit(pagination.limit)
+          .lean(),
+        PropertyModel.countDocuments(query)
+      ]);
+
+      console.log(`Found ${properties.length} properties out of ${total} total`);
+
+      return {
+        properties,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          pages: Math.ceil(total / pagination.limit),
+          hasMore: skip + properties.length < total
+        }
+      };
+    } catch (error) {
+      console.error('Search error:', error);
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        `Error searching properties: ${error.message}`
       );
     }
   }
 
   buildSearchQuery(filters) {
-    const query = { listStatus: EListStatus.APPROVED };
+    try {
+      const query = {};
 
-    if (filters.type) {
-      query.type = filters.type;
-    }
-
-    if (filters.buildingType) {
-      query.buildingType = filters.buildingType;
-    }
-
-    if (filters.space) {
-      query.space = filters.space;
-    }
-
-    if (filters.priceRange) {
-      query.price = {
-        $gte: filters.priceRange.min,
-        $lte: filters.priceRange.max,
-      };
-    }
-
-    if (filters.location) {
-      if (filters.location.city) {
-        query['location.city'] = filters.location.city;
+      // Type filter
+      if (filters.type) {
+        query.type = filters.type;
       }
-      if (filters.location.country) {
-        query['location.country'] = filters.location.country;
+
+      // Building type filter
+      if (filters.buildingType) {
+        query.buildingType = filters.buildingType;
       }
-      if (filters.location.coordinates) {
-        query['location.coordinates'] = {
+
+      // Space filter
+      if (filters.space) {
+        query.space = filters.space;
+      }
+
+      // Price range filter
+      if (filters.priceRange) {
+        query['price.base'] = {};
+        if (filters.priceRange.min) {
+          query['price.base'].$gte = filters.priceRange.min;
+        }
+        if (filters.priceRange.max && filters.priceRange.max !== Infinity) {
+          query['price.base'].$lte = filters.priceRange.max;
+        }
+      }
+
+      // Location filters
+      if (filters.location) {
+        if (filters.location.city) {
+          query['location.city'] = new RegExp(filters.location.city, 'i');
+        }
+        if (filters.location.country) {
+          query['location.country'] = new RegExp(filters.location.country, 'i');
+        }
+        if (filters.location.state) {
+          query['location.state'] = new RegExp(filters.location.state, 'i');
+        }
+      }
+
+      // Amenities filter
+      if (filters.amenities && filters.amenities.length > 0) {
+        query.amenities = { $all: filters.amenities };
+      }
+
+      // Guest filter
+      if (filters.guests) {
+        query.guests = { $gte: parseInt(filters.guests) };
+      }
+
+      // Bedroom filter
+      if (filters.bedrooms) {
+        query.bedrooms = { $gte: parseInt(filters.bedrooms) };
+      }
+
+      // Status filters
+      if (filters.listStatus) {
+        query.listStatus = filters.listStatus;
+      }
+
+      // Boolean filters
+      if (filters.isBooked !== undefined) {
+        query.isBooked = filters.isBooked;
+      }
+
+      if (filters.isFurnished !== undefined) {
+        query.isFurnished = filters.isFurnished;
+      }
+
+      console.log('Built query:', query);
+      return query;
+    } catch (error) {
+      console.error('Error building query:', error);
+      throw new Error(`Error building search query: ${error.message}`);
+    }
+  }
+
+  // async searchProperties(filters, pagination, sort) {
+  //   try {
+  //     const query = this.buildSearchQuery(filters);
+  //     const skip = (pagination.page - 1) * pagination.limit;
+
+  //     // Execute query with pagination
+  //     const [properties, total] = await Promise.all([
+  //       PropertyModel.find(query)
+  //         .populate('owner', 'name email')
+  //         .populate('buildingType')
+  //         .populate('amenities')
+  //         .sort(sort)
+  //         .skip(skip)
+  //         .limit(pagination.limit)
+  //         .lean(),
+  //       PropertyModel.countDocuments(query)
+  //     ]);
+
+  //     return {
+  //       properties,
+  //       pagination: {
+  //         page: pagination.page,
+  //         limit: pagination.limit,
+  //         total,
+  //         pages: Math.ceil(total / pagination.limit),
+  //         hasMore: skip + properties.length < total
+  //       }
+  //     };
+  //   } catch (error) {
+  //     throw new HttpException(
+  //       StatusCodes.INTERNAL_SERVER_ERROR,
+  //       'Error searching properties'
+  //     );
+  //   }
+  // }
+
+  // buildSearchQuery(filters) {
+  //   const query = {};
+
+  //   // Add your query building logic here
+  //   // This should match the structure of your filters object
+  //   Object.entries(filters).forEach(([key, value]) => {
+  //     if (value !== undefined && value !== null) {
+  //       query[key] = value;
+  //     }
+  //   });
+
+  //   return query;
+  // }
+
+  // buildSearchQuery(filters) {
+  //   const query = { listStatus: EListStatus.UNDER_REVIEW };
+
+  //   if (filters.type) {
+  //     query.type = filters.type;
+  //   }
+
+  //   if (filters.buildingType) {
+  //     query.buildingType = filters.buildingType;
+  //   }
+
+  //   if (filters.space) {
+  //     query.space = filters.space;
+  //   }
+
+  //   if (filters.priceRange) {
+  //     query.price = {
+  //       $gte: filters.priceRange.min,
+  //       $lte: filters.priceRange.max,
+  //     };
+  //   }
+
+  //   if (filters.location) {
+  //     if (filters.location.city) {
+  //       query['location.city'] = filters.location.city;
+  //     }
+  //     if (filters.location.country) {
+  //       query['location.country'] = filters.location.country;
+  //     }
+  //     if (filters.location.coordinates) {
+  //       query['location.coordinates'] = {
+  //         $near: {
+  //           $geometry: {
+  //             type: 'Point',
+  //             coordinates: [
+  //               filters.location.coordinates.longitude,
+  //               filters.location.coordinates.latitude,
+  //             ],
+  //           },
+  //           $maxDistance: filters.location.radius || 10000, // Default 10km
+  //         },
+  //       };
+  //     }
+  //   }
+
+  //   if (filters.amenities?.length) {
+  //     query.amenities = { $all: filters.amenities };
+  //   }
+
+  //   if (filters.guests) {
+  //     query.guests = { $gte: filters.guests };
+  //   }
+
+  //   if (filters.bedrooms) {
+  //     query.bedrooms = { $gte: filters.bedrooms };
+  //   }
+
+  //   return query;
+  // }
+
+  async getPropertyNearBy(latitude, longitude, radius) {
+    try {
+      // Validate inputs
+      if (!latitude || !longitude) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Latitude and longitude are required.'
+        );
+      }
+
+      // Parse and validate coordinates
+      const parsedLatitude = parseFloat(latitude);
+      const parsedLongitude = parseFloat(longitude);
+
+      // Validate coordinate ranges
+      if (parsedLatitude < -90 || parsedLatitude > 90) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Invalid latitude. Must be between -90 and 90.'
+        );
+      }
+
+      if (parsedLongitude < -180 || parsedLongitude > 180) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Invalid longitude. Must be between -180 and 180.'
+        );
+      }
+
+      // Set default radius if not provided or invalid
+      const parsedRadius = radius ? parseInt(radius) : 5000; // Default to 5km
+      if (isNaN(parsedRadius) || parsedRadius <= 0) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Invalid radius. Must be a positive number.'
+        );
+      }
+
+      // Find nearby properties
+      const properties = await PropertyModel.find({
+        'location.coordinates': {
           $near: {
             $geometry: {
               type: 'Point',
-              coordinates: [
-                filters.location.coordinates.longitude,
-                filters.location.coordinates.latitude,
-              ],
+              coordinates: [parsedLongitude, parsedLatitude],
             },
-            $maxDistance: filters.location.radius || 10000, // Default 10km
+            $maxDistance: parsedRadius,
           },
-        };
-      }
-    }
-
-    if (filters.amenities?.length) {
-      query.amenities = { $all: filters.amenities };
-    }
-
-    if (filters.guests) {
-      query.guests = { $gte: filters.guests };
-    }
-
-    if (filters.bedrooms) {
-      query.bedrooms = { $gte: filters.bedrooms };
-    }
-
-    return query;
-  }
-
-  async getPropertyNearBy(latitude, longitude, radius) {
-    // Validate and parse the latitude, longitude, and radius
-    if (!latitude || !longitude || !radius) {
-      throw new Error('Latitude, longitude, and radius are required.');
-    }
-
-    // Convert to float and set default radius to 5000 meters (5km) if not provided
-    const parsedLatitude = parseFloat(latitude);
-    const parsedLongitude = parseFloat(longitude);
-    const parsedRadius = parseInt(radius) || 5000; // Default to 5 km if no radius provided
-
-    // Find properties within the specified radius using the geospatial $near operator
-    const properties = await PropertyModel.find({
-      'location.coordinates': {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parsedLongitude, parsedLatitude], // Longitude, Latitude in [long, lat] order
-          },
-          $maxDistance: parsedRadius, // Max distance in meters
         },
-      },
-    });
-    if (properties.length == 0) {
-      return 'Empty Properties';
-    }
+      })
+        .populate('owner', 'name email') // Populate owner details
+        .populate('buildingType') // Populate building type
+        .populate('amenities') // Populate amenities
+        .select('-__v'); // Exclude version key
 
-    // Return the found properties
-    return properties;
+      return {
+        status: 'success',
+        count: properties.length,
+        data: properties,
+        metadata: {
+          searchLocation: {
+            latitude: parsedLatitude,
+            longitude: parsedLongitude,
+          },
+          radiusInMeters: parsedRadius,
+        },
+      };
+    } catch (error) {
+      // Handle specific MongoDB errors
+      if (error.name === 'MongoServerError' && error.code === 16755) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Invalid coordinates format'
+        );
+      }
+
+      // If it's already an HttpException, rethrow it
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Handle unexpected errors
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error finding nearby properties'
+      );
+    }
   }
+
+  // async getPropertyNearBy(latitude, longitude, radius) {
+  //   // Validate and parse the latitude, longitude, and radius
+  //   if (!latitude || !longitude || !radius) {
+  //     throw new Error('Latitude, longitude, and radius are required.');
+  //   }
+
+  //   // Convert to float and set default radius to 5000 meters (5km) if not provided
+  //   const parsedLatitude = parseFloat(latitude);
+  //   const parsedLongitude = parseFloat(longitude);
+  //   const parsedRadius = parseInt(radius) || 5000; // Default to 5 km if no radius provided
+
+  //   // Find properties within the specified radius using the geospatial $near operator
+  //   const properties = await PropertyModel.find({
+  //     'location.coordinates': {
+  //       $near: {
+  //         $geometry: {
+  //           type: 'Point',
+  //           coordinates: [parsedLongitude, parsedLatitude], // Longitude, Latitude in [long, lat] order
+  //         },
+  //         $maxDistance: parsedRadius, // Max distance in meters
+  //       },
+  //     },
+  //   });
+  //   if (!properties || properties.length === 0) {
+  //     return properties;
+  //   }
+
+  //   // Return the found properties
+  //   return properties;
+  // }
 
   // Add more methods as needed
 }
 
 export default PropertyService;
-
-// // routes/mobile.routes.js
-// import { Router } from 'express';
-// import { isAuthenticated } from '../middlewares/auth.middleware.js';
-
-// const router = Router();
-
-// // Device registration
-// router.post('/devices', isAuthenticated, async (req, res) => {
-//   const { deviceToken, platform } = req.body;
-//   await UserModel.findByIdAndUpdate(req.user._id, {
-//     deviceToken,
-//     platform
-//   });
-//   res.status(200).json({ message: 'Device registered successfully' });
-// });
-
-// // Mobile-specific property listing
-// router.get('/featured-properties', async (req, res) => {
-//   const properties = await PropModel.find({ isFeatured: true })
-//     .select('title photos price location')
-//     .limit(10);
-//   res.json(properties);
-// });
-
-// // Mobile search with location
-// router.get('/nearby-properties', isAuthenticated, async (req, res) => {
-//   const { latitude, longitude, radius = 5 } = req.query;
-
-//   const properties = await PropModel.find({
-//     'location.pointer': {
-//       $near: {
-//         $geometry: {
-//           type: 'Point',
-//           coordinates: [parseFloat(longitude), parseFloat(latitude)]
-//         },
-//         $maxDistance: radius * 1000 // Convert km to meters
-//       }
-//     }
-//   });
-
-//   res.json(properties);
-// });
-
-// export default router;

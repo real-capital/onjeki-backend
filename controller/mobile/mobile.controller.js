@@ -10,8 +10,8 @@
 // router.use(rateLimiters.api);
 
 // // Device management
-// router.post('/devices/register', 
-//   isAuthenticated, 
+// router.post('/devices/register',
+//   isAuthenticated,
 //   mobileController.registerDevice
 // );
 
@@ -66,9 +66,9 @@
 
 //   async getNearbyProperties(req, res) {
 //     const { latitude, longitude, radius = 5 } = req.query;
-    
+
 //     const properties = await PropertyService.getNearbyProperties({
-//       coordinates: [longitude, latitude],
+//       pointer: [longitude, latitude],
 //       radius: parseInt(radius),
 //       limit: 20,
 //       select: 'title photos price location distance', // Include distance

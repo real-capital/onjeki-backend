@@ -82,7 +82,7 @@ class AuthService {
       throw new HttpException(StatusCodes.BAD_REQUEST, 'OTP has expired');
     }
 
-    const token = Jwt.signJwt({ email: user.email }, '7d');
+    const token = Jwt.signJwt({ id: user.id, email: user.email }, '70d');
 
     // Clear OTP after validation
     await OtpModel.findByIdAndDelete(user.otp);

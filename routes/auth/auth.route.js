@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import express from 'express';
+import { Route } from '../../interfaces/route.interface.js';
 
 import AuthController from '../../controller/auth/auth.controller.js';
 import {
@@ -6,12 +7,15 @@ import {
   validateOtp,
   validate,
 } from '../../middlewares/validation.js';
+import PropertyController from '../../controller/property/property.controller.js';
 
-class AuthRoute {
+class AuthRoute extends Route {
   constructor() {
+    super(express.Router());
     this.path = '/auth';
-    this.router = Router();
+    // this.router = Router();
     this.controller = new AuthController();
+    this.propController = new PropertyController();
     this.initializeRoute();
   }
 
@@ -22,7 +26,10 @@ class AuthRoute {
       validate,
       this.controller.createAccount
     );
-    this.router.get(`${this.path}/start-google-login`, this.controller.startGoogleLogin);
+    this.router.get(
+      `${this.path}/start-google-login`,
+      this.controller.startGoogleLogin
+    );
     this.router.get(`${this.path}/google-login`, this.controller.googleLogin);
     // this.router.post(
     //   `${this.path}/apple`,
@@ -35,6 +42,7 @@ class AuthRoute {
       validate,
       this.controller.validateOtp
     );
+    this.router.get(`${this.path}/getAll`, this.propController.getAllProperties);
     // this.router.post(
     //   `${this.path}/complete`,
     //   dtoValidationMiddleware(completeRegDto, 'body', 'missing params'),
