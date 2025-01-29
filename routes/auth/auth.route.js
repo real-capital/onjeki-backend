@@ -42,12 +42,14 @@ class AuthRoute extends Route {
       validate,
       this.controller.validateOtp
     );
-    this.router.get(`${this.path}/getAll`, this.propController.getAllProperties);
-    // this.router.post(
-    //   `${this.path}/complete`,
-    //   dtoValidationMiddleware(completeRegDto, 'body', 'missing params'),
-    //   this.controller.completeReg
-    // );
+    this.router.get(
+      `${this.path}/getAll`,
+      this.propController.getAllProperties
+    );
+    this.router.post(
+      `${this.path}/updateNewToListing`,
+      this.controller.updateNewToListing
+    );
     // this.router.get(
     //   `${this.path}/my-profile`,
     //   UserGuard.createInstance,

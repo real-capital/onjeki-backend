@@ -121,6 +121,25 @@ class AuthService {
     return user;
   }
 
+  async updateNewToListing(userId) {
+    try {
+      const updateUser = await UserModel.findOneAndUpdate(
+        { userId },
+        {
+          newToListing: false,
+        },
+        { new: true, upsert: true }
+      );
+      await updateUser.save();
+      return updateUser;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+
   async handleGoogleLogin(code) {
     try {
       // Exchange authorization code for access token and id token

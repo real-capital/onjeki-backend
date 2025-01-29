@@ -112,6 +112,19 @@ class AuthController {
       next(error);
     }
   }
+
+  updateNewToListing = async (req, res, next) => {
+    try {
+      const updateduser = await authService.updateNewToListing(req.user.id);
+      res.status(StatusCodes.CREATED).json({
+        status: 'success',
+        message: 'User Updated successfully',
+        // data: lastListing,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export default AuthController;

@@ -1,6 +1,6 @@
 // controllers/booking.controller.js
 import { validationResult } from 'express-validator';
-import BookingService from '../../services/booking.service.js';
+import BookingService from '../../services/booking/booking.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 
