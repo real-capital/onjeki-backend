@@ -115,7 +115,8 @@ class AuthController {
 
   updateNewToListing = async (req, res, next) => {
     try {
-      const updateduser = await authService.updateNewToListing(req.user.id);
+      await authService.updateNewToListing(req.user.id);
+
       res.status(StatusCodes.CREATED).json({
         status: 'success',
         message: 'User Updated successfully',

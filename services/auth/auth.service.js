@@ -124,7 +124,7 @@ class AuthService {
   async updateNewToListing(userId) {
     try {
       const updateUser = await UserModel.findOneAndUpdate(
-        { userId },
+        { _id: userId },
         {
           newToListing: false,
         },
