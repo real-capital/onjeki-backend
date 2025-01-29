@@ -7,7 +7,8 @@ import {
   validateOtp,
   validate,
 } from '../../middlewares/validation.js';
-import PropertyController from '../../controller/property/property.controller.js';
+// import PropertyController from '../../controller/property/property.controller.js';
+import { isAuthenticated } from '../../middlewares/auth.js';
 
 class AuthRoute extends Route {
   constructor() {
@@ -15,7 +16,7 @@ class AuthRoute extends Route {
     this.path = '/auth';
     // this.router = Router();
     this.controller = new AuthController();
-    this.propController = new PropertyController();
+    // this.propController = new PropertyController();
     this.initializeRoute();
   }
 
@@ -42,12 +43,13 @@ class AuthRoute extends Route {
       validate,
       this.controller.validateOtp
     );
-    this.router.get(
-      `${this.path}/getAll`,
-      this.propController.getAllProperties
-    );
+    // this.router.get(
+    //   `${this.path}/getAll`,
+    //   this.propController.getAllProperties
+    // );
     this.router.post(
       `${this.path}/updateNewToListing`,
+      isAuthenticated,
       this.controller.updateNewToListing
     );
     // this.router.get(
