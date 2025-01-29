@@ -128,7 +128,7 @@ class AuthService {
         {
           newToListing: false,
         },
-        { new: true, upsert: true }
+        { new: true }
       );
       await updateUser.save();
       return updateUser;
