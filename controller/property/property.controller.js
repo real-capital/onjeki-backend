@@ -9,6 +9,38 @@ const propertyService = new PropertyService();
 const searchService = new SearchService();
 
 class PropertyController {
+  postLastListingPath = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+    try {
+      const lastListing = await propertyService.postLastListingPath(
+        req.body.listingPath,
+        req.user.id
+      );
+      res.status(StatusCodes.CREATED).json({
+        status: 'success',
+        data: lastListing,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getLastListingPath = async (req, res, next) => {
+    try {
+      const lastListing = await propertyService.getLastListingPath(req.user.id);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: lastListing,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   createProperty = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

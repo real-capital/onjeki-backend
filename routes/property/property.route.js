@@ -22,6 +22,18 @@ class PropertyRoute extends Route {
       validate,
       this.controller.createProperty
     );
+    this.router.post(
+      `${this.path}/lastListingPath`,
+      isAuthenticated,
+      validate,
+      this.controller.postLastListingPath
+    );
+    this.router.get(
+      `${this.path}/lastListingPath`,
+      isAuthenticated,
+      validate,
+      this.controller.getLastListingPath
+    );
 
     this.router.get(
       `${this.path}/search`,

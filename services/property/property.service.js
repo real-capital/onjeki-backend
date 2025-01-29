@@ -5,10 +5,48 @@ import { StatusCodes } from 'http-status-codes';
 import UploadService from '../upload/upload.service.js';
 import { EListStatus } from '../../enum/house.enum.js';
 import mongoose from 'mongoose';
+import LastListingModel from '../../models/lastListing.model.js';
 
 // const uploadService = new UploadService();
 
 class PropertyService {
+  async postLastListingPath(listingPath, userId) {
+    try {
+      if (!userId) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'User is required');
+      }
+      if (!listingPath) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Listing Path is required'
+        );
+      }
+
+      const lastListing = await LastListingModel.findOneAndUpdate(
+        { userId },
+        { lastListingPath: listingPath, lastVisitedAt: Date.now() },
+        { new: true, upsert: true }
+      );
+      await lastListing.save();
+      return lastListing;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+  async getLastListingPath(userId) {
+    try {
+      return await LastListingModel.findOne({ userId });
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching listing path'
+      );
+    }
+  }
+
   async createProperty(propertyData, userId) {
     let uploadedImages = [];
     try {
