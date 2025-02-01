@@ -57,18 +57,21 @@ class PropertyRoute extends Route {
     this.router.get(
       `${this.path}/getAll`,
       validate,
+      isAuthenticated,
       this.controller.getAllProperties
     );
 
     this.router.get(
       `${this.path}/property/:id`,
       validate,
+      isAuthenticated,
       this.controller.getPropertyById
     );
 
     this.router.get(
       `${this.path}/nearby`,
       validate,
+      isAuthenticated,
       this.controller.getPropertyNearBy
     );
   }

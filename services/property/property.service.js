@@ -76,6 +76,11 @@ class PropertyService {
         owner: userId,
       });
       await property.save();
+
+      // Notify nearby users about new property
+      // if (property.listStatus === 'published') {
+      //   await notifyNearbyUsers(property);
+      // }
       return property;
     } catch (error) {
       // If there's an error, cleanup any uploaded images
@@ -174,8 +179,14 @@ class PropertyService {
         .populate('buildingType')
         .skip(skip)
         .limit(pagination.limit)
-        .populate('owner', 'name email')
+        .populate('owner', '_id name email')
         .sort('-createdAt');
+
+      // // Increment views if visitor is not the host
+      // if (userId !== properties.owner._id) {
+      //   properties.stats.views += 1;
+      //   await properties.save({ validateBeforeSave: false });
+      // }
 
       const total = await PropertyModel.countDocuments(query);
 
@@ -192,22 +203,6 @@ class PropertyService {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
-
-  // async getPropertyById(propertyId) {
-  //   try {
-  //     const property = await PropertyModel.findById(propertyId);
-  //     if (!property) {
-  //       throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
-  //     }
-  //     return property;
-  //   } catch (error) {
-  //     console.log(error);
-  //     throw new HttpException(
-  //       StatusCodes.INTERNAL_SERVER_ERROR,
-  //       'Error fetching property'
-  //     );
-  //   }
-  // }
 
   async getPropertyById(propertyId) {
     try {
@@ -226,12 +221,17 @@ class PropertyService {
           },
         })
         .populate('buildingType')
-        .populate('owner', 'name email')
+        .populate('owner', '_id name email')
         .lean(); // Use lean() for better performance if you don't need Mongoose documents
 
       if (!property) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
       }
+      // console.log(property.owner._id);
+      // if (userId !== property.owner._id) {
+      //   property.stats.views += 1;
+      //   await property.save();
+      // }
 
       return property;
     } catch (error) {
@@ -297,6 +297,7 @@ class PropertyService {
     try {
       const query = {};
 
+      query.listStatus = 'published';
       // Type filter
       if (filters.type) {
         query.type = filters.type;
@@ -352,9 +353,9 @@ class PropertyService {
       }
 
       // Status filters
-      if (filters.listStatus) {
-        query.listStatus = filters.listStatus;
-      }
+      // if (filters.listStatus) {
+      //   query.listStatus = filters.listStatus;
+      // }
 
       // Boolean filters
       if (filters.isBooked !== undefined) {
@@ -364,6 +365,23 @@ class PropertyService {
       if (filters.isFurnished !== undefined) {
         query.isFurnished = filters.isFurnished;
       }
+
+      // Add date-based availability filter
+      // if (req.query.checkIn && req.query.checkOut) {
+      //   const checkIn = new Date(req.query.checkIn);
+      //   const checkOut = new Date(req.query.checkOut);
+
+      //   features.query.find({
+      //     'availability.calendar': {
+      //       $not: {
+      //         $elemMatch: {
+      //           date: { $gte: checkIn, $lt: checkOut },
+      //           isBlocked: true
+      //         }
+      //       }
+      //     }
+      //   });
+      // }
 
       console.log('Built query:', query);
       return query;
@@ -485,28 +503,47 @@ class PropertyService {
     }
   }
 
-  async postProgress(currentStep, formData, userId) {
+  async postProgress(userId, data) {
     try {
-      let progress = await OnboardingProgress.findOne({
-        userId,
-        isCompleted: false,
-      });
+      // let progress = await OnboardingModel.findOne({
+      //   userId,
+      //   isCompleted: false,
+      // });
 
-      if (progress) {
-        progress.currentStep = currentStep;
-        progress.formData = formData;
-        progress.lastUpdated = new Date();
-      } else {
-        progress = new OnboardingProgress({
-          userId,
-          currentStep,
-          formData,
-        });
-      }
+      const progressData = {
+        userId: userId,
+        currentStep: data.currentStep,
+        formData: data.formData || {},
+        isCompleted: data.isCompleted || false,
+        lastUpdated: new Date(),
+      };
+
+      // if (progress) {
+      //   progress.currentStep = currentStep;
+      //   progress.formData = formData;
+      //   progress.lastUpdated = new Date();
+      // } else {
+      //   progress = new OnboardingModel({
+      //     userId,
+      //     currentStep,
+      //     formData,
+      //   });
+      // }
+      const progress = await OnboardingModel.findOneAndUpdate(
+        { userId: userId, isCompleted: false },
+        progressData,
+        {
+          new: true,
+          upsert: true,
+          runValidators: true,
+          setDefaultsOnInsert: true,
+        }
+      );
 
       await progress.save();
       return progress;
     } catch (error) {
+      console.log(error);
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Error posting progress'
@@ -516,7 +553,7 @@ class PropertyService {
 
   async completeOnboaring(userId) {
     try {
-      const progress = await OnboardingProgress.findOne({
+      const progress = await OnboardingModel.findOne({
         userId,
         isCompleted: false,
       });
@@ -539,6 +576,8 @@ class PropertyService {
       );
     }
   }
+
+
 }
 
 export default PropertyService;

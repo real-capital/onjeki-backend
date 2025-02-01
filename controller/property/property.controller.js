@@ -23,16 +23,17 @@ class PropertyController {
   };
 
   postProgress = async (req, res, next) => {
+    console.log(req.body);
+    console.log(req.user.id);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
     }
 
     try {
-      const progress = await propertyService.postProgress(
-        req.body,
-        req.user.id
-      );
+      const userId = req.user._id; // Assuming you have user info in request
+      const progressData = req.body;
+      const progress = await propertyService.postProgress(userId, progressData);
 
       res.status(StatusCodes.CREATED).json({
         status: 'success',
@@ -268,6 +269,28 @@ class PropertyController {
       },
     };
   };
+
+
+
+  // export const updateAvailability = catchAsync(async (req, res, next) => {
+  //   const { dates, status } = req.body;
+    
+  //   const property = await Property.findOne({
+  //     _id: req.params.id,
+  //     host: req.user.id
+  //   });
+  
+  //   if (!property) {
+  //     return next(new AppError('Property not found or unauthorized', 404));
+  //   }
+  
+  //   await property.updateAvailability(dates.map(date => new Date(date)), status);
+  
+  //   res.status(200).json({
+  //     status: 'success',
+  //     data: { property }
+  //   });
+  // });
 }
 
 export default PropertyController;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const OnboardingSchema = new mongoose.Schema(
   {
@@ -12,8 +12,7 @@ const OnboardingSchema = new mongoose.Schema(
       required: true,
     },
     formData: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
+      type: Object, // Changed from Map to Object
       default: {},
     },
     lastUpdated: {

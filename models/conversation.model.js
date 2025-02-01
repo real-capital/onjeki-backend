@@ -1,0 +1,35 @@
+// src/models/Conversation.js
+const conversationSchema = new mongoose.Schema({
+    participants: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    booking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking'
+    },
+    lastMessage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message'
+    },
+    unreadCounts: {
+      type: Map,
+      of: Number,
+      default: new Map()
+    },
+    status: {
+      type: String,
+      enum: ['active', 'archived'],
+      default: 'active'
+    }
+  }, {
+    timestamps: true
+  });
+  
+  conversationSchema.index({ participants: 1 });
+  conversationSchema.index({ booking: 1 });
+  conversationSchema.index({ 'unreadCounts.userId': 1 });
+  
+  const Conversation = mongoose.model('Conversation', conversationSchema);
+  
+  export default Conversation;

@@ -1,71 +1,231 @@
 import mongoose, { model, Schema } from 'mongoose';
 import { BookingStatus } from '../enum/booking.enum'; // Assuming `BookingStatus` is an enum
 
-const bookingSchema = new Schema({
-  guest: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'User',
-  },
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'Property',
-  },
-  checkIn: {
-    type: Date,
-    required: true,
-  },
-  checkOut: {
-    type: Date,
-    required: true,
-  },
-  // duration: {
-  //     type: Number,
-  //     required: true
-  // },
-  // discount: {
-  //     type: Number,
-  //     required: true
-  // },
-  // status: {
-  //     type: String,
-  //     enum: Object.values(BookingStatus) // Assuming `BookingStatus` is an enum
-  // },
-  // totalPrice: {
-  //     type: Number,
-  //     required: true
-  // },
-  guests: {
-    adults: { type: Number, required: true },
-    children: { type: Number, default: 0 },
-    infants: { type: Number, default: 0 },
-  },
-  payment: {
-    amount: { type: Number, required: true },
-    currency: { type: String, default: 'NGN' },
-    status: {
-      type: String,
-      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
-      default: 'PENDING',
-    },
-    transactionId: String,
-  },
-  status: {
-    type: String,
-    enum: Object.values(BookingStatus),
-    default: 'PENDING',
-  },
-  cancellation: {
-    cancelledAt: Date,
-    reason: String,
-    cancelledBy: {
-      type: Types.ObjectId,
+const bookingSchema = new Schema(
+  {
+    guest: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
       ref: 'User',
     },
-    refundAmount: Number,
+    property: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'Property',
+    },
+    checkIn: {
+      type: Date,
+      required: true,
+    },
+    checkOut: {
+      type: Date,
+      required: true,
+    },
+    host: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
+    // duration: {
+    //     type: Number,
+    //     required: true
+    // },
+    // discount: {
+    //     type: Number,
+    //     required: true
+    // },
+    // status: {
+    //     type: String,
+    //     enum: Object.values(BookingStatus) // Assuming `BookingStatus` is an enum
+    // },
+    // totalPrice: {
+    //     type: Number,
+    //     required: true
+    // },
+    pricing: {
+      nightlyRate: {
+        type: Number,
+        required: true,
+      },
+      nights: {
+        type: Number,
+        required: true,
+      },
+      cleaningFee: {
+        type: Number,
+        default: 0,
+      },
+      serviceFee: {
+        type: Number,
+        default: 0,
+      },
+      discount: {
+        type: Number,
+        default: 0,
+      },
+      total: {
+        type: Number,
+        required: true,
+      },
+      currency: {
+        type: String,
+        default: 'NGN',
+      },
+    },
+
+    guests: {
+      adults: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      children: {
+        type: Number,
+        default: 0,
+      },
+      infants: {
+        type: Number,
+        default: 0,
+      },
+    },
+    payment: {
+      amount: { type: Number },
+      currency: { type: String, default: 'NGN' },
+      status: {
+        type: String,
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING',
+      },
+      method: String,
+      transactionId: String,
+      paidAt: Date,
+      refundedAt: Date,
+      // transactionId: String,
+    },
+    status: {
+      type: String,
+      enum: Object.values(BookingStatus),
+      default: 'PENDING',
+    },
+
+    cancellation: {
+      cancelledBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      reason: String,
+      cancelledAt: Date,
+      refundAmount: Number,
+      refundStatus: {
+        type: String,
+        enum: ['Pending', 'Processed', 'Failed'],
+      },
+    },
+    specialRequests: String,
+    checkInDetails: {
+      estimatedArrivalTime: String,
+      actualCheckInTime: Date,
+      checkInNotes: String,
+    },
+    checkOutDetails: {
+      checkOutTime: Date,
+      checkOutNotes: String,
+    },
+    review: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Review',
+    },
+    conversation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Conversation',
+    },
   },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+
+bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 });
+bookingSchema.index({ guest: 1, status: 1 });
+bookingSchema.index({ host: 1, status: 1 });
+
+// Middleware
+bookingSchema.pre('save', async function (next) {
+  if (this.isNew) {
+    // Create conversation for booking
+    const conversation = await mongoose.model('Conversation').create({
+      booking: this._id,
+      participants: [this.guest, this.host],
+    });
+    this.conversation = conversation._id;
+  }
+  next();
 });
+
+// Methods
+bookingSchema.methods = {
+  async cancel(userId, reason) {
+    const now = new Date();
+
+    // Calculate refund amount based on cancellation policy
+    const property = await mongoose.model('Property').findById(this.property);
+    const refundAmount = await this.calculateRefundAmount(
+      property.rules.cancellationPolicy
+    );
+
+    this.status = 'Cancelled';
+    this.cancellation = {
+      cancelledBy: userId,
+      reason,
+      cancelledAt: now,
+      refundAmount,
+      refundStatus: 'Pending',
+    };
+
+    if (refundAmount > 0) {
+      // Process refund through payment service
+      const refund = await paymentService.processRefund(
+        this.payment.transactionId,
+        refundAmount
+      );
+
+      if (refund.success) {
+        this.cancellation.refundStatus = 'Processed';
+        this.payment.status = 'Refunded';
+        this.payment.refundedAt = now;
+      } else {
+        this.cancellation.refundStatus = 'Failed';
+      }
+    }
+
+    await this.save();
+    return this;
+  },
+
+  calculateRefundAmount(cancellationPolicy) {
+    const now = new Date();
+    const checkIn = new Date(this.checkIn);
+    const daysUntilCheckIn = Math.ceil((checkIn - now) / (1000 * 60 * 60 * 24));
+
+    let refundPercentage = 0;
+    switch (cancellationPolicy) {
+      case 'flexible':
+        refundPercentage = daysUntilCheckIn >= 1 ? 100 : 0;
+        break;
+      case 'moderate':
+        refundPercentage = daysUntilCheckIn >= 5 ? 100 : 50;
+        break;
+      case 'strict':
+        refundPercentage =
+          daysUntilCheckIn >= 14 ? 100 : daysUntilCheckIn >= 7 ? 50 : 0;
+        break;
+    }
+
+    return (this.pricing.total * refundPercentage) / 100;
+  },
+};
 
 const BookingModel = model('Booking', bookingSchema);
 
