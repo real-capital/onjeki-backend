@@ -10,6 +10,25 @@ const OnboardingSchema = new mongoose.Schema(
     currentStep: {
       type: String,
       required: true,
+      enum: [
+        'purpose',
+        'welcome',
+        'buildingType',
+        'space',
+        'location',
+        'guestInfo',
+        'welcomeTwo',
+        'amenities',
+        'photos',
+        'title',
+        'description',
+        'finishUp',
+        'bookingSetting',
+        'pricing',
+        'discounts',
+        'rules',
+        'review',
+      ],
     },
     formData: {
       type: Object, // Changed from Map to Object
