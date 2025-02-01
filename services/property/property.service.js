@@ -6,6 +6,7 @@ import UploadService from '../upload/upload.service.js';
 import { EListStatus } from '../../enum/house.enum.js';
 import mongoose from 'mongoose';
 import LastListingModel from '../../models/lastListing.model.js';
+import OnboardingModel from '../../models/onboarding.model.js';
 
 // const uploadService = new UploadService();
 
@@ -372,116 +373,6 @@ class PropertyService {
     }
   }
 
-  // async searchProperties(filters, pagination, sort) {
-  //   try {
-  //     const query = this.buildSearchQuery(filters);
-  //     const skip = (pagination.page - 1) * pagination.limit;
-
-  //     // Execute query with pagination
-  //     const [properties, total] = await Promise.all([
-  //       PropertyModel.find(query)
-  //         .populate('owner', 'name email')
-  //         .populate('buildingType')
-  //         .populate('amenities')
-  //         .sort(sort)
-  //         .skip(skip)
-  //         .limit(pagination.limit)
-  //         .lean(),
-  //       PropertyModel.countDocuments(query)
-  //     ]);
-
-  //     return {
-  //       properties,
-  //       pagination: {
-  //         page: pagination.page,
-  //         limit: pagination.limit,
-  //         total,
-  //         pages: Math.ceil(total / pagination.limit),
-  //         hasMore: skip + properties.length < total
-  //       }
-  //     };
-  //   } catch (error) {
-  //     throw new HttpException(
-  //       StatusCodes.INTERNAL_SERVER_ERROR,
-  //       'Error searching properties'
-  //     );
-  //   }
-  // }
-
-  // buildSearchQuery(filters) {
-  //   const query = {};
-
-  //   // Add your query building logic here
-  //   // This should match the structure of your filters object
-  //   Object.entries(filters).forEach(([key, value]) => {
-  //     if (value !== undefined && value !== null) {
-  //       query[key] = value;
-  //     }
-  //   });
-
-  //   return query;
-  // }
-
-  // buildSearchQuery(filters) {
-  //   const query = { listStatus: EListStatus.UNDER_REVIEW };
-
-  //   if (filters.type) {
-  //     query.type = filters.type;
-  //   }
-
-  //   if (filters.buildingType) {
-  //     query.buildingType = filters.buildingType;
-  //   }
-
-  //   if (filters.space) {
-  //     query.space = filters.space;
-  //   }
-
-  //   if (filters.priceRange) {
-  //     query.price = {
-  //       $gte: filters.priceRange.min,
-  //       $lte: filters.priceRange.max,
-  //     };
-  //   }
-
-  //   if (filters.location) {
-  //     if (filters.location.city) {
-  //       query['location.city'] = filters.location.city;
-  //     }
-  //     if (filters.location.country) {
-  //       query['location.country'] = filters.location.country;
-  //     }
-  //     if (filters.location.coordinates) {
-  //       query['location.coordinates'] = {
-  //         $near: {
-  //           $geometry: {
-  //             type: 'Point',
-  //             coordinates: [
-  //               filters.location.coordinates.longitude,
-  //               filters.location.coordinates.latitude,
-  //             ],
-  //           },
-  //           $maxDistance: filters.location.radius || 10000, // Default 10km
-  //         },
-  //       };
-  //     }
-  //   }
-
-  //   if (filters.amenities?.length) {
-  //     query.amenities = { $all: filters.amenities };
-  //   }
-
-  //   if (filters.guests) {
-  //     query.guests = { $gte: filters.guests };
-  //   }
-
-  //   if (filters.bedrooms) {
-  //     query.bedrooms = { $gte: filters.bedrooms };
-  //   }
-
-  //   return query;
-  // }
-
   async getPropertyNearBy(latitude, longitude, radius) {
     try {
       // Validate inputs
@@ -571,38 +462,83 @@ class PropertyService {
     }
   }
 
-  // async getPropertyNearBy(latitude, longitude, radius) {
-  //   // Validate and parse the latitude, longitude, and radius
-  //   if (!latitude || !longitude || !radius) {
-  //     throw new Error('Latitude, longitude, and radius are required.');
-  //   }
+  async getProgress(userId) {
+    try {
+      const progress = await OnboardingModel.findOne({
+        userId,
+        isCompleted: false,
+      }).sort({ lastUpdated: -1 });
 
-  //   // Convert to float and set default radius to 5000 meters (5km) if not provided
-  //   const parsedLatitude = parseFloat(latitude);
-  //   const parsedLongitude = parseFloat(longitude);
-  //   const parsedRadius = parseInt(radius) || 5000; // Default to 5 km if no radius provided
+      if (!progress) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'No onboarding progress found'
+        );
+      }
 
-  //   // Find properties within the specified radius using the geospatial $near operator
-  //   const properties = await PropertyModel.find({
-  //     'location.coordinates': {
-  //       $near: {
-  //         $geometry: {
-  //           type: 'Point',
-  //           coordinates: [parsedLongitude, parsedLatitude], // Longitude, Latitude in [long, lat] order
-  //         },
-  //         $maxDistance: parsedRadius, // Max distance in meters
-  //       },
-  //     },
-  //   });
-  //   if (!properties || properties.length === 0) {
-  //     return properties;
-  //   }
+      return progress;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching progress'
+      );
+    }
+  }
 
-  //   // Return the found properties
-  //   return properties;
-  // }
+  async postProgress(currentStep, formData, userId) {
+    try {
+      let progress = await OnboardingProgress.findOne({
+        userId,
+        isCompleted: false,
+      });
 
-  // Add more methods as needed
+      if (progress) {
+        progress.currentStep = currentStep;
+        progress.formData = formData;
+        progress.lastUpdated = new Date();
+      } else {
+        progress = new OnboardingProgress({
+          userId,
+          currentStep,
+          formData,
+        });
+      }
+
+      await progress.save();
+      return progress;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error posting progress'
+      );
+    }
+  }
+
+  async completeOnboaring(userId) {
+    try {
+      const progress = await OnboardingProgress.findOne({
+        userId,
+        isCompleted: false,
+      });
+
+      if (!progress) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'No onboarding progress found'
+        );
+      }
+
+      progress.isCompleted = true;
+      await progress.save();
+
+      return progress;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error completing onboarding'
+      );
+    }
+  }
 }
 
 export default PropertyService;

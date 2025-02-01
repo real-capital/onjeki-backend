@@ -25,13 +25,26 @@ class PropertyRoute extends Route {
     this.router.post(
       `${this.path}/lastListingPath`,
       isAuthenticated,
-      validate,
       this.controller.postLastListingPath
+    );
+    this.router.get(
+      `${this.path}/progress`,
+      isAuthenticated,
+      this.controller.getProgress
+    );
+    this.router.post(
+      `${this.path}/progress`,
+      isAuthenticated,
+      this.controller.postProgress
+    );
+    this.router.post(
+      `${this.path}/complete`,
+      isAuthenticated,
+      this.controller.completeOnboarding
     );
     this.router.get(
       `${this.path}/lastListingPath`,
       isAuthenticated,
-      validate,
       this.controller.getLastListingPath
     );
 
