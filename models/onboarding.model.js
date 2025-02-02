@@ -11,7 +11,6 @@ const OnboardingSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: [
-        'purpose',
         'welcome',
         'buildingType',
         'space',
