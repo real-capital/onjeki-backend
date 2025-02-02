@@ -559,12 +559,12 @@ class PropertyService {
         isCompleted: false,
       });
 
-      if (!progress) {
-        throw new HttpException(
-          StatusCodes.NOT_FOUND,
-          'No onboarding progress found'
-        );
-      }
+      // if (!progress) {
+      //   throw new HttpException(
+      //     StatusCodes.NOT_FOUND,
+      //     'No onboarding progress found'
+      //   );
+      // }
 
       progress.isCompleted = true;
       await progress.save();
