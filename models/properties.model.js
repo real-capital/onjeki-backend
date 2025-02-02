@@ -1,5 +1,6 @@
 import mongoose, { Schema, model } from 'mongoose';
 import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js';
+import slugify from 'slugify';
 
 const propertySchema = new Schema(
   {
@@ -32,7 +33,6 @@ const propertySchema = new Schema(
     rules: {
       houseRules: [
         {
-          type: String,
           rule: String,
           icon: String,
         },
@@ -52,13 +52,13 @@ const propertySchema = new Schema(
       },
       additionalRules: [String],
     },
-    rules: {
-      checkInTime: { type: String, default: '15:00' },
-      checkOutTime: { type: String, default: '11:00' },
-      maxGuests: { type: Number, required: true },
-      petsAllowed: { type: Boolean, default: false },
-      smokingAllowed: { type: Boolean, default: false },
-    },
+    // rules: {
+    //   checkInTime: { type: String, default: '15:00' },
+    //   checkOutTime: { type: String, default: '11:00' },
+    //   maxGuests: { type: Number, required: true },
+    //   petsAllowed: { type: Boolean, default: false },
+    //   smokingAllowed: { type: Boolean, default: false },
+    // },
     location: {
       city: { type: String, required: true },
       state: { type: String, required: true },
@@ -146,13 +146,6 @@ const propertySchema = new Schema(
         },
       ],
     },
-
-    // discount: {
-    //   firstBooking: { type: Number },
-    //   weekBooking: { type: Number },
-    //   monthlyBooking: { type: Number },
-    //   general: { type: Number },
-    // },
     size: { type: String, required: false },
     hasMortgage: { type: Boolean },
     isNew: { type: Boolean },
@@ -190,16 +183,7 @@ const propertySchema = new Schema(
         default: false,
       },
     },
-    // availability: {
-    //   isActive: { type: Boolean, default: true },
-    //   blockedDates: [
-    //     {
-    //       startDate: Date,
-    //       endDate: Date,
-    //       reason: String,
-    //     },
-    //   ],
-    // },
+
     stats: {
       views: {
         type: Number,

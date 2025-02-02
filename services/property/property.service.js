@@ -487,15 +487,16 @@ class PropertyService {
         isCompleted: false,
       }).sort({ lastUpdated: -1 });
 
-      if (!progress) {
-        throw new HttpException(
-          StatusCodes.NOT_FOUND,
-          'No onboarding progress found'
-        );
-      }
+      // if (!progress) {
+      //   throw new HttpException(
+      //     StatusCodes.NOT_FOUND,
+      //     'No onboarding progress found'
+      //   );
+      // }
 
       return progress;
     } catch (error) {
+      console.log(error);
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Error fetching progress'
