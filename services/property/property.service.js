@@ -547,7 +547,7 @@ class PropertyService {
       console.log(error);
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        'Error posting progress'
+        error
       );
     }
   }

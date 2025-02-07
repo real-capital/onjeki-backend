@@ -1,4 +1,5 @@
 // controllers/building.controller.js
+import { validationResult } from 'express-validator';
 import BuildingService from '../../services/building/building.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';

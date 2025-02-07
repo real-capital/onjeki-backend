@@ -15,6 +15,7 @@ class BuildingRoute extends Route {
 
   initializeRoute() {
     this.router.get(`${this.path}`, this.controller.getAllBuildings);
+    this.router.post(`${this.path}`, this.controller.createBuilding);
   }
 }
 
