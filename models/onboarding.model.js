@@ -19,6 +19,7 @@ const OnboardingSchema = new mongoose.Schema(
         'welcomeTwo',
         'amenities',
         'photos',
+        'photoReorder',
         'title',
         'description',
         'finishUp',
