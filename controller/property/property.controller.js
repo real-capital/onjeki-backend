@@ -103,7 +103,7 @@ class PropertyController {
     try {
       const urls = await propertyService.uploadImage(req.body, req.user.id);
       res.status(StatusCodes.CREATED).json({
-        url: urls,
+        urls: urls,
       });
     } catch (error) {
       next(error);
