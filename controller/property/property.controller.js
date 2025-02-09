@@ -23,17 +23,49 @@ class PropertyController {
     }
   };
 
+  // postProgress = async (req, res, next) => {
+  //   console.log(req.body);
+  //   console.log(req.user.id);
+  //   const errors = validationResult(req);
+  //   if (!errors.isEmpty()) {
+  //     return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+  //   }
+
+  //   try {
+  //     const userId = req.user._id; // Assuming you have user info in request
+  //     const progressData = req.body;
+  //     const progress = await propertyService.postProgress(userId, progressData);
+
+  //     res.status(StatusCodes.CREATED).json({
+  //       status: 'success',
+  //       data: progress,
+  //     });
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // };
+
   postProgress = async (req, res, next) => {
-    console.log(req.body);
-    console.log(req.user.id);
+    // Validate the request
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
     }
 
     try {
-      const userId = req.user._id; // Assuming you have user info in request
-      const progressData = req.body;
+      const userId = req.user._id; // Assuming user ID is available in request (from authentication middleware)
+      const progressData = req.body; // This contains the form data
+
+      // Handle uploaded files (locals)
+      const uploadedFiles = req.files; // This will contain the array of uploaded files
+
+      // Process the uploaded images (store paths or handle them as needed)
+      const imagePaths = uploadedFiles.map((file) => file.path); // Store file paths or URLs
+
+      // Add the image paths to the form data
+      progressData.formData.images = imagePaths;
+
+      // Call your service to save the progress (with image paths and form data)
       const progress = await propertyService.postProgress(userId, progressData);
 
       res.status(StatusCodes.CREATED).json({
@@ -271,22 +303,20 @@ class PropertyController {
     };
   };
 
-
-
   // export const updateAvailability = catchAsync(async (req, res, next) => {
   //   const { dates, status } = req.body;
-    
+
   //   const property = await Property.findOne({
   //     _id: req.params.id,
   //     host: req.user.id
   //   });
-  
+
   //   if (!property) {
   //     return next(new AppError('Property not found or unauthorized', 404));
   //   }
-  
+
   //   await property.updateAvailability(dates.map(date => new Date(date)), status);
-  
+
   //   res.status(200).json({
   //     status: 'success',
   //     data: { property }
