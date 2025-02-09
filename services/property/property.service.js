@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import LastListingModel from '../../models/lastListing.model.js';
 import OnboardingModel from '../../models/onboarding.model.js';
 
-// const uploadService = new UploadService();
+const uploadService = new UploadService();
 
 class PropertyService {
   async postLastListingPath(listingPath, userId) {
@@ -49,12 +49,14 @@ class PropertyService {
   }
 
   async uploadImage(images, userId) {
+    console.log(images);
+    console.log('uploading');
     let uploadedImages = [];
     let imageUrls = []; // Initialize as an empty array
     try {
       // Handle image uploads if present
       if (images && Array.isArray(images)) {
-        uploadedImages = await UploadService.uploadMultipleImages(
+        uploadedImages = await uploadService.uploadMultipleImages(
           images,
           `localUploads/${userId}`
         );
@@ -62,6 +64,9 @@ class PropertyService {
           uploadedImages.map(async (image) => image.secure_url)
         );
       }
+      console.log('uploadedImages');
+      console.log(uploadedImages);
+      console.log(imageUrls);
 
       return imageUrls;
     } catch (error) {
@@ -71,7 +76,7 @@ class PropertyService {
           await Promise.all(
             uploadedImages.map(async (img) => {
               if (img.public_id) {
-                await UploadService.deleteImage(img.public_id);
+                await uploadService.deleteImage(img.public_id);
               }
             })
           );
@@ -92,7 +97,7 @@ class PropertyService {
     try {
       // Handle image uploads if present
       if (propertyData.images && Array.isArray(propertyData.images)) {
-        const uploadedImages = await UploadService.uploadMultipleImages(
+        const uploadedImages = await uploadService.uploadMultipleImages(
           propertyData.images,
           `properties/${userId}`
         );
@@ -124,7 +129,7 @@ class PropertyService {
           await Promise.all(
             uploadedImages.map(async (img) => {
               if (img.public_id) {
-                await UploadService.deleteImage(img.public_id);
+                await uploadService.deleteImage(img.public_id);
               }
             })
           );
@@ -152,7 +157,7 @@ class PropertyService {
       }
 
       // Upload new images
-      const uploadedImages = await UploadService.uploadMultipleImages(
+      const uploadedImages = await uploadService.uploadMultipleImages(
         newImages,
         `properties/${userId}`
       );

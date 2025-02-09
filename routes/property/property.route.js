@@ -1,11 +1,19 @@
 // routes/property/property.route.js
 import express from 'express';
+import multer from 'multer';
 import { Route } from '../../interfaces/route.interface.js';
 import PropertyController from '../../controller/property/property.controller.js';
 import { validate } from '../../middlewares/validation.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import { validateSearchQuery } from '../../validation/validateSearch.js';
+const storage = multer.diskStorage({
+  filename: function (req, file, callback) {
+    callback(null, file.originalname);
+  },
+});
 
+const upload = multer({ storage });
+// const upload = multer({ storage: multer.memoryStorage() });
 class PropertyRoute extends Route {
   constructor() {
     super(express.Router()); // Initialize the parent class
@@ -39,6 +47,8 @@ class PropertyRoute extends Route {
     );
     this.router.post(
       `${this.path}/upload`,
+
+      upload.array('locals'),
       isAuthenticated,
       this.controller.uploadImages
     );

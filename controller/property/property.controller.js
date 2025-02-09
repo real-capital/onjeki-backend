@@ -95,13 +95,23 @@ class PropertyController {
     }
   };
   uploadImages = async (req, res, next) => {
+    console.log(req.files.locals);
+    if (!req.files ) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        status: 'error',
+        message: 'No files uploaded',
+      });
+    }
+    console.log('req');
+    console.log(req.user.id);
+    console.log(req.files);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
     }
 
     try {
-      const urls = await propertyService.uploadImage(req.body, req.user.id);
+      const urls = await propertyService.uploadImage(req.files, req.user.id);
       res.status(StatusCodes.CREATED).json({
         urls: urls,
       });

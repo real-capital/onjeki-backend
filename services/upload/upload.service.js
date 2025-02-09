@@ -1,5 +1,7 @@
 import cloudinary from '../../config/cloudinary.js';
 import { Readable } from 'stream';
+import HttpException from '../../utils/exception.js';
+import { StatusCodes } from 'http-status-codes';
 
 class UploadService {
   async uploadImage(file, folder = 'properties') {
@@ -30,7 +32,10 @@ class UploadService {
     }
   }
 
-  static async uploadMultipleImages(images, folder) {
+  async uploadMultipleImages(images, folder) {
+    console.log('images');
+    console.log(images);
+    console.log(folder);
     try {
       if (!images || !Array.isArray(images)) {
         throw new Error('No images provided or invalid format');
@@ -40,12 +45,15 @@ class UploadService {
         const result = await cloudinary.uploader.upload(image.path, {
           folder: folder,
         });
+        console.log('result');
+        console.log(result);
         return {
           public_id: result.public_id,
           secure_url: result.secure_url,
           originalname: image.originalname,
         };
       });
+      console.log(uploadPromises);
 
       return await Promise.all(uploadPromises);
     } catch (error) {
@@ -57,7 +65,7 @@ class UploadService {
   }
 
 
-  static async deleteImage(publicId) {
+   async deleteImage(publicId) {
     try {
       if (!publicId) {
         throw new Error('No publicId provided for image deletion');
@@ -120,4 +128,4 @@ class UploadService {
   }
 }
 
-export default new UploadService();
+export default UploadService;

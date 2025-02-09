@@ -17,10 +17,10 @@ export const isAuthenticated = async (req, res, next) => {
 
   try {
     const decoded = Jwt.verifyJwt(token); // Verify token and get decoded data (user info)
-    console.log('decoded');
-    console.log(decoded);
+    // console.log('decoded');
+    // console.log(decoded);
     const user = await User.findById(decoded.id);
-    console.log(user);
+    // console.log(user);
 
     if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
