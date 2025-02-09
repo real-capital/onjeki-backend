@@ -48,6 +48,56 @@ class PropertyService {
     }
   }
 
+  async uploadImage(images, userId) {
+    let uploadedImages = [];
+    let imageUrls;
+    try {
+      // Handle image uploads if present
+      if (images && Array.isArray(images)) {
+        const uploadedImages = await UploadService.uploadMultipleImages(
+          images,
+          `localUploads/${userId}`
+        );
+        imageUrls = await Promise.all(
+          uploadedImages.map(async (image) => ({
+            url: image.secure_url,
+            caption: image.originalname || '',
+            isPrimary: false,
+            publicId: image.public_id,
+          }))
+        );
+      }
+
+      // const property = new PropertyModel({
+      //   ...propertyData,
+      //   owner: userId,
+      // });
+      // await property.save();
+
+      return imageUrls;
+    } catch (error) {
+      // If there's an error, cleanup any uploaded images
+      if (uploadedImages.length > 0) {
+        try {
+          await Promise.all(
+            uploadedImages.map(async (img) => {
+              if (img.public_id) {
+                await UploadService.deleteImage(img.public_id);
+              }
+            })
+          );
+        } catch (cleanupError) {
+          console.error('Error cleaning up images:', cleanupError);
+        }
+      }
+
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        error.message || 'Error uploading images'
+      );
+    }
+  }
+
   async createProperty(propertyData, userId) {
     let uploadedImages = [];
     try {
@@ -77,25 +127,8 @@ class PropertyService {
       });
       await property.save();
 
-      // Notify nearby users about new property
-      // if (property.listStatus === 'published') {
-      //   await notifyNearbyUsers(property);
-      // }
       return property;
     } catch (error) {
-      // If there's an error, cleanup any uploaded images
-      // if (propertyData.photo && propertyData.photo.images) {
-      //   try {
-      //     await Promise.all(
-      //       propertyData.photo.images.map((img) =>
-      //         UploadService.deleteImage(img.publicId)
-      //       )
-      //     );
-      //   } catch (cleanupError) {
-      //     console.error('Error cleaning up images:', cleanupError);
-      //   }
-      // }
-
       // If there's an error, cleanup any uploaded images
       if (uploadedImages.length > 0) {
         try {
@@ -506,11 +539,6 @@ class PropertyService {
 
   async postProgress(userId, data) {
     try {
-      // let progress = await OnboardingModel.findOne({
-      //   userId,
-      //   isCompleted: false,
-      // });
-
       const progressData = {
         userId: userId,
         currentStep: data.currentStep,
@@ -519,17 +547,6 @@ class PropertyService {
         lastUpdated: new Date(),
       };
 
-      // if (progress) {
-      //   progress.currentStep = currentStep;
-      //   progress.formData = formData;
-      //   progress.lastUpdated = new Date();
-      // } else {
-      //   progress = new OnboardingModel({
-      //     userId,
-      //     currentStep,
-      //     formData,
-      //   });
-      // }
       const progress = await OnboardingModel.findOneAndUpdate(
         { userId: userId, isCompleted: false },
         progressData,
@@ -545,10 +562,7 @@ class PropertyService {
       return progress;
     } catch (error) {
       console.log(error);
-      throw new HttpException(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        error
-      );
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
 
@@ -577,8 +591,6 @@ class PropertyService {
       );
     }
   }
-
-
 }
 
 export default PropertyService;

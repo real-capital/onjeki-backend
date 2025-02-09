@@ -55,6 +55,8 @@ class UploadService {
       );
     }
   }
+
+
   static async deleteImage(publicId) {
     try {
       if (!publicId) {

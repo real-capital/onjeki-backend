@@ -94,6 +94,22 @@ class PropertyController {
       next(error);
     }
   };
+  uploadImages = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      const urls = await propertyService.uploadImage(req.body, req.user.id);
+      res.status(StatusCodes.CREATED).json({
+        status: 'success',
+        data: urls,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   createProperty = async (req, res, next) => {
     const errors = validationResult(req);
@@ -271,22 +287,20 @@ class PropertyController {
     };
   };
 
-
-
   // export const updateAvailability = catchAsync(async (req, res, next) => {
   //   const { dates, status } = req.body;
-    
+
   //   const property = await Property.findOne({
   //     _id: req.params.id,
   //     host: req.user.id
   //   });
-  
+
   //   if (!property) {
   //     return next(new AppError('Property not found or unauthorized', 404));
   //   }
-  
+
   //   await property.updateAvailability(dates.map(date => new Date(date)), status);
-  
+
   //   res.status(200).json({
   //     status: 'success',
   //     data: { property }

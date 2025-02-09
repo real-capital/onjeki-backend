@@ -38,6 +38,11 @@ class PropertyRoute extends Route {
       this.controller.postProgress
     );
     this.router.post(
+      `${this.path}/upload`,
+      isAuthenticated,
+      this.controller.uploadImages
+    );
+    this.router.post(
       `${this.path}/complete`,
       isAuthenticated,
       this.controller.completeOnboarding
