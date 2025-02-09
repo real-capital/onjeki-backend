@@ -486,14 +486,6 @@ class PropertyService {
         userId,
         isCompleted: false,
       }).sort({ lastUpdated: -1 });
-
-      // if (!progress) {
-      //   throw new HttpException(
-      //     StatusCodes.NOT_FOUND,
-      //     'No onboarding progress found'
-      //   );
-      // }
-
       return progress;
     } catch (error) {
       console.log(error);
@@ -506,11 +498,6 @@ class PropertyService {
 
   async postProgress(userId, data) {
     try {
-      // let progress = await OnboardingModel.findOne({
-      //   userId,
-      //   isCompleted: false,
-      // });
-
       const progressData = {
         userId: userId,
         currentStep: data.currentStep,
@@ -519,17 +506,6 @@ class PropertyService {
         lastUpdated: new Date(),
       };
 
-      // if (progress) {
-      //   progress.currentStep = currentStep;
-      //   progress.formData = formData;
-      //   progress.lastUpdated = new Date();
-      // } else {
-      //   progress = new OnboardingModel({
-      //     userId,
-      //     currentStep,
-      //     formData,
-      //   });
-      // }
       const progress = await OnboardingModel.findOneAndUpdate(
         { userId: userId, isCompleted: false },
         progressData,
@@ -545,10 +521,7 @@ class PropertyService {
       return progress;
     } catch (error) {
       console.log(error);
-      throw new HttpException(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        error
-      );
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
 
@@ -577,8 +550,6 @@ class PropertyService {
       );
     }
   }
-
-
 }
 
 export default PropertyService;
