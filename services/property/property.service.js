@@ -59,12 +59,7 @@ class PropertyService {
           `localUploads/${userId}`
         );
         imageUrls = await Promise.all(
-          uploadedImages.map(async (image) => ({
-            url: image.secure_url,
-            caption: image.originalname || '',
-            isPrimary: false,
-            publicId: image.public_id,
-          }))
+          uploadedImages.map(async (image) => image.secure_url)
         );
       }
 
