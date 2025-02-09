@@ -5,7 +5,9 @@ import PropertyController from '../../controller/property/property.controller.js
 import { validate } from '../../middlewares/validation.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import { validateSearchQuery } from '../../validation/validateSearch.js';
+import multer from 'multer';
 
+const upload = multer({ dest: 'locals/' });
 class PropertyRoute extends Route {
   constructor() {
     super(express.Router()); // Initialize the parent class
@@ -34,6 +36,7 @@ class PropertyRoute extends Route {
     );
     this.router.post(
       `${this.path}/progress`,
+      upload.array('photos'),
       isAuthenticated,
       this.controller.postProgress
     );

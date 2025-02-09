@@ -134,7 +134,7 @@ const propertySchema = new Schema(
         {
           type: {
             type: String,
-            enum: ['weekly', 'monthly', 'early_bird', 'general'],
+            enum: ['weekly', 'monthly', 'early_bird'],
           },
           percentage: {
             type: Number,
