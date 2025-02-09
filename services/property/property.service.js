@@ -50,11 +50,11 @@ class PropertyService {
 
   async uploadImage(images, userId) {
     let uploadedImages = [];
-    let imageUrls;
+    let imageUrls = []; // Initialize as an empty array
     try {
       // Handle image uploads if present
       if (images && Array.isArray(images)) {
-        const uploadedImages = await UploadService.uploadMultipleImages(
+        uploadedImages = await UploadService.uploadMultipleImages(
           images,
           `localUploads/${userId}`
         );
@@ -67,12 +67,6 @@ class PropertyService {
           }))
         );
       }
-
-      // const property = new PropertyModel({
-      //   ...propertyData,
-      //   owner: userId,
-      // });
-      // await property.save();
 
       return imageUrls;
     } catch (error) {
