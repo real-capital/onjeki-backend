@@ -44,6 +44,9 @@ const propertySchema = new Schema(
       checkOutTime: String,
       maxGuests: { type: Number, required: true },
       petsAllowed: { type: Boolean, default: false },
+      cameraPresent: { type: Boolean, default: false },
+      // weaponsPresent: { type: Boolean, default: false },
+      nois: { type: Boolean, default: false },
       smokingAllowed: { type: Boolean, default: false },
       cancellationPolicy: {
         type: String,
@@ -60,7 +63,7 @@ const propertySchema = new Schema(
     //   smokingAllowed: { type: Boolean, default: false },
     // },
     location: {
-      city: { type: String, required: true },
+      city: { type: String, },
       state: { type: String, required: true },
       country: { type: String, required: true },
       address: { type: String, required: true },
