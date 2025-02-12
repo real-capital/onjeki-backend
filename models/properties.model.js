@@ -30,6 +30,7 @@ const propertySchema = new Schema(
       enum: Object.values(EHouseSpace),
     },
     usedCurrentLocation: { type: Boolean },
+    isOrganization: { type: Boolean, default: true, required: true },
     rules: {
       houseRules: [
         {
@@ -45,7 +46,7 @@ const propertySchema = new Schema(
       maxGuests: { type: Number, required: true },
       petsAllowed: { type: Boolean, default: false },
       cameraPresent: { type: Boolean, default: false },
-      // weaponsPresent: { type: Boolean, default: false },
+      noiseCheck: { type: Boolean, default: false },
       nois: { type: Boolean, default: false },
       smokingAllowed: { type: Boolean, default: false },
       cancellationPolicy: {
@@ -63,7 +64,7 @@ const propertySchema = new Schema(
     //   smokingAllowed: { type: Boolean, default: false },
     // },
     location: {
-      city: { type: String, },
+      city: { type: String },
       state: { type: String, required: true },
       country: { type: String, required: true },
       address: { type: String, required: true },
