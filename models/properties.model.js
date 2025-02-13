@@ -47,7 +47,7 @@ const propertySchema = new Schema(
       petsAllowed: { type: Boolean, default: false },
       cameraPresent: { type: Boolean, default: false },
       noiseCheck: { type: Boolean, default: false },
-      nois: { type: Boolean, default: false },
+      weaponsPresent: { type: Boolean, default: false },
       smokingAllowed: { type: Boolean, default: false },
       cancellationPolicy: {
         type: String,
