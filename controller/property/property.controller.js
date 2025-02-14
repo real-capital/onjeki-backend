@@ -241,7 +241,7 @@ class PropertyController {
       guests,
       bedrooms,
       sortBy = 'createdAt',
-      sortOrder = 'desc',
+      sortOrder = 'asc',
       listStatus,
       isBooked,
       isFurnished,

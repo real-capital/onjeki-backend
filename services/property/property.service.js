@@ -207,7 +207,7 @@ class PropertyService {
         .skip(skip)
         .limit(pagination.limit)
         .populate('owner', '_id name email')
-        .sort('-createdAt');
+        .sort('createdAt');
 
       // // Increment views if visitor is not the host
       // if (userId !== properties.owner._id) {
