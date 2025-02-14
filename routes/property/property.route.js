@@ -82,6 +82,12 @@ class PropertyRoute extends Route {
       isAuthenticated,
       this.controller.getPropertyById
     );
+    this.router.get(
+      `${this.path}/userListing`,
+      validate,
+      isAuthenticated,
+      this.controller.getListingByuser
+    );
 
     this.router.get(
       `${this.path}/nearby`,

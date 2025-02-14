@@ -96,7 +96,7 @@ class PropertyController {
   };
   uploadImages = async (req, res, next) => {
     console.log(req.files.locals);
-    if (!req.files ) {
+    if (!req.files) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: 'error',
         message: 'No files uploaded',
@@ -134,6 +134,22 @@ class PropertyController {
       res.status(StatusCodes.CREATED).json({
         status: 'success',
         data: property,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getListingByuser = async (req, res, next) => {
+    try {
+      const userId = req.user.id; // Get the logged-in user ID
+
+      // Fetch properties where the user is the owner
+      const properties = await propertyService.getListingByuser(userId);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: properties,
       });
     } catch (error) {
       next(error);

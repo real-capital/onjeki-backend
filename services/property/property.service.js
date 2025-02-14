@@ -196,6 +196,20 @@ class PropertyService {
     }
   }
 
+  async getListingByuser(userId) {
+    try {
+      const properties = await PropertyModel.find({ owner: userId });
+
+      return properties;
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching properties'
+      );
+    }
+  }
+
   async getAllProperties(filters = {}, pagination = { page: 1, limit: 10 }) {
     try {
       const query = this.buildSearchQuery(filters);
