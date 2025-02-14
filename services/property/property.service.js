@@ -198,7 +198,10 @@ class PropertyService {
 
   async getListingByuser(userId) {
     try {
-      const properties = await PropertyModel.find({ owner: userId });
+      const properties = await PropertyModel.find({ owner: userId })
+        .populate('amenities')
+        .populate('buildingType')
+        .populate('owner', 'name email');
 
       return properties;
     } catch (error) {
