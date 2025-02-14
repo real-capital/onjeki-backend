@@ -201,7 +201,8 @@ class PropertyService {
       const properties = await PropertyModel.find({ owner: userId })
         .populate('amenities')
         .populate('buildingType')
-        .populate('owner', 'name email');
+        .populate('owner', 'name email')
+        .sort('createdAt');
 
       return properties;
     } catch (error) {
