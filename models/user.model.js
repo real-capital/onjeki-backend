@@ -13,6 +13,11 @@ const userSchema = new Schema(
     googleUserId: { type: String, unique: true, sparse: true }, // Store Google User ID
     isEmailVerified: { type: Boolean, default: false }, // Email verification status
     newToListing: { type: Boolean, default: true },
+    plan: {
+      type: String,
+      enum: ['basic', 'premium', 'enterprise'],
+      default: 'basic', // New users start with "basic"
+    },
     phoneNo: { type: String },
     bookings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
     criteria: [{ type: String }],

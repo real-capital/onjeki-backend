@@ -4,6 +4,8 @@ import PropertyService from '../../services/property/property.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 import SearchService from '../../services/property/search.service.js';
+import PropertyModel from '../../models/properties.model.js';
+import UserModel from '../../models/user.model.js';
 
 const propertyService = new PropertyService();
 const searchService = new SearchService();
@@ -127,6 +129,29 @@ class PropertyController {
     }
 
     try {
+      const userId = req.user.id;
+
+      // Fetch user details (assuming you store plan info in the User model)
+      const user = await UserModel.findById(userId);
+
+      if (!user) {
+        return next(new HttpException(StatusCodes.NOT_FOUND, 'User not found'));
+      }
+
+      // Fetch the number of listings created by the user
+      const userListingsCount = await PropertyModel.countDocuments({
+        owner: userId,
+      });
+
+      // Restrict based on plan
+      if (user.plan === 'basic' && userListingsCount >= 1) {
+        return next(
+          new HttpException(
+            StatusCodes.FORBIDDEN,
+            'You have reached your listing limit. Upgrade to Premium or Enterprise to add more listings.'
+          )
+        );
+      }
       const property = await propertyService.createProperty(
         req.body,
         req.user.id
