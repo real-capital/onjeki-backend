@@ -43,10 +43,11 @@ class AuthRoute extends Route {
       validate,
       this.controller.validateOtp
     );
-    // this.router.get(
-    //   `${this.path}/getAll`,
-    //   this.propController.getAllProperties
-    // );
+    this.router.get(
+      `${this.path}/me`,
+      isAuthenticated,
+      this.controller.getUser
+    );
     this.router.post(
       `${this.path}/updateNewToListing`,
       isAuthenticated,

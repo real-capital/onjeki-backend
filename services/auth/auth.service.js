@@ -92,6 +92,14 @@ class AuthService {
     return { token, name: user.name };
   }
 
+  async getUser(userId) {
+    const user = UserModel.findById(userId);
+    if (!user) {
+      throw new HttpException(StatusCodes.NOT_FOUND, 'User Not Found');
+    }
+    return user;
+  }
+
   // Create or update user based on Google or Apple profile info
   async createOrUpdateUser(profile) {
     const { email, name, googleUserId } = profile;

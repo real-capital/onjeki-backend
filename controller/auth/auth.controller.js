@@ -49,6 +49,19 @@ class AuthController {
       next(error);
     }
   }
+  async getUser(req, res, next) {
+    try {
+      const user = await authService.getUser(req.user.id);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: user,
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
 
   // Google Login
   //   async googleLogin(req, res, next) {
@@ -127,24 +140,22 @@ class AuthController {
     }
   };
 
-
-
   // upgradePlan = async (req, res, next) => {
   //   try {
   //     const { plan } = req.body; // "premium" or "enterprise"
   //     const validPlans = ['basic', 'premium', 'enterprise'];
-  
+
   //     if (!validPlans.includes(plan)) {
   //       return next(new HttpException(StatusCodes.BAD_REQUEST, 'Invalid plan'));
   //     }
-  
+
   //     // Update the user's plan
   //     const user = await User.findByIdAndUpdate(
   //       req.user.id,
   //       { plan },
   //       { new: true }
   //     );
-  
+
   //     res.status(StatusCodes.OK).json({
   //       status: 'success',
   //       message: `Your plan has been upgraded to ${plan}`,
@@ -154,7 +165,6 @@ class AuthController {
   //     next(error);
   //   }
   // };
-  
 }
 
 export default AuthController;
