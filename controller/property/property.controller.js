@@ -283,7 +283,7 @@ class PropertyController {
       bedrooms,
       sortBy = 'createdAt',
       sortOrder = 'asc',
-      listStatus,
+      listStatus = 'Approved',
       isBooked,
       isFurnished,
     } = req.query;

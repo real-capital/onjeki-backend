@@ -38,6 +38,9 @@ class SearchService {
     const query = {};
 
     // Purpose filter (Layover, Rent, Sale)
+    if (filters.listStatus) {
+      query.listStatus = filters.listStatus;
+    }
     if (filters.type) {
       query.type = filters.type;
     }
