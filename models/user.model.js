@@ -12,13 +12,19 @@ const userSchema = new Schema(
     otp: { type: Types.ObjectId, ref: 'Otp' },
     googleUserId: { type: String, unique: true, sparse: true }, // Store Google User ID
     isEmailVerified: { type: Boolean, default: false }, // Email verification status
+    phoneNumber: { type: String, required: true },
+    isPhoneVerified: { type: Boolean, default: false },
+    nin: { type: String, required: true },
+    isNinVerified: { type: Boolean, default: false },
+    ninLast4Digits: { type: String, required: false },
+    ninVerificationDate: { type: Date, required: false },
     newToListing: { type: Boolean, default: true },
     plan: {
       type: String,
       enum: ['basic', 'premium', 'enterprise'],
       default: 'basic', // New users start with "basic"
     },
-    phoneNo: { type: String },
+    // phoneNo: { type: String },
     bookings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
     criteria: [{ type: String }],
     notification: [

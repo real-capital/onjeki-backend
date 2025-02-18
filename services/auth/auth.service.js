@@ -12,8 +12,14 @@ import {
   GOOGLE_CLIENT_SECRET,
   CALLBACK_URL,
 } from '../../config/index.js';
+import { Vonage } from '@vonage/server-sdk';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+const vonage = new Vonage({
+  apiKey: process.env.NEXMO_API_KEY,
+  apiSecret: process.env.NEXMO_API_SECRET,
+});
 class AuthService {
   // Create account or login with email
   async createAccount(user) {
@@ -366,6 +372,51 @@ class AuthService {
   //       verifiedEmail: payload.email_verified,
   //     };
   //   }
+
+  // Send OTP
+  async sendPhoneOtp(userId) {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+    }
+
+    if (!user.phoneNumber) {
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        'Phone number is required'
+      );
+    }
+
+    const response = await vonage.verify.start({
+      number: user.phoneNumber,
+      brand: 'Onjeki',
+    });
+    console.log(response);
+
+    if (response.status !== '0') {
+      throw new HttpException(StatusCodes.BAD_REQUEST, 'Failed to send OTP');
+    }
+    console.log(response);
+
+    return { requestId: response.request_id };
+  }
+
+  // Verify OTP
+  async verifyPhoneOtp(userId, requestId, code) {
+    const response = await vonage.verify.check({
+      request_id: requestId,
+      code,
+    });
+
+    if (response.status !== '0') {
+      throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid OTP');
+    }
+
+    // Mark phone as verified
+    await UserModel.findByIdAndUpdate(userId, { isPhoneVerified: true });
+
+    return { message: 'Phone number verified successfully' };
+  }
 }
 
 export default AuthService;

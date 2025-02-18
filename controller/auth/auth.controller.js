@@ -165,6 +165,27 @@ class AuthController {
   //     next(error);
   //   }
   // };
+
+  sendPhoneOtp = async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const result = await authService.sendPhoneOtp(userId);
+      res.status(StatusCodes.OK).json({ status: 'success', data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  verifyPhoneOtp = async (req, res, next) => {
+    try {
+      const { requestId, code } = req.body;
+      const userId = req.user.id;
+      const result = await authService.verifyPhoneOtp(userId, requestId, code);
+      res.status(200).json({ status: 'success', data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export default AuthController;
