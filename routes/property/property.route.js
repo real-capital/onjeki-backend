@@ -32,6 +32,7 @@ class PropertyRoute extends Route {
     );
     this.router.patch(
       `${this.path}/:id`,
+      upload.array('locals'),
       isAuthenticated,
       // uploadMiddleware.array('images'), // If you're handling file uploads
       this.controller.updateProperty
