@@ -30,6 +30,12 @@ class PropertyRoute extends Route {
       validate,
       this.controller.createProperty
     );
+    this.router.patch(
+      `${this.path}/:id`,
+      isAuthenticated,
+      // uploadMiddleware.array('images'), // If you're handling file uploads
+      this.controller.updateProperty
+    );
     this.router.post(
       `${this.path}/lastListingPath`,
       isAuthenticated,

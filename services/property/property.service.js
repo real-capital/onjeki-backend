@@ -145,6 +145,81 @@ class PropertyService {
     }
   }
 
+  async updateProperty(propertyId, propertyData, userId) {
+    let uploadedImages = [];
+    try {
+        // Find existing property
+        const existingProperty = await PropertyModel.findOne({
+            _id: propertyId,
+            owner: userId
+        });
+
+        if (!existingProperty) {
+            throw new HttpException(
+                StatusCodes.NOT_FOUND,
+                'Property not found or unauthorized'
+            );
+        }
+
+        // Handle image uploads if present
+        if (propertyData.images && Array.isArray(propertyData.images)) {
+            uploadedImages = await uploadService.uploadMultipleImages(
+                propertyData.images,
+                `properties/${userId}`
+            );
+
+            // If there are existing images, combine them with new ones
+            const newImages = await Promise.all(
+                uploadedImages.map(async (image) => ({
+                    url: image.secure_url,
+                    caption: image.originalname || '',
+                    isPrimary: false,
+                    publicId: image.public_id,
+                }))
+            );
+
+            // Combine with existing images if any
+            const existingImages = existingProperty.photo?.images || [];
+            propertyData.photo = {
+                images: [...existingImages, ...newImages],
+                videos: existingProperty.photo?.videos || [],
+            };
+        }
+
+        // Update the property
+        const updatedProperty = await PropertyModel.findByIdAndUpdate(
+            propertyId,
+            {
+                ...propertyData,
+                updatedAt: new Date(),
+            },
+            { new: true } // Return updated document
+        );
+
+        return updatedProperty;
+    } catch (error) {
+        // If there's an error and we uploaded new images, clean them up
+        if (uploadedImages.length > 0) {
+            try {
+                await Promise.all(
+                    uploadedImages.map(async (img) => {
+                        if (img.public_id) {
+                            await uploadService.deleteImage(img.public_id);
+                        }
+                    })
+                );
+            } catch (cleanupError) {
+                console.error('Error cleaning up images:', cleanupError);
+            }
+        }
+
+        throw new HttpException(
+            StatusCodes.BAD_REQUEST,
+            error.message || 'Error updating property'
+        );
+    }
+}
+
   async updatePropertyImages(propertyId, newImages, userId) {
     try {
       const property = await PropertyModel.findOne({

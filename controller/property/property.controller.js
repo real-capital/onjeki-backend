@@ -165,6 +165,31 @@ class PropertyController {
     }
   };
 
+  async updateProperty(req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+    try {
+      const propertyId = req.params.id;
+      const userId = req.user.id; // Assuming you have auth middleware
+      const propertyData = req.body;
+
+      const updatedProperty = await propertyService.updateProperty(
+        propertyId,
+        propertyData,
+        userId
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: updatedProperty,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   getListingByuser = async (req, res, next) => {
     try {
       const userId = req.user.id; // Get the logged-in user ID
