@@ -147,7 +147,7 @@ class PropertyController {
       if (user.plan === 'basic' && userListingsCount >= 1) {
         return next(
           new HttpException(
-            StatusCodes.FORBIDDEN,
+            StatusCodes.UPGRADE_REQUIRED,
             'You have reached your listing limit. Upgrade to Premium or Enterprise to add more listings.'
           )
         );
