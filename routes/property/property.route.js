@@ -30,12 +30,38 @@ class PropertyRoute extends Route {
       validate,
       this.controller.createProperty
     );
+    // this.router.patch(
+    //   `${this.path}/:id`,
+    //   isAuthenticated,
+    //   // uploadMiddleware.array('images'), // If you're handling file uploads
+    //   this.controller.updateProperty
+    // );
+
     this.router.patch(
       `${this.path}/:id`,
-      upload.array('locals'),
       isAuthenticated,
-      // uploadMiddleware.array('images'), // If you're handling file uploads
+      validate,
       this.controller.updateProperty
+    );
+
+    this.router.post(
+      `${this.path}/:id/images`,
+      isAuthenticated,
+      upload.array('locals'),
+      // upload.array('images', 10),
+      this.controller.uploadImagestoProperty
+    );
+
+    this.router.delete(
+      `${this.path}/:id/images/:imageId`,
+      isAuthenticated,
+      this.controller.deleteImage
+    );
+
+    this.router.patch(
+      `${this.path}/:id/images/:imageId/primary`,
+      isAuthenticated,
+      this.controller.setPrimaryImage
     );
     this.router.post(
       `${this.path}/lastListingPath`,

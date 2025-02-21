@@ -98,6 +98,26 @@ const propertySchema = new Schema(
         },
       },
     },
+    directions: {
+      written: {
+        type: String,
+        trim: true,
+      },
+      landmarks: [
+        {
+          type: String,
+          trim: true,
+        },
+      ],
+      publicTransport: {
+        type: String,
+        trim: true,
+      },
+      parking: {
+        type: String,
+        trim: true,
+      },
+    },
     bedrooms: { type: Number },
     bathrooms: { type: Number },
     guests: { type: Number },

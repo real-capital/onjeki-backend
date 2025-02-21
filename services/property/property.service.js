@@ -58,7 +58,7 @@ class PropertyService {
       if (images && Array.isArray(images)) {
         uploadedImages = await uploadService.uploadMultipleImages(
           images,
-          `localUploads/${userId}`
+          `properties/${userId}`
         );
         imageUrls = await Promise.all(
           uploadedImages.map(async (image) => image.secure_url)
@@ -145,81 +145,234 @@ class PropertyService {
     }
   }
 
-  async updateProperty(propertyId, propertyData, userId) {
+  //   async updateProperty(propertyId, propertyData, userId) {
+  //     let uploadedImages = [];
+  //     try {
+  //         // Find existing property
+  //         const existingProperty = await PropertyModel.findOne({
+  //             _id: propertyId,
+  //             owner: userId
+  //         });
+
+  //         if (!existingProperty) {
+  //             throw new HttpException(
+  //                 StatusCodes.NOT_FOUND,
+  //                 'Property not found or unauthorized'
+  //             );
+  //         }
+
+  //         // Handle image uploads if present
+  //         if (propertyData.images && Array.isArray(propertyData.images)) {
+  //             uploadedImages = await uploadService.uploadMultipleImages(
+  //                 propertyData.images,
+  //                 `properties/${userId}`
+  //             );
+
+  //             // If there are existing images, combine them with new ones
+  //             const newImages = await Promise.all(
+  //                 uploadedImages.map(async (image) => ({
+  //                     url: image.secure_url,
+  //                     caption: image.originalname || '',
+  //                     isPrimary: false,
+  //                     publicId: image.public_id,
+  //                 }))
+  //             );
+
+  //             // Combine with existing images if any
+  //             const existingImages = existingProperty.photo?.images || [];
+  //             propertyData.photo = {
+  //                 images: [...existingImages, ...newImages],
+  //                 videos: existingProperty.photo?.videos || [],
+  //             };
+  //         }
+
+  //         // Update the property
+  //         const updatedProperty = await PropertyModel.findByIdAndUpdate(
+  //             propertyId,
+  //             {
+  //                 ...propertyData,
+  //                 updatedAt: new Date(),
+  //             },
+  //             { new: true } // Return updated document
+  //         );
+
+  //         return updatedProperty;
+  //     } catch (error) {
+  //         // If there's an error and we uploaded new images, clean them up
+  //         if (uploadedImages.length > 0) {
+  //             try {
+  //                 await Promise.all(
+  //                     uploadedImages.map(async (img) => {
+  //                         if (img.public_id) {
+  //                             await uploadService.deleteImage(img.public_id);
+  //                         }
+  //                     })
+  //                 );
+  //             } catch (cleanupError) {
+  //                 console.error('Error cleaning up images:', cleanupError);
+  //             }
+  //         }
+
+  //         throw new HttpException(
+  //             StatusCodes.BAD_REQUEST,
+  //             error.message || 'Error updating property'
+  //         );
+  //     }
+  // }
+
+  async updateProperty(propertyId, userId, updateData) {
+    try {
+      const property = await PropertyModel.findOneAndUpdate(
+        {
+          _id: propertyId,
+          owner: userId,
+        },
+        {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+        { new: true }
+      );
+
+      if (!property) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
+        );
+      }
+
+      return property;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async uploadPropertyImages(propertyId, userId, files) {
     let uploadedImages = [];
     try {
-        // Find existing property
-        const existingProperty = await PropertyModel.findOne({
-            _id: propertyId,
-            owner: userId
-        });
+      // Verify property ownership
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
 
-        if (!existingProperty) {
-            throw new HttpException(
-                StatusCodes.NOT_FOUND,
-                'Property not found or unauthorized'
-            );
-        }
-
-        // Handle image uploads if present
-        if (propertyData.images && Array.isArray(propertyData.images)) {
-            uploadedImages = await uploadService.uploadMultipleImages(
-                propertyData.images,
-                `properties/${userId}`
-            );
-
-            // If there are existing images, combine them with new ones
-            const newImages = await Promise.all(
-                uploadedImages.map(async (image) => ({
-                    url: image.secure_url,
-                    caption: image.originalname || '',
-                    isPrimary: false,
-                    publicId: image.public_id,
-                }))
-            );
-
-            // Combine with existing images if any
-            const existingImages = existingProperty.photo?.images || [];
-            propertyData.photo = {
-                images: [...existingImages, ...newImages],
-                videos: existingProperty.photo?.videos || [],
-            };
-        }
-
-        // Update the property
-        const updatedProperty = await PropertyModel.findByIdAndUpdate(
-            propertyId,
-            {
-                ...propertyData,
-                updatedAt: new Date(),
-            },
-            { new: true } // Return updated document
-        );
-
-        return updatedProperty;
-    } catch (error) {
-        // If there's an error and we uploaded new images, clean them up
-        if (uploadedImages.length > 0) {
-            try {
-                await Promise.all(
-                    uploadedImages.map(async (img) => {
-                        if (img.public_id) {
-                            await uploadService.deleteImage(img.public_id);
-                        }
-                    })
-                );
-            } catch (cleanupError) {
-                console.error('Error cleaning up images:', cleanupError);
-            }
-        }
-
+      if (!property) {
         throw new HttpException(
-            StatusCodes.BAD_REQUEST,
-            error.message || 'Error updating property'
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
         );
-    }
-}
+      }
 
+      // Upload images to cloud storage
+      uploadedImages = await uploadService.uploadMultipleImages(
+        files,
+        `properties/${userId}`
+      );
+
+      // Format the image data
+      const newImages = await Promise.all(
+        uploadedImages.map(async (image) => ({
+          url: image.secure_url,
+          caption: image.originalname || '',
+          isPrimary: false,
+          publicId: image.public_id,
+        }))
+      );
+
+      // Add new images to existing ones
+      const existingImages = property.photo?.images || [];
+      property.photo = {
+        images: [...existingImages, ...newImages],
+        videos: property.photo?.videos || [],
+      };
+
+      await property.save();
+
+      return newImages;
+    } catch (error) {
+      // Cleanup uploaded images if there's an error
+      if (uploadedImages.length > 0) {
+        try {
+          await Promise.all(
+            uploadedImages.map(async (img) => {
+              if (img.public_id) {
+                await uploadService.deleteImage(img.public_id);
+              }
+            })
+          );
+        } catch (cleanupError) {
+          console.error('Error cleaning up images:', cleanupError);
+        }
+      }
+      throw error;
+    }
+  }
+
+  async deletePropertyImage(propertyId, userId, imageId) {
+    try {
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
+
+      if (!property) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
+        );
+      }
+
+      const imageToDelete = property.photo.images.find(
+        (img) => img._id.toString() === imageId
+      );
+
+      if (!imageToDelete) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Image not found');
+      }
+
+      // Delete from cloud storage
+      if (imageToDelete.publicId) {
+        await uploadService.deleteImage(imageToDelete.publicId);
+      }
+
+      // Remove image from property
+      property.photo.images = property.photo.images.filter(
+        (img) => img._id.toString() !== imageId
+      );
+
+      await property.save();
+      return property;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async setPrimaryImage(propertyId, userId, imageId) {
+
+    try {
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
+
+      if (!property) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
+        );
+      }
+
+      property.photo.images = property.photo.images.map((img) => ({
+        ...img,
+        isPrimary: img._id.toString() === imageId,
+      }));
+
+      await property.save();
+      return property;
+    } catch (error) {
+      throw error;
+    }
+  }
   async updatePropertyImages(propertyId, newImages, userId) {
     try {
       const property = await PropertyModel.findOne({
