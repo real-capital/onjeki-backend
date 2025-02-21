@@ -12,9 +12,9 @@ const userSchema = new Schema(
     otp: { type: Types.ObjectId, ref: 'Otp' },
     googleUserId: { type: String, unique: true, sparse: true }, // Store Google User ID
     isEmailVerified: { type: Boolean, default: false }, // Email verification status
-    phoneNumber: { type: String, required: true },
+    phoneNumber: { type: String, required: false },
     isPhoneVerified: { type: Boolean, default: false },
-    nin: { type: String, required: true },
+    nin: { type: String, required: false },
     isNinVerified: { type: Boolean, default: false },
     ninLast4Digits: { type: String, required: false },
     ninVerificationDate: { type: Date, required: false },
