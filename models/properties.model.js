@@ -953,16 +953,16 @@ propertySchema.virtual('reviews', {
 
 propertySchema.virtual('hasCustomPricing').get(function () {
   return (
-    (this.pricing.customPricing && this.pricing.customPricing.length > 0) ||
-    (this.pricing.seasonalPricing && this.pricing.seasonalPricing.length > 0)
+    (this.price.customPricing && this.price.customPricing.length > 0) ||
+    (this.price.seasonalPricing && this.price.seasonalPricing.length > 0)
   );
 });
 
 propertySchema.virtual('hasDiscounts').get(function () {
   return (
-    (this.pricing.discounts && this.pricing.discounts.length > 0) ||
-    (this.pricing.lastMinute && this.pricing.lastMinute.length > 0) ||
-    (this.pricing.longStay && this.pricing.longStay.length > 0)
+    (this.price.discounts && this.price.discounts.length > 0) ||
+    (this.price.lastMinute && this.price.lastMinute.length > 0) ||
+    (this.price.longStay && this.price.longStay.length > 0)
   );
 });
 
@@ -1027,7 +1027,7 @@ propertySchema.methods = {
     let maxDiscount = 0;
 
     // Check standard discounts
-    const standardDiscount = this.pricing.discounts?.find((discount) =>
+    const standardDiscount = this.price.discounts?.find((discount) =>
       this._isDiscountApplicable(discount, startDate, nights)
     );
     if (standardDiscount) {
@@ -1038,7 +1038,7 @@ propertySchema.methods = {
     const daysUntilArrival = Math.ceil(
       (startDate - new Date()) / (1000 * 60 * 60 * 24)
     );
-    const lastMinuteDiscount = this.pricing.lastMinute?.find(
+    const lastMinuteDiscount = this.price.lastMinute?.find(
       (discount) => daysUntilArrival <= discount.daysBeforeArrival
     );
     if (lastMinuteDiscount) {
@@ -1049,7 +1049,7 @@ propertySchema.methods = {
     }
 
     // Check long-stay discounts
-    const longStayDiscount = this.pricing.longStay?.find(
+    const longStayDiscount = this.price.longStay?.find(
       (discount) => nights >= discount.numberOfNights
     );
     if (longStayDiscount) {
