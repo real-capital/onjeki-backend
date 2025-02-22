@@ -626,7 +626,7 @@ const propertySchema = new Schema(
         to: String,
       },
       checkOutTime: String,
-      maxGuests: { type: Number, required: true },
+      maxGuests: { type: Number, required: false },
       petsAllowed: { type: Boolean, default: false },
       cameraPresent: { type: Boolean, default: false },
       noiseCheck: { type: Boolean, default: false },

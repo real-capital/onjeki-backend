@@ -232,7 +232,7 @@ class PropertyService {
           $set: updateData,
           updatedAt: new Date(),
         },
-        { new: true }
+        { new: true, runValidators: true }
       );
 
       if (!property) {
@@ -241,6 +241,25 @@ class PropertyService {
           'Property not found or unauthorized'
         );
       }
+
+      // // Verify the update was successful
+      // const updatedValues = Object.entries(updateData).every(([key, value]) => {
+      //   const keys = key.split('.');
+      //   let obj = property;
+      //   for (let i = 0; i < keys.length - 1; i++) {
+      //     obj = obj[keys[i]];
+      //   }
+      //   return obj[keys[keys.length - 1]] === value;
+      // });
+
+      // console.log(updatedValues);
+
+      // if (!updatedValues) {
+      //   throw new HttpException(
+      //     StatusCodes.INTERNAL_SERVER_ERROR,
+      //     'Update verification failed'
+      //   );
+      // }
 
       return property;
     } catch (error) {
