@@ -166,96 +166,90 @@ class PropertyController {
   };
 
   async updateProperty(req, res, next) {
+    console.log(req.body);
     try {
-        const propertyId = req.params.id;
-        const userId = req.user.id;
-        const updateData = req.body;
+      const propertyId = req.params.id;
+      const userId = req.user.id;
+      const updateData = req.body;
 
-        const updatedProperty = await propertyService.updateProperty(
-            propertyId,
-            userId,
-            updateData
-        );
+      const updatedProperty = await propertyService.updateProperty(
+        propertyId,
+        userId,
+        updateData
+      );
 
-        res.status(StatusCodes.OK).json({
-            status: 'success',
-            data: updatedProperty
-        });
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: updatedProperty,
+      });
     } catch (error) {
-        next(error);
+      next(error);
     }
-}
+  }
 
-async uploadImagestoProperty(req, res, next) {
+  async uploadImagestoProperty(req, res, next) {
     try {
-        const propertyId = req.params.id;
-        const userId = req.user.id;
-        const files = req.files;
+      const propertyId = req.params.id;
+      const userId = req.user.id;
+      const files = req.files;
 
-        if (!files || files.length === 0) {
-            throw new HttpException(
-                StatusCodes.BAD_REQUEST,
-                'No images provided'
-            );
-        }
+      if (!files || files.length === 0) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'No images provided');
+      }
 
-        const newImages = await propertyService.uploadPropertyImages(
-            propertyId,
-            userId,
-            files
-        );
+      const newImages = await propertyService.uploadPropertyImages(
+        propertyId,
+        userId,
+        files
+      );
 
-        res.status(StatusCodes.OK).json({
-            status: 'success',
-            data: {
-                images: newImages
-            }
-        });
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          images: newImages,
+        },
+      });
     } catch (error) {
-        next(error);
+      next(error);
     }
-}
+  }
 
-async deleteImage(req, res, next) {
+  async deleteImage(req, res, next) {
     try {
-        const { propertyId, imageId } = req.params;
-        const userId = req.user.id;
+      const { propertyId, imageId } = req.params;
+      const userId = req.user.id;
 
-        await propertyService.deletePropertyImage(
-            propertyId,
-            userId,
-            imageId
-        );
+      await propertyService.deletePropertyImage(propertyId, userId, imageId);
 
-        res.status(StatusCodes.OK).json({
-            status: 'success',
-            message: 'Image deleted successfully'
-        });
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        message: 'Image deleted successfully',
+      });
     } catch (error) {
-        next(error);
+      next(error);
     }
-}
+  }
 
-async setPrimaryImage(req, res, next) {
-  try {
-    // console.log(req.params);
+  async setPrimaryImage(req, res, next) {
+    try {
+      // console.log(req.params);
       const { id, imageId } = req.params;
-        const userId = req.user.id;
+      const userId = req.user.id;
 
-        const updatedProperty = await propertyService.setPrimaryImage(
-          id,
-            userId,
-            imageId
-        );
+      const updatedProperty = await propertyService.setPrimaryImage(
+        id,
+        userId,
+        imageId
+      );
 
-        res.status(StatusCodes.OK).json({
-            status: 'success',
-            data: updatedProperty
-        });
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: updatedProperty,
+      });
     } catch (error) {
-        next(error);
+      next(error);
     }
-}
+  }
 
   // async updateProperty(req, res) {
   //   const errors = validationResult(req);
