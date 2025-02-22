@@ -221,6 +221,7 @@ class PropertyService {
   // }
 
   async updateProperty(propertyId, userId, updateData) {
+    console.log("Updating property with data:", updateData);
     try {
       const property = await PropertyModel.findOneAndUpdate(
         {
