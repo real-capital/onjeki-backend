@@ -228,7 +228,8 @@ class PropertyService {
           owner: userId,
         },
         {
-          ...updateData,
+          // ...updateData,
+          $set: updateData,
           updatedAt: new Date(),
         },
         { new: true }
@@ -348,7 +349,6 @@ class PropertyService {
   }
 
   async setPrimaryImage(propertyId, userId, imageId) {
-
     try {
       const property = await PropertyModel.findOne({
         _id: propertyId,
