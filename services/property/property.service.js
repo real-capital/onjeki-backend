@@ -221,8 +221,23 @@ class PropertyService {
   // }
 
   async updateProperty(propertyId, userId, updateData) {
-    console.log("Updating property with data:", updateData);
+    console.log('Updating property with data:', updateData);
+
     try {
+      // Convert nested object to dot notation
+      const flattenedUpdate = {};
+
+      function flatten(obj, prefix = '') {
+        for (const key in obj) {
+          if (typeof obj[key] === 'object' && obj[key] !== null) {
+            flatten(obj[key], `${prefix}${key}.`);
+          } else {
+            flattenedUpdate[`${prefix}${key}`] = obj[key];
+          }
+        }
+      }
+
+      flatten(updateData);
       const property = await PropertyModel.findOneAndUpdate(
         {
           _id: propertyId,
@@ -230,10 +245,10 @@ class PropertyService {
         },
         {
           // ...updateData,
-          $set: updateData,
+          $set: flattenedUpdate,
           updatedAt: new Date(),
         },
-        { new: true, upsert: true }
+        { new: true }
       );
 
       if (!property) {
