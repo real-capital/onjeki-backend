@@ -64,6 +64,7 @@ class WishListController {
   };
 
   removeFromWishlist = async (req, res, next) => {
+    const { wishlistId, propertyId } = req.params;
     try {
       const wishlist = await wishlistService.removeFromWishlist(
         req.user._id,
