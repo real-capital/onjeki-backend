@@ -32,7 +32,7 @@ class WIshlistRoute extends Route {
       this.controller.addToWishlist
     );
     this.router.delete(
-      `${this.path}/:wishlistId/properties/propertyId`,
+      `${this.path}/:wishlistId/properties/:propertyId`,
       isAuthenticated,
       this.controller.addToWishlist
     );
