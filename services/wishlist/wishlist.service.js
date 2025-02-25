@@ -87,6 +87,36 @@ class WishListService {
     }
   }
 
+  async deleteWishlist(wishlistId, userId) {
+    try {
+      // Check if wishlist exists and belongs to user
+      const wishlist = await WishlistModel.findOne({
+        _id: wishlistId,
+        owner: userId,
+      });
+
+      if (!wishlist) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Wishlist not found or unauthorized'
+        );
+      }
+
+      // Delete the wishlist
+      await WishlistModel.deleteOne({ _id: wishlistId });
+
+      return {
+        status: 'success',
+        message: 'Wishlist deleted successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        error.message || 'Error deleting wishlist'
+      );
+    }
+  }
+
   async removeFromWishlist(userId, wishlistId, propertyId) {
     try {
       const wishlist = await WishlistModel.findOneAndUpdate(

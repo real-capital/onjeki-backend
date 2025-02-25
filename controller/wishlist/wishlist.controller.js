@@ -50,13 +50,29 @@ class WishListController {
         // note
       );
 
-      //   if (!wishlist) {
-      //     return res
-      //       .status(404)
-      //       .json({ message: 'Wishlist not found or unauthorized' });
-      //   }
-
       res.json(wishlist);
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  };
+
+  deleteWishlist = async (req, res, next) => {
+    try {
+      const { wishlistId } = req.params;
+      const userId = req.user._id;
+
+      // Find and delete the wishlist, ensuring it belongs to the user
+      const deletedWishlist = await wishlistService.deleteWishlist(
+        wishlistId,
+        userId
+      );
+
+      res.status(StatusCodes.NO_CONTENT).json({
+        status: 'success',
+        data: deletedWishlist,
+      });
+      res.json(deletedWishlist);
     } catch (error) {
       console.log(error);
       next(error);
