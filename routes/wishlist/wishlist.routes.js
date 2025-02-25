@@ -36,6 +36,11 @@ class WIshlistRoute extends Route {
       isAuthenticated,
       this.controller.removeFromWishlist
     );
+    this.router.delete(
+      `${this.path}/:wishlistId`,
+      isAuthenticated,
+      this.controller.deleteWishlist
+    );
   }
 }
 
