@@ -7,9 +7,8 @@ class WishListService {
     try {
       const wishlists = await WishlistModel.find({ owner: userId })
         .populate({
-          path: 'properties.property'
+          path: 'properties.property',
         })
-        .populate('properties.addedBy')
         .sort({ createdAt: -1 })
         .lean();
       return wishlists;
