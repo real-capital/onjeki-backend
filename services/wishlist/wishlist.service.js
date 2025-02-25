@@ -5,21 +5,25 @@ import HttpException from '../../utils/exception.js';
 class WishListService {
   async getWishlist(userId) {
     try {
-      const wishlists = await WishlistModel.find({ owner: userId })
+      const wishlists = await WishlistModel.find({
+        $or: [{ owner: userId }, { collaborators: userId }],
+      })
         .populate({
           path: 'properties.property',
         })
         .sort({ createdAt: -1 })
         .lean();
+
       return wishlists;
     } catch (error) {
-      console.log(error);
+      console.error('Error fetching wishlist:', error);
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Error fetching wishlist'
       );
     }
   }
+
   async createWishlist(userId, name) {
     try {
       // Check if the user already has a wishlist with this name
