@@ -5,11 +5,15 @@ import HttpException from '../../utils/exception.js';
 class WishListService {
   async getWishlist(userId) {
     try {
-      const wishlist = await WishlistModel.find({
-        owner: userId,
-      }).sort({ createdAt: -1 });
-
-      return wishlist;
+      const wishlists = await WishlistModel.find({ owner: userId })
+        .populate({
+          path: 'properties.property',
+          select: 'title photo location price stats',
+        })
+        .populate('properties.addedBy', 'name')
+        .sort({ createdAt: -1 })
+        .lean();
+      return wishlists;
     } catch (error) {
       console.log(error);
       throw new HttpException(
@@ -19,25 +23,38 @@ class WishListService {
     }
   }
   async createWishlist(userId, name) {
-    console.log(name);
     try {
-      // Check if the category exists
-      const wishlistExists = await WishlistModel.exists({ name: name });
+      // Check if the user already has a wishlist with this name
+      const wishlistExists = await WishlistModel.findOne({
+        owner: userId,
+        name: name,
+      });
+
       if (wishlistExists) {
         throw new HttpException(
           StatusCodes.BAD_REQUEST,
-          'Wishlist already exist'
+          'You already have a wishlist with this name'
         );
       }
 
-      return await WishlistModel.create({ name, owner: userId });
+      // Create new wishlist
+      const wishlist = await WishlistModel.create({
+        name,
+        owner: userId,
+        properties: [],
+      });
+
+      // Return the created wishlist
+      return wishlist;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         StatusCodes.BAD_REQUEST,
         error.message || 'Error creating wishlist'
       );
     }
-    // return await WishlistModel.create({ name, owner: userId });
   }
 
   async addToWishlist(userId, wishlistId, propertyId) {
