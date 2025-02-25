@@ -5,8 +5,8 @@ import HttpException from '../../utils/exception.js';
 class WishListService {
   async getWishlist(userId) {
     try {
-      const wishlist = await WishlistModel.findOne({
-        userId,
+      const wishlist = await WishlistModel.find({
+        owner: userId,
       }).sort({ createdAt: -1 });
 
       return wishlist;
