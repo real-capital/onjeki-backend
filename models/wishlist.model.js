@@ -14,7 +14,11 @@ const wishlistSchema = new Schema({
       addedAt: { type: Date, default: Date.now },
     },
   ],
-  shareableLink: { type: String, unique: true },
+  shareableLink: {
+    type: String,
+    sparse: true, // Only index non-null values
+    unique: true,
+  },
   isPublic: { type: Boolean, default: false },
   isEditable: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
