@@ -60,8 +60,21 @@ class WishListController {
     } catch (error) {
       console.log(error);
       next(error);
+    }
+  };
 
-      //   res.status(500).json({ error: error.message });
+  removeFromWishlist = async (req, res, next) => {
+    try {
+      const wishlist = await wishlistService.removeFromWishlist(
+        req.user._id,
+        wishlistId,
+        propertyId
+      );
+
+      res.json(wishlist);
+    } catch (error) {
+      console.log(error);
+      next(error);
     }
   };
 

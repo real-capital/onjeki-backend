@@ -67,6 +67,36 @@ class WishListService {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
+
+  async removeFromWishlist(userId, wishlistId, propertyId) {
+    try {
+      const wishlist = await WishlistModel.findOneAndUpdate(
+        {
+          _id: wishlistId,
+          $or: [{ owner: userId }, { collaborators: userId }],
+        },
+        {
+          $pull: {
+            properties: {
+              property: propertyId,
+            },
+          },
+        },
+        { new: true }
+      );
+
+      if (!wishlist) {
+        return res
+          .status(404)
+          .json({ message: 'Wishlist not found or unauthorized' });
+      }
+
+      return wishlist;
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
+    }
+  }
   async generateShareableLink(userId, wishlistId, isEditable) {
     try {
       const wishlist = await WishlistModel.findOne({
@@ -93,6 +123,78 @@ class WishListService {
       );
     }
   }
+
+  // wishlist.controller.js
+  // const inviteToWishlist = async (req, res) => {
+  //     try {
+  //       const { wishlistId } = req.params;
+  //       const { email, role } = req.body;
+
+  //       const user = await UserModel.findOne({ email });
+  //       if (!user) {
+  //         return res.status(404).json({ message: 'User not found' });
+  //       }
+
+  //       const wishlist = await WishlistModel.findOneAndUpdate(
+  //         {
+  //           _id: wishlistId,
+  //           owner:userId,
+  //           'collaborators.user': { $ne: user._id },
+  //         },
+  //         {
+  //           $push: {
+  //             collaborators: {
+  //               user: user._id,
+  //               role,
+  //               invitedBy:userId,
+  //             },
+  //           },
+  //         },
+  //         { new: true },
+  //       );
+
+  //       if (!wishlist) {
+  //         return res.status(404).json({ message: 'Wishlist not found or user already invited' });
+  //       }
+
+  //       // Send email notification
+  //       await sendInvitationEmail(user.email, req.user.name, wishlist.name);
+
+  //       res.json(wishlist);
+  //     } catch (error) {
+  //       res.status(500).json({ error: error.message });
+  //     }
+  //   };
+
+  //   const respondToInvitation = async (req, res) => {
+  //     try {
+  //       const { wishlistId } = req.params;
+  //       const { accept } = req.body;
+
+  //       const wishlist = await WishlistModel.findOneAndUpdate(
+  //         {
+  //           _id: wishlistId,
+  //           'collaborators.user':userId,
+  //           'collaborators.status': 'pending',
+  //         },
+  //         {
+  //           $set: {
+  //             'collaborators.$.status': accept ? 'accepted' : 'declined',
+  //             'collaborators.$.respondedAt': new Date(),
+  //           },
+  //         },
+  //         { new: true },
+  //       );
+
+  //       if (!wishlist) {
+  //         return res.status(404).json({ message: 'Invitation not found or already responded' });
+  //       }
+
+  //       res.json(wishlist);
+  //     } catch (error) {
+  //       res.status(500).json({ error: error.message });
+  //     }
+  //   };
 }
 
 export default WishListService;
