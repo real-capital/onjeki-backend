@@ -105,7 +105,7 @@ const rentAndSalesSchema = new Schema(
         ],
       },
     ],
-    media: {
+    photo: {
       images: [
         {
           url: String,

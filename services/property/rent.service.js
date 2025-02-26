@@ -18,7 +18,7 @@ class RentOrSalesService {
           `properties/${userId}`
         );
 
-        propertyData.media = {
+        propertyData.photo = {
           images: await Promise.all(
             uploadedImages.map(async (image) => ({
               url: image.secure_url,
