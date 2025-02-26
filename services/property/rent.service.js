@@ -63,13 +63,41 @@ class RentOrSalesService {
     }
   }
 
+  async getRentOrSalesById(propertyId) {
+    try {
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid property ID');
+      }
+
+      const property = await RentAndSales.findById(propertyId)
+        .populate('owner', '_id name email phoneNumber')
+        .lean();
+
+      if (!property) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
+      }
+
+      return property;
+    } catch (error) {
+      console.error('Error in getPropertyById:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching property'
+      );
+    }
+  }
+
   async searchRentOrSales(filters, pagination, sort) {
     try {
       console.log('Received filters:', filters);
       console.log('Pagination:', pagination);
       console.log('Sort:', sort);
-        const query = this.buildSearchQuery(filters);
-        const skip = (pagination.page - 1) * pagination.limit;
+      const query = this.buildSearchQuery(filters);
+      const skip = (pagination.page - 1) * pagination.limit;
       const [properties, total] = await Promise.all([
         RentAndSales.find(query)
           .populate('owner', 'name email phoneNumber')
@@ -77,7 +105,7 @@ class RentOrSalesService {
           .skip(skip)
           .limit(pagination.limit)
           .lean(),
-          RentAndSales.countDocuments(query),
+        RentAndSales.countDocuments(query),
       ]);
 
       return {

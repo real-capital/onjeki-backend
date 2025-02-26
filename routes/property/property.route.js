@@ -129,6 +129,12 @@ class PropertyRoute extends Route {
       this.controller.getPropertyById
     );
     this.router.get(
+      `${this.path}/property/rent/:id`,
+      validate,
+      isAuthenticated,
+      this.rentController.getRentOrSalesById
+    );
+    this.router.get(
       `${this.path}/userListing`,
       validate,
       isAuthenticated,

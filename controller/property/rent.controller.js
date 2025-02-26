@@ -2,17 +2,14 @@ import { StatusCodes } from 'http-status-codes';
 import RentOrSalesService from '../../services/property/rent.service.js';
 
 // controllers/property.controller.js
+const rentOrSalesService = new RentOrSalesService();
 class RentOrSalesController {
-  constructor() {
-    this.rentOrSalesService = new RentOrSalesService();
-  }
-
   createRentOrSale = async (req, res, next) => {
     try {
       const propertyData = req.body;
       const userId = req.user._id;
 
-      const property = await this.rentOrSalesService.createRentOrSale(
+      const property = await rentOrSalesService.createRentOrSale(
         propertyData,
         userId
       );
@@ -26,13 +23,30 @@ class RentOrSalesController {
     }
   };
 
+  getRentOrSalesById = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      console.log('Fetching property with ID:', id);
+
+      const property = await rentOrSalesService.getRentOrSalesById(id);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: property,
+      });
+    } catch (error) {
+      // Let the error middleware handle it
+      next(error);
+    }
+  };
+
   searchRentOrSales = async (req, res, next) => {
     try {
       // const filters = req.query;
       const { filters, pagination, sort } = this.parseSearchParams(req);
       console.log('Parsed search parameters:', { filters, pagination, sort });
 
-      const result = await this.rentOrSalesService.searchRentOrSales(
+      const result = await rentOrSalesService.searchRentOrSales(
         filters,
         pagination,
         sort
@@ -129,7 +143,7 @@ class RentOrSalesController {
       const { propertyId } = req.params;
       const userId = req.user._id;
 
-      const analytics = await this.rentOrSalesService.getRentOrSaleAnalytics(
+      const analytics = await rentOrSalesService.getRentOrSaleAnalytics(
         propertyId,
         userId
       );

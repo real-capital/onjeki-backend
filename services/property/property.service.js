@@ -440,11 +440,7 @@ class PropertyService {
       if (!property) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
       }
-      // console.log(property.owner._id);
-      // if (userId !== property.owner._id) {
-      //   property.stats.views += 1;
-      //   await property.save();
-      // }
+    
 
       return property;
     } catch (error) {
