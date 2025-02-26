@@ -13,6 +13,7 @@ import {
   CALLBACK_URL,
 } from '../../config/index.js';
 import { Vonage } from '@vonage/server-sdk';
+import { SMS } from '@vonage/messages';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -387,18 +388,18 @@ class AuthService {
       );
     }
 
-    const response = await vonage.verify.start({
-      number: user.phoneNumber,
-      brand: 'Onjeki',
-    });
+    const response = await vonage.messages.send(
+      new SMS('1234', user.phoneNumber, 'Onjeki')
+    );
+
     console.log(response);
 
-    if (response.status !== '0') {
-      throw new HttpException(StatusCodes.BAD_REQUEST, 'Failed to send OTP');
-    }
-    console.log(response);
+    // if (response.status !== '0') {
+    //   throw new HttpException(StatusCodes.BAD_REQUEST, 'Failed to send OTP');
+    // }
+    // console.log(response);
 
-    return { requestId: response.request_id };
+    return { requestId: response };
   }
 
   // Verify OTP

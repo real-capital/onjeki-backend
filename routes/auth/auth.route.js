@@ -58,6 +58,11 @@ class AuthRoute extends Route {
       isAuthenticated,
       this.controller.sendPhoneOtp
     );
+    this.router.post(
+      `${this.path}/verify/verify-otp`,
+      isAuthenticated,
+      this.controller.verifyPhoneOtp
+    );
     // this.router.get(
     //   `${this.path}/my-profile`,
     //   UserGuard.createInstance,

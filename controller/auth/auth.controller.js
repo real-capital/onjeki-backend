@@ -172,6 +172,7 @@ class AuthController {
       const result = await authService.sendPhoneOtp(userId);
       res.status(StatusCodes.OK).json({ status: 'success', data: result });
     } catch (error) {
+      console.log(error);
       next(error);
     }
   };

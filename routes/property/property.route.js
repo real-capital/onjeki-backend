@@ -6,6 +6,7 @@ import PropertyController from '../../controller/property/property.controller.js
 import { validate } from '../../middlewares/validation.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import { validateSearchQuery } from '../../validation/validateSearch.js';
+import RentOrSalesController from '../../controller/property/rent.controller.js';
 const storage = multer.diskStorage({
   filename: function (req, file, callback) {
     callback(null, file.originalname);
@@ -19,6 +20,7 @@ class PropertyRoute extends Route {
     super(express.Router()); // Initialize the parent class
     this.path = '/properties'; // Set the base path
     this.controller = new PropertyController(); // Instantiate the controller
+    this.rentController = new RentOrSalesController();
     this.initializeRoute();
   }
 
@@ -29,6 +31,12 @@ class PropertyRoute extends Route {
       isAuthenticated,
       validate,
       this.controller.createProperty
+    );
+    this.router.post(
+      `${this.path}/rent/create`,
+      isAuthenticated,
+      validate,
+      this.rentController.createRentOrSale
     );
     // this.router.patch(
     //   `${this.path}/:id`,
@@ -100,6 +108,11 @@ class PropertyRoute extends Route {
       `${this.path}/search`,
       validateSearchQuery,
       this.controller.searchProperties
+    );
+    this.router.get(
+      `${this.path}/rent/search`,
+      validateSearchQuery,
+      this.rentController.searchRentOrSales
     );
 
     this.router.get(
