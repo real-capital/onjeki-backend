@@ -53,19 +53,19 @@ class EmailService {
   //   });
   // }
 
-  // async sendEmail({ to, subject, html }) {
-  //   try {
-  //     await this.transporter.sendMail({
-  //       from: process.env.EMAIL_FROM,
-  //       to,
-  //       subject,
-  //       html
-  //     });
-  //   } catch (error) {
-  //     console.error('Email sending failed:', error);
-  //     throw new Error('Failed to send email');
-  //   }
-  // }
+  async sendEmail({ to, subject, html }) {
+    try {
+      await this.transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to,
+        subject,
+        html
+      });
+    } catch (error) {
+      console.error('Email sending failed:', error);
+      throw new Error('Failed to send email');
+    }
+  }
 }
 
 export default new EmailService();

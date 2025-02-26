@@ -20,6 +20,8 @@ import HttpException from './utils/exception.js';
 import morganMiddleware from './middlewares/morgan.middleware.js';
 import { handleMulterError } from './middlewares/upload.middleware.js';
 import rateLimit from 'express-rate-limit';
+import { SocketService } from './services/chat/socket.service.js';
+import ChatService from './services/chat/chat.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,9 +32,11 @@ class app {
     this.app = express();
     this.port = process.env.PORT || 8000;
     this.server = createServer(this.app);
+    this.socketService = null;
 
     // Initialize middlewares, routes, error handling, etc.
     this.initializeMiddlewares();
+    this.initializeSocket();
     this.initializeRoutes(routes);
     this.initializeErrorHandling();
     this.listRoutes();
@@ -65,6 +69,27 @@ class app {
     //   })
     // );
   }
+  initializeSocket() {
+    // Initialize Socket.IO with server
+    this.socketService = new SocketService(this.server);
+
+    // Get the io instance from socket service
+    const io = this.socketService.getIO();
+
+    // Initialize chat service with io instance
+    this.chatService = new ChatService(io);
+    this.chatService.initialize();
+
+    // Make services available throughout the application
+    this.app.set('socketService', this.socketService);
+    this.app.set('chatService', this.chatService);
+  }
+  // initializeSocket() {
+  //   this.socketService = new SocketService(this.server);
+
+  //   // Make socket service available throughout the application
+  //   this.app.set('socketService', this.socketService);
+  // }
 
   // Initialize Routes
   initializeRoutes(routes) {

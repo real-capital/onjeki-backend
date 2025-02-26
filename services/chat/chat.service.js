@@ -1,7 +1,184 @@
-// // services/chat.service.js
-// import mongoose from 'mongoose';
-// import ChatModel from '../models/chat.model.js';
-// import MessageModel from '../models/message.model.js';
+import ChatModel from '../../models/chat.model.js';
+import Message from '../../models/message_model.js';
+import { Server } from 'socket.io';
+import mongoose from 'mongoose';
+import RentOrSaleNotificationService from '../notification/rent-or-sale-notification.service.js';
+class ChatService {
+  constructor(io) {
+    this.io = io;
+    this.connectedUsers = new Map(); // userId -> socketId
+  }
+
+  initialize() {
+    this.io.on('connection', (socket) => {
+      socket.on('user_connected', (userId) =>
+        this.handleUserConnect(socket, userId)
+      );
+      socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
+      socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
+      socket.on('send_message', (data) => this.handleNewMessage(socket, data));
+      socket.on('disconnect', () => this.handleDisconnect(socket));
+    });
+  }
+
+  async handleUserConnect(socket, userId) {
+    this.connectedUsers.set(userId, socket.id);
+    socket.userId = userId;
+
+    // Get user's active chats and join their rooms
+    const activeChats = await ChatModel.find({
+      participants: userId,
+    });
+
+    activeChats.forEach((chat) => {
+      socket.join(`chat_${chat._id}`);
+    });
+  }
+
+  handleJoinChat(socket, chatId) {
+    socket.join(`chat_${chatId}`);
+  }
+
+  handleLeaveChat(socket, chatId) {
+    socket.leave(`chat_${chatId}`);
+  }
+
+  async handleNewMessage(socket, { chatId, message }) {
+    try {
+      const chat = await ChatModel.findById(chatId).populate(
+        'participants',
+        'name email fcmToken'
+      );
+
+      if (!chat) {
+        throw new Error('Chat not found');
+      }
+
+      // Save message to database
+      const newMessage = await Message.create({
+        chat: chatId,
+        sender: socket.userId,
+        content: message.content,
+        attachments: message.attachments,
+      });
+
+      // Update chat's last message
+      chat.lastMessage = {
+        content: message.content,
+        sender: socket.userId,
+        createdAt: new Date(),
+      };
+      await chat.save();
+
+      // Emit message to all participants in the chat room
+      this.io.to(`chat_${chatId}`).emit('new_message', {
+        chatId,
+        message: newMessage,
+      });
+
+      // Send notifications to offline participants
+      const offlineParticipants = chat.participants.filter(
+        (participant) =>
+          participant._id.toString() !== socket.userId &&
+          !this.connectedUsers.has(participant._id.toString())
+      );
+
+      await this.sendNotifications(offlineParticipants, chat, newMessage);
+    } catch (error) {
+      socket.emit('error', error.message);
+    }
+  }
+
+  handleDisconnect(socket) {
+    if (socket.userId) {
+      this.connectedUsers.delete(socket.userId);
+    }
+  }
+
+  async createChat(userId, recipientId, propertyId) {
+    // Check if chat already exists
+    let chat = await ChatModel.findOne({
+      property: propertyId,
+      participants: { $all: [userId, recipientId] },
+    });
+
+    if (chat) {
+      return chat;
+    }
+
+    // Create new chat
+    chat = await ChatModel.create({
+      property: propertyId,
+      participants: [userId, recipientId],
+      createdBy: userId,
+    });
+
+    await chat.populate('participants', 'name email avatar');
+    await chat.populate('property', 'title photos');
+
+    return chat;
+  }
+
+  handleJoinChat(chatId, userIds) {
+    userIds.forEach((userId) => {
+      const socketId = this.connectedUsers.get(userId.toString());
+      if (socketId) {
+        const socket = this.io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.join(`chat_${chatId}`);
+        }
+      }
+    });
+  }
+
+  handleUserConnect(userId, chatIds) {
+    const socketId = this.connectedUsers.get(userId.toString());
+    if (socketId) {
+      const socket = this.io.sockets.sockets.get(socketId);
+      if (socket) {
+        chatIds.forEach((chatId) => {
+          socket.join(`chat_${chatId}`);
+        });
+      }
+    }
+  }
+
+  async sendNotifications(recipients, chat, message) {
+    const notificationService = new RentOrSaleNotificationService();
+
+    for (const recipient of recipients) {
+      // Send push notification if FCM token exists
+      if (recipient.fcmToken) {
+        await notificationService.sendPushNotification({
+          token: recipient.fcmToken,
+          title: `New message from ${message.sender.name}`,
+          body: message.content,
+          data: {
+            type: 'chat_message',
+            chatId: chat._id.toString(),
+            propertyId: chat.property.toString(),
+          },
+        });
+      }
+
+      // Send email notification
+      await notificationService.sendEmailNotification({
+        to: recipient.email,
+        subject: 'New Message Received',
+        template: 'chat-notification',
+        context: {
+          recipientName: recipient.name,
+          senderName: message.sender.name,
+          propertyTitle: chat.property.title,
+          messagePreview: message.content.substring(0, 100),
+          chatLink: `${process.env.CLIENT_URL}/chats/${chat._id}`,
+        },
+      });
+    }
+  }
+}
+
+export default ChatService;
 
 // class ChatService {
 //   constructor(io) {
@@ -80,3 +257,5 @@
 // }
 
 // export default ChatService;
+
+// services/chat.service.js

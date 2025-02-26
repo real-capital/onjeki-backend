@@ -8,6 +8,7 @@ import CategoryRoute from './routes/category/category.route.js';
 import AmenitiesRoute from './routes/amenity/amenities.route.js';
 import BuildingRoute from './routes/building/building.route.js';
 import WIshlistRoute from './routes/wishlist/wishlist.routes.js';
+import ChatRoute from './routes/message/chat.route.js';
 // import SaleRoute from './routes/Sale/sales.route';
 // import RentalRoute from './routes/Rental/rental.route';
 // import buildingRoute from './routes/buildings/building.route';
@@ -26,6 +27,7 @@ const app = new App([
   new AmenitiesRoute(),
   new BuildingRoute(),
   new WIshlistRoute(),
+  new ChatRoute(),
 
   // new SaleRoute(),
   //   new RentalRoute(),
