@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import RentAndSales from '../../models/rentAndSales.model.js';
 import HttpException from '../../utils/exception.js';
 import UploadService from '../upload/upload.service.js';
+import mongoose from 'mongoose';
 
 // services/property.service.js
 
