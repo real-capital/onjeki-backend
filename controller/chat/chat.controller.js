@@ -315,10 +315,10 @@ class ChatController {
       });
 
       // Emit message to all participants
-      //   chatService.io.to(`chat_${chatId}`).emit('new_message', {
-      //     chatId,
-      //     message,
-      //   });
+        chatService.io.to(`chat_${chatId}`).emit('new_message', {
+          chatId,
+          message,
+        });
 
       res.status(201).json({
         status: 'success',
