@@ -50,9 +50,8 @@ class ChatService {
     this.io.on('connection', (socket) => {
       console.log(`User connected: ${socket.id}`);
 
-      // Capture userId when a user connects
       socket.on('user_connected', (userId) => {
-        socket.userId = userId; // Store userId in the socket instance
+        console.log(`User ${userId} connected with socket ID: ${socket.id}`);
         this.handleUserConnect(socket, userId);
       });
 
@@ -61,41 +60,34 @@ class ChatService {
       socket.on('send_message', (data) => this.handleNewMessage(socket, data));
       socket.on('disconnect', () => this.handleDisconnect(socket));
 
-      // Add new socket handlers
-      socket.on('typing_start', (chatId) =>
-        this.handleTypingStart(socket, chatId)
-      );
-      socket.on('typing_end', (chatId) => this.handleTypingEnd(socket, chatId));
+      // Updated typing event handlers
+      socket.on('typing_start', (data) => this.handleTypingStart(socket, data));
+      socket.on('typing_end', (data) => this.handleTypingEnd(socket, data));
       socket.on('mark_read', (data) => this.handleMarkRead(socket, data));
     });
   }
 
-  // Add new methods for typing indicators
-  handleTypingStart(socket, chatId) {
-    if (!socket.userId) {
-      console.error(
-        `Typing event ignored: No userId set for socket ${socket.id}`
-      );
+  // ✅ Updated typing handlers that expect `userId` in `data`
+  handleTypingStart(socket, data) {
+    const { userId, chatId } = data;
+    if (!userId || !chatId) {
+      console.error(`Typing event ignored: Missing userId or chatId`);
       return;
     }
-    socket.to(`chat_${chatId}`).emit('typing_start', {
-      userId: socket.userId, // Ensure userId is sent
-      chatId,
-    });
+    console.log(`User ${userId} started typing in chat ${chatId}`);
+    socket.to(`chat_${chatId}`).emit('typing_start', { userId, chatId });
   }
 
-  handleTypingEnd(socket, chatId) {
-    if (!socket.userId) {
-      console.error(
-        `Typing event ignored: No userId set for socket ${socket.id}`
-      );
+  handleTypingEnd(socket, data) {
+    const { userId, chatId } = data;
+    if (!userId || !chatId) {
+      console.error(`Typing event ignored: Missing userId or chatId`);
       return;
     }
-    socket.to(`chat_${chatId}`).emit('typing_end', {
-      userId: socket.userId, // Ensure userId is sent
-      chatId,
-    });
+    console.log(`User ${userId} stopped typing in chat ${chatId}`);
+    socket.to(`chat_${chatId}`).emit('typing_end', { userId, chatId });
   }
+
   async handleMarkRead(socket, { chatId, messageIds }) {
     try {
       await Message.updateMany(
