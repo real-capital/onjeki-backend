@@ -54,13 +54,15 @@ class ChatService {
         throw new Error('Chat not found');
       }
 
+    //   const newMessage = await this.sendMessage(chatId, socket.userId, message);
+
       // Save message to database
-      const newMessage = await Message.create({
-        chat: chatId,
-        sender: socket.userId,
-        content: message.content,
-        attachments: message.attachments,
-      });
+        const newMessage = await Message.create({
+          chat: chatId,
+          sender: socket.userId,
+          content: message.content,
+          attachments: message.attachments,
+        });
 
       // Update chat's last message
       chat.lastMessage = {
@@ -95,7 +97,46 @@ class ChatService {
     }
   }
 
+  // In ChatService class
+  async sendMessage(chatId, senderId, messageData) {
+    try {
+      const chat = await ChatModel.findById(chatId).populate(
+        'participants',
+        'name email fcmToken'
+      );
+
+      if (!chat) {
+        throw new Error('Chat not found');
+      }
+
+      // Create new message
+      const newMessage = await Message.create({
+        chat: chatId,
+        sender: senderId,
+        content: messageData.content,
+        attachments: messageData.attachments || [],
+      });
+
+      // Update chat's last message
+      chat.lastMessage = {
+        content: messageData.content,
+        sender: senderId,
+        createdAt: new Date(),
+      };
+      await chat.save();
+
+      // Populate sender information
+      await newMessage.populate('sender', 'name email avatar');
+
+      return newMessage;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async createChat(userId, recipientId, propertyId) {
+    // // Check if chat already exists
+
     // Check if chat already exists
     let chat = await ChatModel.findOne({
       property: propertyId,
@@ -103,18 +144,26 @@ class ChatService {
     });
 
     if (chat) {
-      return chat;
+      return res.json({
+        status: 'success',
+        data: chat,
+      });
     }
 
     // Create new chat
+    // Create new chat with both participants
     chat = await ChatModel.create({
       property: propertyId,
-      participants: [userId, recipientId],
+      participants: [userId, recipientId], // Ensure both participants are included
       createdBy: userId,
     });
+    console.log(chat);
 
-    await chat.populate('participants', 'name email avatar');
-    await chat.populate('property', 'title photos');
+    // Populate necessary fields
+    await chat.populate([
+      { path: 'participants', select: 'name email avatar' },
+      { path: 'property', select: 'title photos' },
+    ]);
 
     return chat;
   }

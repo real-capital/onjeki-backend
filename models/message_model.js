@@ -1,9 +1,11 @@
 // src/models/Message.js
 import mongoose from 'mongoose';
 
+// models/Message.js
 const messageSchema = new mongoose.Schema(
   {
     chat: {
+      // Add this
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Chat',
       required: true,
@@ -21,10 +23,10 @@ const messageSchema = new mongoose.Schema(
       {
         type: {
           type: String,
-          enum: ['image', 'file'],
+          enum: ['image', 'video', 'document', 'audio'],
         },
         url: String,
-        filename: String,
+        name: String,
         size: Number,
         mimeType: String,
       },
@@ -41,18 +43,13 @@ const messageSchema = new mongoose.Schema(
         },
       },
     ],
-    type: {
-      type: String,
-      enum: ['text', 'system', 'automated'],
-      default: 'text',
-    },
   },
   {
     timestamps: true,
   }
 );
 
-messageSchema.index({ conversation: 1, createdAt: -1 });
+messageSchema.index({ chat: 1, createdAt: -1 });
 messageSchema.index({ sender: 1, createdAt: -1 });
 
 const Message = mongoose.model('Message', messageSchema);

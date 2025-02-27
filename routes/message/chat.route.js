@@ -21,6 +21,11 @@ class ChatRoute extends Route {
   initializeRoute() {
     this.router.get('/chats', isAuthenticated, this.controller.getUserChats);
     this.router.post('/chats', isAuthenticated, this.controller.createChat);
+    this.router.post(
+      '/chats/:chatId/messages',
+      isAuthenticated,
+      this.controller.sendMessage
+    );
     this.router.get(
       '/chats/:chatId',
       isAuthenticated,

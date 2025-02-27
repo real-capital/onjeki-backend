@@ -8,31 +8,6 @@ const chatService = new ChatService();
 
 class ChatController {
   // Get all chats for a user
-  async getUserChats(req, res) {
-    try {
-      const userId = req.user._id;
-      const chats = await ChatModel.find({ participants: userId })
-        .populate('participants', 'name email avatar')
-        .populate('property', 'title photos')
-        .sort({ updatedAt: -1 });
-
-      // Connect user to all their chat rooms
-      chatService.handleUserConnect(
-        userId,
-        chats.map((chat) => chat._id)
-      );
-
-      res.json({
-        status: 'success',
-        data: chats,
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        message: error.message,
-      });
-    }
-  }
   //   async getUserChats(req, res) {
   //     try {
   //       const userId = req.user._id;
@@ -40,6 +15,12 @@ class ChatController {
   //         .populate('participants', 'name email avatar')
   //         .populate('property', 'title photos')
   //         .sort({ updatedAt: -1 });
+  //       console.log(chats);
+  //       // Connect user to all their chat rooms
+  //       chatService.handleUserConnect(
+  //         userId,
+  //         chats.map((chat) => chat._id)
+  //       );
 
   //       res.json({
   //         status: 'success',
@@ -53,11 +34,65 @@ class ChatController {
   //     }
   //   }
 
+  async getUserChats(req, res) {
+    try {
+      const userId = req.user._id;
+
+      // Get all chats where user is a participant
+      const chats = await ChatModel.find({
+        participants: userId,
+      })
+        .populate('participants', 'name email avatar')
+        .populate('property', 'title photos')
+        .sort({ updatedAt: -1 });
+
+      // Get latest message for each chat
+      const chatsWithMessages = await Promise.all(
+        chats.map(async (chat) => {
+          const latestMessage = await Message.findOne({ chat: chat._id })
+            .sort({ createdAt: -1 })
+            .populate('sender', 'name avatar');
+
+          // Get unread messages count
+          const unreadCount = await Message.countDocuments({
+            chat: chat._id,
+            sender: { $ne: userId },
+            'readBy.user': { $ne: userId },
+          });
+
+          return {
+            ...chat.toJSON(),
+            latestMessage,
+            unreadCount,
+          };
+        })
+      );
+
+      // Connect user to all their chat rooms
+      chatService.handleUserConnect(
+        userId,
+        chats.map((chat) => chat._id)
+      );
+
+      res.json({
+        status: 'success',
+        data: chatsWithMessages,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        message: error.message,
+      });
+    }
+  }
+
   // Get a specific chat by ID
+  // Get a specific chat with messages
   async getChatById(req, res) {
     try {
       const { chatId } = req.params;
       const userId = req.user._id;
+      const { page = 1, limit = 20 } = req.query;
 
       const chat = await ChatModel.findOne({
         _id: chatId,
@@ -73,9 +108,36 @@ class ChatController {
         });
       }
 
+      // Get messages for this chat with pagination
+      const messages = await Message.find({ chat: chatId })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .populate('sender', 'name avatar');
+
+      // Get total messages count
+      const totalMessages = await Message.countDocuments({ chat: chatId });
+
+      // Get unread messages count
+      const unreadCount = await Message.countDocuments({
+        chat: chatId,
+        sender: { $ne: userId },
+        'readBy.user': { $ne: userId },
+      });
+
       res.json({
         status: 'success',
-        data: chat,
+        data: {
+          chat: chat.toJSON(),
+          messages,
+          unreadCount,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: totalMessages,
+            pages: Math.ceil(totalMessages / limit),
+          },
+        },
       });
     } catch (error) {
       res.status(500).json({
@@ -84,6 +146,36 @@ class ChatController {
       });
     }
   }
+  //   async getChatById(req, res) {
+  //     try {
+  //       const { chatId } = req.params;
+  //       const userId = req.user._id;
+
+  //       const chat = await ChatModel.findOne({
+  //         _id: chatId,
+  //         participants: userId,
+  //       })
+  //         .populate('participants', 'name email avatar')
+  //         .populate('property', 'title photos');
+
+  //       if (!chat) {
+  //         return res.status(404).json({
+  //           status: 'error',
+  //           message: 'Chat not found or unauthorized',
+  //         });
+  //       }
+
+  //       res.json({
+  //         status: 'success',
+  //         data: chat,
+  //       });
+  //     } catch (error) {
+  //       res.status(500).json({
+  //         status: 'error',
+  //         message: error.message,
+  //       });
+  //     }
+  //   }
 
   // Get messages for a chat
   async getChatMessages(req, res) {
@@ -111,13 +203,35 @@ class ChatController {
         .limit(parseInt(limit))
         .populate('sender', 'name avatar');
 
+      const totalMessages = await Message.countDocuments({ chat: chatId });
+
+      // Mark messages as read
+      await Message.updateMany(
+        {
+          chat: chatId,
+          sender: { $ne: userId },
+          'readBy.user': { $ne: userId },
+        },
+        {
+          $push: {
+            readBy: {
+              user: userId,
+              readAt: new Date(),
+            },
+          },
+        }
+      );
+
       res.json({
         status: 'success',
-        data: messages,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: await Message.countDocuments({ chat: chatId }),
+        data: {
+          messages,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: totalMessages,
+            pages: Math.ceil(totalMessages / limit),
+          },
         },
       });
     } catch (error) {
@@ -133,13 +247,22 @@ class ChatController {
     try {
       const { propertyId, recipientId } = req.body;
       const userId = req.user._id;
+      console.log(req.body);
 
+      // Validate both users exist
+      if (!recipientId) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Recipient ID is required',
+        });
+      }
       // Create chat using chat service
       const chat = await chatService.createChat(
         userId,
         recipientId,
         propertyId
       );
+      console.log(chat);
 
       // Join participants to chat room
       chatService.handleJoinChat(chat._id, [userId, recipientId]);
@@ -149,6 +272,60 @@ class ChatController {
         data: chat,
       });
     } catch (error) {
+      console.error('Chat creation error:', error);
+      res.status(500).json({
+        status: 'error',
+        message: error.message || 'Failed to create chat',
+      });
+    }
+  }
+
+  // In ChatController class
+  async sendMessage(req, res) {
+    try {
+      const { chatId } = req.params;
+      const userId = req.user._id;
+      const { content, attachments } = req.body;
+
+      // Validate input
+      if (!content && (!attachments || attachments.length === 0)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Message content or attachments required',
+        });
+      }
+
+      // Verify user is participant in chat
+      const chat = await ChatModel.findOne({
+        _id: chatId,
+        participants: userId,
+      });
+
+      if (!chat) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Chat not found or unauthorized',
+        });
+      }
+
+      // Send message using chat service
+      const message = await chatService.sendMessage(chatId, userId, {
+        content,
+        attachments,
+      });
+
+      // Emit message to all participants
+      //   chatService.io.to(`chat_${chatId}`).emit('new_message', {
+      //     chatId,
+      //     message,
+      //   });
+
+      res.status(201).json({
+        status: 'success',
+        data: message,
+      });
+    } catch (error) {
+      console.log(error);
       res.status(500).json({
         status: 'error',
         message: error.message,

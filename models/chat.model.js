@@ -2,46 +2,26 @@
 import mongoose, { Schema, model } from 'mongoose';
 const chatSchema = new Schema(
   {
-    inquiry: {
+    property: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Inquiry',
+      ref: 'Property',
       required: true,
     },
-    participants: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    ],
-    messages: [
-      {
-        sender: {
+    participants: {
+      type: [
+        {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'User',
         },
-        content: String,
-        attachments: [
-          {
-            type: String,
-            url: String,
-            name: String,
-          },
-        ],
-        readBy: [
-          {
-            user: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'User',
-            },
-            readAt: Date,
-          },
-        ],
-        createdAt: {
-          type: Date,
-          default: Date.now,
+      ],
+      validate: {
+        validator: function (participants) {
+          return participants.length === 2; // Ensure exactly 2 participants
         },
+        message: 'Chat must have exactly 2 participants',
       },
-    ],
+      required: true,
+    },
     lastMessage: {
       content: String,
       sender: {
@@ -49,6 +29,16 @@ const chatSchema = new Schema(
         ref: 'User',
       },
       createdAt: Date,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'archived', 'blocked'],
+      default: 'active',
     },
   },
   {
