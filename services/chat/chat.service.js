@@ -224,6 +224,13 @@ class ChatService {
       };
       await chat.save();
 
+      console.log(`emitting messages ${newMessage}`);
+      // Emit message to all participants in the chat room
+      this.io.to(`chat_${chatId}`).emit('new_message', {
+        chatId,
+        message: newMessage,
+      });
+
       // Populate sender information
       await newMessage.populate('sender', 'name email avatar');
 
