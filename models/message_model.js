@@ -43,6 +43,17 @@ const messageSchema = new mongoose.Schema(
         },
       },
     ],
+    status: {
+      type: String,
+      enum: ['SENT', 'DELIVERED', 'READ'],
+      default: 'SENT',
+    },
+    deletedFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,

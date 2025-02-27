@@ -7,6 +7,11 @@ const chatSchema = new Schema(
       ref: 'Property',
       required: true,
     },
+    inquiry: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Inquiry',
+      required: true,
+    },
     participants: {
       type: [
         {
@@ -22,6 +27,7 @@ const chatSchema = new Schema(
       },
       required: true,
     },
+    messages: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Message' }],
     lastMessage: {
       content: String,
       sender: {

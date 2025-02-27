@@ -11,6 +11,7 @@ class ChatService {
 
   initialize() {
     this.io.on('connection', (socket) => {
+      // Your existing socket handlers
       socket.on('user_connected', (userId) =>
         this.handleUserConnect(socket, userId)
       );
@@ -18,7 +19,71 @@ class ChatService {
       socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
       socket.on('send_message', (data) => this.handleNewMessage(socket, data));
       socket.on('disconnect', () => this.handleDisconnect(socket));
+
+      // Add new socket handlers
+      socket.on('typing_start', (chatId) =>
+        this.handleTypingStart(socket, chatId)
+      );
+      socket.on('typing_end', (chatId) => this.handleTypingEnd(socket, chatId));
+      socket.on('mark_read', (data) => this.handleMarkRead(socket, data));
     });
+  }
+
+  // initialize() {
+  //   this.io.on('connection', (socket) => {
+  //     socket.on('user_connected', (userId) =>
+  //       this.handleUserConnect(socket, userId)
+  //     );
+  //     socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
+  //     socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
+  //     socket.on('send_message', (data) => this.handleNewMessage(socket, data));
+  //     socket.on('disconnect', () => this.handleDisconnect(socket));
+  //   });
+  // }
+
+  // Add new methods for typing indicators
+  handleTypingStart(socket, chatId) {
+    socket.to(`chat_${chatId}`).emit('typing_start', {
+      userId: socket.userId,
+      chatId,
+    });
+  }
+
+  handleTypingEnd(socket, chatId) {
+    socket.to(`chat_${chatId}`).emit('typing_end', {
+      userId: socket.userId,
+      chatId,
+    });
+  }
+
+  // Add method for marking messages as read
+  async handleMarkRead(socket, { chatId, messageIds }) {
+    try {
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds },
+          chat: chatId,
+          'readBy.user': { $ne: socket.userId },
+        },
+        {
+          $push: {
+            readBy: {
+              user: socket.userId,
+              readAt: new Date(),
+            },
+          },
+          status: 'READ',
+        }
+      );
+
+      this.io.to(`chat_${chatId}`).emit('messages_read', {
+        chatId,
+        messageIds,
+        userId: socket.userId,
+      });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
   }
 
   async handleUserConnect(socket, userId) {
@@ -54,15 +119,15 @@ class ChatService {
         throw new Error('Chat not found');
       }
 
-    //   const newMessage = await this.sendMessage(chatId, socket.userId, message);
+      //   const newMessage = await this.sendMessage(chatId, socket.userId, message);
 
       // Save message to database
-        const newMessage = await Message.create({
-          chat: chatId,
-          sender: socket.userId,
-          content: message.content,
-          attachments: message.attachments,
-        });
+      const newMessage = await Message.create({
+        chat: chatId,
+        sender: socket.userId,
+        content: message.content,
+        attachments: message.attachments,
+      });
 
       // Update chat's last message
       chat.lastMessage = {

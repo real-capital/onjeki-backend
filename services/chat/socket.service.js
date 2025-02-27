@@ -81,13 +81,18 @@ import { SocketErrorHandler } from '../../middlewares/socket.error.middleware.js
 import { SocketLogger } from '../../middlewares/socket.logger.middleware.js';
 import ChatService from './chat.service.js';
 
-
 // services/socket.service.js
 export class SocketService {
   constructor(server) {
     this.io = new Server(server, {
       cors: {
-        origin: process.env.CLIENT_URL,
+        // Allow multiple origins
+        origin: '*',
+        // origin: [
+        //   process.env.CLIENT_URL_ANDROID,
+        //   process.env.CLIENT_URL_IOS,
+        //   process.env.CLIENT_URL_PRODUCTION,
+        // ].filter(Boolean), // Filter out undefined values
         methods: ['GET', 'POST'],
         credentials: true,
       },
@@ -107,7 +112,7 @@ export class SocketService {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await UserModel.findById(decoded.id);
-        
+
         if (!user) {
           return next(new Error('User not found'));
         }
@@ -168,7 +173,7 @@ export class SocketService {
 //   initialize() {
 //     // Apply authentication middleware
 //     this.io.use(SocketMiddleware.authenticate);
- 
+
 //     this.io.on('connection', SocketMiddleware.handleConnection);
 
 //     // Add logger in development
@@ -195,8 +200,6 @@ export class SocketService {
 //       logger.error(`Socket connection error: ${error.message}`);
 //     });
 //   }
-
-  
 
 //   emitToUsers(users, event, data) {
 //     if (Array.isArray(users)) {

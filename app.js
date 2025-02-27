@@ -69,6 +69,28 @@ class app {
     //   })
     // );
   }
+  // initializeSocket() {
+  //   // Initialize Socket.IO with server
+  //   const io = new Server(this.server, {
+  //     cors: {
+  //       origin: [
+  //         process.env.CLIENT_URL_ANDROID,
+  //         process.env.CLIENT_URL_IOS,
+  //         process.env.CLIENT_URL_PRODUCTION,
+  //       ].filter(Boolean),
+  //       methods: ['GET', 'POST'],
+  //       credentials: true,
+  //     },
+  //   });
+
+  //   // Initialize chat service with io instance
+  //   const chatService = new ChatService(io);
+  //   chatService.initialize();
+
+  //   // Make services available throughout the application
+  //   this.app.set('io', io);
+  //   this.app.set('chatService', chatService);
+  // }
   initializeSocket() {
     // Initialize Socket.IO with server
     this.socketService = new SocketService(this.server);
