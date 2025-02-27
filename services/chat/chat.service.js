@@ -9,41 +9,6 @@ class ChatService {
     this.connectedUsers = new Map(); // userId -> socketId
   }
 
-  // initialize() {
-  //   this.io.on('connection', (socket) => {
-  //     // Your existing socket handlers
-  //     socket.on('user_connected', (userId) =>
-  //       this.handleUserConnect(socket, userId)
-  //     );
-  //     socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
-  //     socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
-  //     socket.on('send_message', (data) => this.handleNewMessage(socket, data));
-  //     socket.on('disconnect', () => this.handleDisconnect(socket));
-
-  //     // Add new socket handlers
-  //     socket.on('typing_start', (chatId) =>
-  //       this.handleTypingStart(socket, chatId)
-  //     );
-  //     socket.on('typing_end', (chatId) => this.handleTypingEnd(socket, chatId));
-  //     socket.on('mark_read', (data) => this.handleMarkRead(socket, data));
-  //   });
-  // }
-
-  // // Add new methods for typing indicators
-  // handleTypingStart(socket, chatId) {
-  //   socket.to(`chat_${chatId}`).emit('typing_start', {
-  //     userId: socket.userId,
-  //     chatId,
-  //   });
-  // }
-
-  // handleTypingEnd(socket, chatId) {
-  //   socket.to(`chat_${chatId}`).emit('typing_end', {
-  //     userId: socket.userId,
-  //     chatId,
-  //   });
-  // }
-
   // Add method for marking messages as read
 
   initialize() {
@@ -118,8 +83,10 @@ class ChatService {
   }
 
   async handleUserConnect(socket, userId) {
+    console.log(`socket ============== ${socket}`);
     this.connectedUsers.set(userId, socket.id);
     socket.userId = userId;
+    console.log('Socket userId:', socket.userId);
 
     // Get user's active chats and join their rooms
     const activeChats = await ChatModel.find({
@@ -171,6 +138,7 @@ class ChatService {
       await chat.save();
 
       console.log(`emitting messages ${newMessage}`);
+      console.log('this.io:', this.io);
       // Emit message to all participants in the chat room
       this.io.to(`chat_${chatId}`).emit('new_message', {
         chatId,
@@ -225,11 +193,12 @@ class ChatService {
       await chat.save();
 
       console.log(`emitting messages ${newMessage}`);
-      // Emit message to all participants in the chat room
-      this.io.to(`chat_${chatId}`).emit('new_message', {
-        chatId,
-        message: newMessage,
-      });
+      // console.log('this.io:', this.io);
+      // // Emit message to all participants in the chat room
+      // this.io.to(`chat_${chatId}`).emit('new_message', {
+      //   chatId,
+      //   message: newMessage,
+      // });
 
       // Populate sender information
       await newMessage.populate('sender', 'name email avatar');
