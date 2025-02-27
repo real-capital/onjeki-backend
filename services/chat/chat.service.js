@@ -233,17 +233,17 @@ class ChatService {
     return chat;
   }
 
-  handleJoinChat(chatId, userIds) {
-    userIds.forEach((userId) => {
-      const socketId = this.connectedUsers.get(userId.toString());
-      if (socketId) {
-        const socket = this.io.sockets.sockets.get(socketId);
-        if (socket) {
-          socket.join(`chat_${chatId}`);
-        }
-      }
-    });
-  }
+  // handleJoinChat(chatId, userIds) {
+  //   userIds.forEach((userId) => {
+  //     const socketId = this.connectedUsers.get(userId.toString());
+  //     if (socketId) {
+  //       const socket = this.io.sockets.sockets.get(socketId);
+  //       if (socket) {
+  //         socket.join(`chat_${chatId}`);
+  //       }
+  //     }
+  //   });
+  // }
 
   handleUserConnect(userId, chatIds) {
     const socketId = this.connectedUsers.get(userId.toString());
