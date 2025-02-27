@@ -7,11 +7,11 @@ const chatSchema = new Schema(
       ref: 'Property',
       required: true,
     },
-    inquiry: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Inquiry',
-      required: true,
-    },
+    // inquiry: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'Inquiry',
+    //   required: true,
+    // },
     participants: {
       type: [
         {
