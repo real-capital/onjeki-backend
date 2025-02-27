@@ -9,12 +9,53 @@ class ChatService {
     this.connectedUsers = new Map(); // userId -> socketId
   }
 
+  // initialize() {
+  //   this.io.on('connection', (socket) => {
+  //     // Your existing socket handlers
+  //     socket.on('user_connected', (userId) =>
+  //       this.handleUserConnect(socket, userId)
+  //     );
+  //     socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
+  //     socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
+  //     socket.on('send_message', (data) => this.handleNewMessage(socket, data));
+  //     socket.on('disconnect', () => this.handleDisconnect(socket));
+
+  //     // Add new socket handlers
+  //     socket.on('typing_start', (chatId) =>
+  //       this.handleTypingStart(socket, chatId)
+  //     );
+  //     socket.on('typing_end', (chatId) => this.handleTypingEnd(socket, chatId));
+  //     socket.on('mark_read', (data) => this.handleMarkRead(socket, data));
+  //   });
+  // }
+
+  // // Add new methods for typing indicators
+  // handleTypingStart(socket, chatId) {
+  //   socket.to(`chat_${chatId}`).emit('typing_start', {
+  //     userId: socket.userId,
+  //     chatId,
+  //   });
+  // }
+
+  // handleTypingEnd(socket, chatId) {
+  //   socket.to(`chat_${chatId}`).emit('typing_end', {
+  //     userId: socket.userId,
+  //     chatId,
+  //   });
+  // }
+
+  // Add method for marking messages as read
+
   initialize() {
     this.io.on('connection', (socket) => {
-      // Your existing socket handlers
-      socket.on('user_connected', (userId) =>
-        this.handleUserConnect(socket, userId)
-      );
+      console.log(`User connected: ${socket.id}`);
+
+      // Capture userId when a user connects
+      socket.on('user_connected', (userId) => {
+        socket.userId = userId; // Store userId in the socket instance
+        this.handleUserConnect(socket, userId);
+      });
+
       socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
       socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
       socket.on('send_message', (data) => this.handleNewMessage(socket, data));
@@ -31,20 +72,30 @@ class ChatService {
 
   // Add new methods for typing indicators
   handleTypingStart(socket, chatId) {
+    if (!socket.userId) {
+      console.error(
+        `Typing event ignored: No userId set for socket ${socket.id}`
+      );
+      return;
+    }
     socket.to(`chat_${chatId}`).emit('typing_start', {
-      userId: socket.userId,
+      userId: socket.userId, // Ensure userId is sent
       chatId,
     });
   }
 
   handleTypingEnd(socket, chatId) {
+    if (!socket.userId) {
+      console.error(
+        `Typing event ignored: No userId set for socket ${socket.id}`
+      );
+      return;
+    }
     socket.to(`chat_${chatId}`).emit('typing_end', {
-      userId: socket.userId,
+      userId: socket.userId, // Ensure userId is sent
       chatId,
     });
   }
-
-  // Add method for marking messages as read
   async handleMarkRead(socket, { chatId, messageIds }) {
     try {
       await Message.updateMany(
