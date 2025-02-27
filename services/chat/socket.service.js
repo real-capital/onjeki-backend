@@ -26,27 +26,27 @@ export class SocketService {
 
   initialize() {
     // Authentication middleware
-    // this.io.use(async (socket, next) => {
-    //   try {
-    //     const token = socket.handshake.auth.token;
-    //     if (!token) {
-    //       return next(new Error('Authentication required'));
-    //     }
+    this.io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth.token;
+        if (!token) {
+          return next(new Error('Authentication required'));
+        }
 
-    //     const decoded = Jwt.verify(token, process.env.JWT_SECRET);
-    //     const user = await UserModel.findById(decoded.id);
+        const decoded = Jwt.verify(token, process.env.JWT_SECRET);
+        const user = await UserModel.findById(decoded.id);
 
-    //     if (!user) {
-    //       return next(new Error('User not found'));
-    //     }
+        if (!user) {
+          return next(new Error('User not found'));
+        }
 
-    //     socket.user = user;
-    //     next();
-    //   } catch (error) {
-    //     logger.error(`Socket authentication error: ${error.message}`);
-    //     next(new Error('Authentication failed'));
-    //   }
-    // });
+        socket.user = user;
+        next();
+      } catch (error) {
+        logger.error(`Socket authentication error: ${error.message}`);
+        next(new Error('Authentication failed'));
+      }
+    });
 
     // Basic connection handling
     this.io.on('connection', (socket) => {

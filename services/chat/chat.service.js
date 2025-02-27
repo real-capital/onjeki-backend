@@ -29,18 +29,6 @@ class ChatService {
     });
   }
 
-  // initialize() {
-  //   this.io.on('connection', (socket) => {
-  //     socket.on('user_connected', (userId) =>
-  //       this.handleUserConnect(socket, userId)
-  //     );
-  //     socket.on('join_chat', (chatId) => this.handleJoinChat(socket, chatId));
-  //     socket.on('leave_chat', (chatId) => this.handleLeaveChat(socket, chatId));
-  //     socket.on('send_message', (data) => this.handleNewMessage(socket, data));
-  //     socket.on('disconnect', () => this.handleDisconnect(socket));
-  //   });
-  // }
-
   // Add new methods for typing indicators
   handleTypingStart(socket, chatId) {
     socket.to(`chat_${chatId}`).emit('typing_start', {
