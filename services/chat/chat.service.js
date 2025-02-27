@@ -133,7 +133,7 @@ class ChatService {
   }
 
   handleJoinChat(socket, chatId) {
-    console.log(`user joining ${chat.id}`);
+    console.log(`user joining ${chatId}`);
     socket.join(`chat_${chatId}`);
   }
 
