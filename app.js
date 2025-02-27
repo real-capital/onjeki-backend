@@ -23,6 +23,7 @@ import rateLimit from 'express-rate-limit';
 import { SocketService } from './services/chat/socket.service.js';
 import ChatService from './services/chat/chat.service.js';
 
+
 // Load environment variables
 dotenv.config();
 
@@ -69,28 +70,7 @@ class app {
     //   })
     // );
   }
-  // initializeSocket() {
-  //   // Initialize Socket.IO with server
-  //   const io = new Server(this.server, {
-  //     cors: {
-  //       origin: [
-  //         process.env.CLIENT_URL_ANDROID,
-  //         process.env.CLIENT_URL_IOS,
-  //         process.env.CLIENT_URL_PRODUCTION,
-  //       ].filter(Boolean),
-  //       methods: ['GET', 'POST'],
-  //       credentials: true,
-  //     },
-  //   });
-
-  //   // Initialize chat service with io instance
-  //   const chatService = new ChatService(io);
-  //   chatService.initialize();
-
-  //   // Make services available throughout the application
-  //   this.app.set('io', io);
-  //   this.app.set('chatService', chatService);
-  // }
+ 
   initializeSocket() {
     // Initialize Socket.IO with server
     this.socketService = new SocketService(this.server);
@@ -106,12 +86,7 @@ class app {
     this.app.set('socketService', this.socketService);
     this.app.set('chatService', this.chatService);
   }
-  // initializeSocket() {
-  //   this.socketService = new SocketService(this.server);
 
-  //   // Make socket service available throughout the application
-  //   this.app.set('socketService', this.socketService);
-  // }
 
   // Initialize Routes
   initializeRoutes(routes) {
