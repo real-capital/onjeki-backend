@@ -121,6 +121,12 @@ class PropertyRoute extends Route {
       isAuthenticated,
       this.controller.getAllProperties
     );
+    this.router.get(
+      `${this.path}/getListings-inprogress`,
+      validate,
+      isAuthenticated,
+      this.controller.getAllListingsInProgress
+    );
 
     this.router.get(
       `${this.path}/property/:id`,

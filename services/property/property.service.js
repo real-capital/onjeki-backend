@@ -416,6 +416,38 @@ class PropertyService {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
+  async getAllListingInProgress(pagination = { page: 1, limit: 10 }) {
+    try {
+      // const query = this.buildSearchQuery(filters);
+      const skip = (pagination.page - 1) * pagination.limit;
+
+      const properties = await OnboardingModel.find()
+
+        .skip(skip)
+        .limit(pagination.limit)
+        .sort('createdAt');
+
+      // // Increment views if visitor is not the host
+      // if (userId !== properties.owner._id) {
+      //   properties.stats.views += 1;
+      //   await properties.save({ validateBeforeSave: false });
+      // }
+
+      const total = await PropertyModel.countDocuments(query);
+
+      return {
+        properties,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          pages: Math.ceil(total / pagination.limit),
+        },
+      };
+    } catch (error) {
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
+    }
+  }
 
   async getPropertyById(propertyId) {
     try {
@@ -440,7 +472,6 @@ class PropertyService {
       if (!property) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'Property not found');
       }
-    
 
       return property;
     } catch (error) {
@@ -695,13 +726,6 @@ class PropertyService {
         userId,
         isCompleted: false,
       }).sort({ lastUpdated: -1 });
-
-      // if (!progress) {
-      //   throw new HttpException(
-      //     StatusCodes.NOT_FOUND,
-      //     'No onboarding progress found'
-      //   );
-      // }
 
       return progress;
     } catch (error) {
