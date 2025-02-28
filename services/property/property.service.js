@@ -433,7 +433,7 @@ class PropertyService {
       //   await properties.save({ validateBeforeSave: false });
       // }
 
-      const total = await PropertyModel.countDocuments(query);
+      const total = await PropertyModel.countDocuments();
 
       return {
         properties,
