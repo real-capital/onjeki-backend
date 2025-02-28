@@ -741,6 +741,7 @@ class PropertyService {
     try {
       const progressData = {
         userId: userId,
+        type: data.type,
         currentStep: data.currentStep,
         formData: data.formData || {},
         isCompleted: data.isCompleted || false,

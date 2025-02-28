@@ -30,6 +30,10 @@ const OnboardingSchema = new mongoose.Schema(
         'review',
       ],
     },
+    type: {
+      type: String,
+      required: true,
+    },
     formData: {
       type: Object, // Changed from Map to Object
       default: {},
