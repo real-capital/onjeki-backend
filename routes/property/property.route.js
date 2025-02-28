@@ -122,7 +122,7 @@ class PropertyRoute extends Route {
       this.controller.getAllProperties
     );
     this.router.get(
-      `${this.path}/getListings-inprogress`,
+      `${this.path}/all-progress`,
       validate,
       isAuthenticated,
       this.controller.getAllListingsInProgress
