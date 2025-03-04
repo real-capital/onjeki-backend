@@ -311,10 +311,7 @@ class PropertyController {
   getAllListingsInProgress = async (req, res, next) => {
     try {
       // const { pagination } = req.query;
-      const result = await propertyService
-        .getAllListingInProgress
-        // pagination
-        ();
+      const result = await propertyService.getAllListingInProgress();
 
       res.status(StatusCodes.OK).json({
         status: 'success',

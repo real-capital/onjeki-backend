@@ -417,7 +417,7 @@ class PropertyService {
     }
   }
   async getAllListingInProgress() {
-  // pagination = { page: 1, limit: 10 }
+    // pagination = { page: 1, limit: 10 }
     try {
       // const query = this.buildSearchQuery(filters);
       // const skip = (pagination.page - 1) * pagination.limit;
@@ -436,15 +436,7 @@ class PropertyService {
 
       // const total = await OnboardingModel.countDocuments();
 
-      return {
-        properties,
-        // pagination: {
-        //   page: pagination.page,
-        //   limit: pagination.limit,
-        //   total,
-        //   pages: Math.ceil(total / pagination.limit),
-        // },
-      };
+      return properties;
     } catch (error) {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
