@@ -416,15 +416,16 @@ class PropertyService {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
-  async getAllListingInProgress(pagination = { page: 1, limit: 10 }) {
+  async getAllListingInProgress() {
+  // pagination = { page: 1, limit: 10 }
     try {
       // const query = this.buildSearchQuery(filters);
-      const skip = (pagination.page - 1) * pagination.limit;
+      // const skip = (pagination.page - 1) * pagination.limit;
 
       const properties = await OnboardingModel.find()
 
-        .skip(skip)
-        .limit(pagination.limit)
+        // .skip(skip)
+        // .limit(pagination.limit)
         .sort('createdAt');
 
       // // Increment views if visitor is not the host
@@ -433,16 +434,16 @@ class PropertyService {
       //   await properties.save({ validateBeforeSave: false });
       // }
 
-      const total = await PropertyModel.countDocuments();
+      // const total = await OnboardingModel.countDocuments();
 
       return {
         properties,
-        pagination: {
-          page: pagination.page,
-          limit: pagination.limit,
-          total,
-          pages: Math.ceil(total / pagination.limit),
-        },
+        // pagination: {
+        //   page: pagination.page,
+        //   limit: pagination.limit,
+        //   total,
+        //   pages: Math.ceil(total / pagination.limit),
+        // },
       };
     } catch (error) {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
