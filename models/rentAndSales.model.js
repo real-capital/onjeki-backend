@@ -87,24 +87,75 @@ const rentAndSalesSchema = new Schema(
     features: {
       bedrooms: Number,
       bathrooms: Number,
-      parkingSpaces: Number,
-      totalArea: Number, // in square meters
-      buildingAge: Number,
+      // parkingSpaces: Number,
+      // totalArea: Number, // in square meters
+      // buildingAge: Number,
       furnished: Boolean,
     },
     amenities: [
       {
         type: String,
         enum: [
-          'SWIMMING_POOL',
-          'GYM',
-          'SECURITY',
-          'AIR_CONDITIONING',
-          'ELEVATOR',
-          // Add more amenities
+          // Basic
+          '24/7 Electricity',
+          'Borehole / Water Supply',
+          'Prepaid Meter',
+          'Security',
+          'Gated Compound',
+          'Parking Space',
+          'Modern Kitchen',
+          'Ensuite Bathrooms',
+          'Water Heater',
+          'Air Conditioning',
+          'Ceiling Fans',
+          'POP Ceiling',
+          'Tiled Floors',
+
+          // Luxury
+          'Swimming Pool',
+          'Gym',
+          'Smart Home Features',
+          'CCTV Surveillance',
+          'Elevator',
+          'Garden / Green Space',
+          'Backup Generator',
+          'Solar Power',
+          'Tennis Court',
+          'Clubhouse',
+          'Rooftop Lounge',
+          'Private Cinema Room',
+
+          // Environmental & Convenience
+          'Eco-Friendly Solar System',
+          'Soundproof Windows',
+          'Waste Disposal System',
+          'Fire Alarm & Smoke Detector',
+          'Pet-Friendly Space',
+          'Wheelchair Accessibility',
+          'Intercom System',
+          'Serviced Apartment',
+
+          // Additional Features
+          'Fully Furnished Option',
+          'High-Speed Internet',
+          'Laundry Room',
+          'Balcony',
+          'Walk-In Closet',
+          'Jacuzzi',
+          'BQ (Boys Quarters)',
+          'Study / Home Office',
+          "Children's Playground",
+
+          // Transport & Security
+          'Close to Major Roads',
+          'Proximity to Schools & Markets',
+          'Underground Parking',
+          'Electric Fence',
+          'Smart Lock System',
         ],
       },
     ],
+
     photo: {
       images: [
         {
