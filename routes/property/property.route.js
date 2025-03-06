@@ -118,7 +118,7 @@ class PropertyRoute extends Route {
     this.router.get(
       `${this.path}/getAll`,
       validate,
-      isAuthenticated,
+      // isAuthenticated,
       this.controller.getAllProperties
     );
     this.router.get(
@@ -131,13 +131,13 @@ class PropertyRoute extends Route {
     this.router.get(
       `${this.path}/property/:id`,
       validate,
-      isAuthenticated,
+      // isAuthenticated,
       this.controller.getPropertyById
     );
     this.router.get(
       `${this.path}/property/rent/:id`,
       validate,
-      isAuthenticated,
+      // isAuthenticated,
       this.rentController.getRentOrSalesById
     );
     this.router.get(
@@ -162,7 +162,7 @@ class PropertyRoute extends Route {
     this.router.get(
       `${this.path}/nearby`,
       validate,
-      isAuthenticated,
+      // isAuthenticated,
       this.controller.getPropertyNearBy
     );
   }
