@@ -7,6 +7,7 @@ import { EListStatus } from '../../enum/house.enum.js';
 import mongoose from 'mongoose';
 import LastListingModel from '../../models/lastListing.model.js';
 import OnboardingModel from '../../models/onboarding.model.js';
+import RentAndSales from '../../models/rentAndSales.model.js';
 
 const uploadService = new UploadService();
 
@@ -371,6 +372,38 @@ class PropertyService {
         .populate('buildingType')
         .populate('owner', 'name email')
         .sort('createdAt');
+
+      return properties;
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching properties'
+      );
+    }
+  }
+  async getRentByUser(userId) {
+    try {
+      const properties = await RentAndSales.find({
+        owner: userId,
+        type: 'RENT',
+      }).sort('createdAt');
+
+      return properties;
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching properties'
+      );
+    }
+  }
+  async getSaleByUser(userId) {
+    try {
+      const properties = await RentAndSales.find({
+        owner: userId,
+        type: 'SALE',
+      }).sort('createdAt');
 
       return properties;
     } catch (error) {

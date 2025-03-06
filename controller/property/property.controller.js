@@ -291,6 +291,36 @@ class PropertyController {
       next(error);
     }
   };
+  getRentByUser = async (req, res, next) => {
+    try {
+      const userId = req.user.id; // Get the logged-in user ID
+
+      // Fetch properties where the user is the owner
+      const properties = await propertyService.getRentByUser(userId);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: properties,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+  getSaleByUser = async (req, res, next) => {
+    try {
+      const userId = req.user.id; // Get the logged-in user ID
+
+      // Fetch properties where the user is the owner
+      const properties = await propertyService.getSaleByUser(userId);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: properties,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   getAllProperties = async (req, res, next) => {
     try {
