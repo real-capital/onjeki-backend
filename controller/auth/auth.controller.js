@@ -56,6 +56,7 @@ class AuthController {
     }
   }
   async updateUserName(req, res, next) {
+    console.log(req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));

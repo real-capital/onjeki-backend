@@ -107,9 +107,8 @@ class AuthService {
     return user;
   }
 
-  async updateUserName(req, res) {
+  async updateUserName(name) {
     try {
-      const { name } = req.body;
       const userId = req.user.id; // Get user ID from token
 
       const user = await UserModel.findById(userId);
