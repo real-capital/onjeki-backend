@@ -296,7 +296,7 @@ class PropertyController {
       const userId = req.user.id; // Get the logged-in user ID
 
       // Fetch properties where the user is the owner
-      const properties = await propertyService.getRentByUser(userId);
+      const properties = await propertyService.getPropertiesByUser(userId);
 
       res.status(StatusCodes.OK).json({
         status: 'success',
