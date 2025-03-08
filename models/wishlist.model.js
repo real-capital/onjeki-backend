@@ -27,7 +27,7 @@ const wishlistSchema = new Schema({
 });
 
 // Create sparse unique index
-wishlistSchema.index({ shareableLink: 1 }, { unique: true, sparse: true });
+// wishlistSchema.index({ shareableLink: 1 }, { unique: true, sparse: true });
 
 const WishlistModel = model('Wishlist', wishlistSchema);
 
