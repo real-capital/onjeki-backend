@@ -765,6 +765,32 @@ class PropertyService {
       );
     }
   }
+  async deleteCompletedOnboarding(userId) {
+    try {
+      // Find the most recent completed onboarding
+      const progress = await OnboardingModel.findOneAndDelete({
+        userId,
+        isCompleted: true,
+      }).sort({ lastUpdated: -1 }); // Sort by lastUpdated descending to get the latest one
+
+      if (!progress) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'No completed onboarding found for this user'
+        );
+      }
+
+      return {
+        message: 'Successfully deleted the most recent completed onboarding',
+      };
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error deleting completed onboarding'
+      );
+    }
+  }
 
   async postProgress(userId, data) {
     try {

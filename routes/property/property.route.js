@@ -81,6 +81,11 @@ class PropertyRoute extends Route {
       isAuthenticated,
       this.controller.getProgress
     );
+    this.router.delete(
+      `${this.path}/progress`,
+      isAuthenticated,
+      this.controller.deleteCompletedOnboarding
+    );
     this.router.post(
       `${this.path}/progress`,
       isAuthenticated,

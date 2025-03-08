@@ -24,6 +24,19 @@ class PropertyController {
       next(error);
     }
   };
+  deleteCompletedOnboarding = async (req, res, next) => {
+    try {
+      const progress = await propertyService.deleteCompletedOnboarding(req.user.id);
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: progress,
+      });
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  };
 
   postProgress = async (req, res, next) => {
     console.log(req.body);
