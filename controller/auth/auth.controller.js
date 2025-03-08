@@ -41,14 +41,35 @@ class AuthController {
     }
 
     try {
-      const { token, name } = await authService.validateOtp(req.body);
+      const { token, needsName } = await authService.validateOtp(req.body);
       res
         .status(StatusCodes.OK)
-        .json({ statusCode: StatusCodes.OK, status: 'success', token, name });
+        .json({
+          statusCode: StatusCodes.OK,
+          status: 'success',
+          token,
+          needsName,
+        });
     } catch (error) {
       next(error);
     }
   }
+  async updateUserName(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      const user = await authService.updateUserName(req.body);
+      res
+        .status(StatusCodes.OK)
+        .json({ statusCode: StatusCodes.OK, status: 'success', user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUser(req, res, next) {
     try {
       const user = await authService.getUser(req.user.id);

@@ -96,7 +96,7 @@ class AuthService {
     user.otp = undefined;
     await user.save();
 
-    return { token, name: user.name };
+    return { token, needsName: !user.name };
   }
 
   async getUser(userId) {
@@ -105,6 +105,28 @@ class AuthService {
       throw new HttpException(StatusCodes.NOT_FOUND, 'User Not Found');
     }
     return user;
+  }
+
+  async updateUserName(req, res) {
+    try {
+      const { name } = req.body;
+      const userId = req.user.id; // Get user ID from token
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      user.name = name;
+      await user.save();
+
+      return user;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
   }
 
   // Create or update user based on Google or Apple profile info
