@@ -382,13 +382,13 @@ class PropertyService {
       );
     }
   }
-  async getRentByUser(userId) {
+  async getPropertiesByUser(userId) {
     try {
       const properties = await RentAndSales.find({
         owner: userId,
-        type: 'RENT',
+        type: { $in: ['RENT', 'SALE'] }, // Fetch both RENT and SALE
       }).sort('createdAt');
-
+  
       return properties;
     } catch (error) {
       console.log(error);
@@ -398,6 +398,7 @@ class PropertyService {
       );
     }
   }
+  
   async getSaleByUser(userId) {
     try {
       const properties = await RentAndSales.find({
