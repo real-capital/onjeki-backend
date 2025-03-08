@@ -96,7 +96,7 @@ class AuthService {
     user.otp = undefined;
     await user.save();
 
-    return { token, needsName: !user.name };
+    return { token, user, needsName: !user.name };
   }
 
   async getUser(userId) {

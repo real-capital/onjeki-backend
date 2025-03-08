@@ -41,15 +41,16 @@ class AuthController {
     }
 
     try {
-      const { token, needsName } = await authService.validateOtp(req.body);
-      res
-        .status(StatusCodes.OK)
-        .json({
-          statusCode: StatusCodes.OK,
-          status: 'success',
-          token,
-          needsName,
-        });
+      const { token, user, needsName } = await authService.validateOtp(
+        req.body
+      );
+      res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
+        status: 'success',
+        token,
+        user,
+        needsName,
+      });
     } catch (error) {
       next(error);
     }
