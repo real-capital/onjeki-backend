@@ -566,7 +566,7 @@ class PropertyService {
     try {
       const query = {};
 
-      query.listStatus = 'published';
+      query.listStatus = 'Approved';
       // Type filter
       if (filters.type) {
         query.type = filters.type;
@@ -802,13 +802,6 @@ class PropertyService {
         userId,
         isCompleted: false,
       });
-
-      // if (!progress) {
-      //   throw new HttpException(
-      //     StatusCodes.NOT_FOUND,
-      //     'No onboarding progress found'
-      //   );
-      // }
 
       progress.isCompleted = true;
       await progress.save();

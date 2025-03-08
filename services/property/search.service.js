@@ -27,6 +27,7 @@ class SearchService {
           limit,
           total,
           pages: Math.ceil(total / limit),
+          hasMore: skip + properties.length < total,
         },
       };
     } catch (error) {
@@ -48,8 +49,8 @@ class SearchService {
     // Price range filter
     if (filters.minPrice || filters.maxPrice) {
       query.price = {};
-      if (filters.minPrice) query.price.$gte = filters.minPrice;
-      if (filters.maxPrice) query.price.$lte = filters.maxPrice;
+      if (filters.minPrice) query['price.base'].$gte = filters.minPrice;
+      if (filters.maxPrice) query['price.base'].$lte = filters.maxPrice;
     }
 
     // Location filter

@@ -1,6 +1,7 @@
 // property.model.js
 import mongoose, { Schema, model } from 'mongoose';
 import slugify from 'slugify';
+import { EListStatus } from '../enum/house.enum.js';
 
 const rentAndSalesSchema = new Schema(
   {
@@ -19,6 +20,11 @@ const rentAndSalesSchema = new Schema(
       type: String,
       enum: ['APARTMENT', 'HOUSE', 'LAND', 'COMMERCIAL'],
       required: true,
+    },
+    listStatus: {
+      type: String,
+      enum: Object.values(EListStatus),
+      default: EListStatus.UNDER_REVIEW,
     },
     status: {
       type: String,

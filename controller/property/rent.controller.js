@@ -81,17 +81,19 @@ class RentOrSalesController {
       // amenities,
       // guests,
       // bedrooms,
-      // sortBy = 'createdAt',
-      // sortOrder = 'asc',
+      sortBy = 'date',
+      sortOrder = 'asc',
       status,
-      // listStatus = 'Approved',
+      listStatus = 'Approved',
       // isBooked,
       // isFurnished,
     } = req.query;
 
     const filters = {};
+    const sort = `${sortBy}_${sortOrder}`;
 
     // Add filters only if they exist
+    if (listStatus) filters.listStatus = listStatus;
     if (type) filters.type = type;
     if (propertyType) filters.propertyType = propertyType;
     if (space) filters.space = space;
@@ -132,9 +134,7 @@ class RentOrSalesController {
         page: Number(page),
         limit: Number(limit),
       },
-      // sort: {
-      //   [sortBy]: sortOrder === 'asc' ? 1 : -1,
-      // },
+      sort,
     };
   };
 

@@ -98,13 +98,16 @@ class RentOrSalesService {
       console.log('Pagination:', pagination);
       console.log('Sort:', sort);
       const query = this.buildSearchQuery(filters);
-      const skip = (pagination.page - 1) * pagination.limit;
+      const { page = 1, limit = 10 } = pagination;
+      const skip = (page - 1) * limit;
+      const sortQuery = this.buildSortQuery(sort);
+      // const skip = (pagination.page - 1) * pagination.limit;
       const [properties, total] = await Promise.all([
         RentAndSales.find(query)
           .populate('owner', 'name email phoneNumber')
-          .sort(this.buildSortQuery(filters.sort))
+          .sort(sortQuery)
           .skip(skip)
-          .limit(pagination.limit)
+          .limit(limit)
           .lean(),
         RentAndSales.countDocuments(query),
       ]);
@@ -112,10 +115,10 @@ class RentOrSalesService {
       return {
         properties,
         pagination: {
-          page: pagination.page,
-          limit: pagination.limit,
+          page,
+          limit,
           total,
-          pages: Math.ceil(total / pagination.limit),
+          pages: Math.ceil(total / limit),
           hasMore: skip + properties.length < total,
         },
       };
@@ -133,6 +136,9 @@ class RentOrSalesService {
     if (filters.type) {
       query.type = filters.type;
     }
+    if (filters.listStatus) {
+      query.listStatus = filters.listStatus;
+    }
     if (filters.status) {
       query.status = filters.status;
     }
@@ -146,6 +152,13 @@ class RentOrSalesService {
         $gte: filters.priceRange.min,
         $lte: filters.priceRange.max,
       };
+    }
+
+    // Price range filter
+    if (filters.minPrice || filters.maxPrice) {
+      query['price.amount'] = {};
+      if (filters.minPrice) query['price.amount'].$gte = filters.minPrice;
+      if (filters.maxPrice) query['price.amount'].$lte = filters.maxPrice;
     }
 
     if (filters.location) {
@@ -173,6 +186,15 @@ class RentOrSalesService {
     }
 
     if (filters.features) {
+      // if (filters.features.bedrooms) {
+      //   query['features.bedrooms'] = { $gte: filters.bedrooms };
+      // }
+      // if (filters.features.bathrooms) {
+      //   query['features.bathrooms'] = { $gte: filters.bedrooms };
+      // }
+      // if (filters.features.furnished !== undefined)
+      //   query.furnished = filters.furnished;
+
       Object.entries(filters.features).forEach(([key, value]) => {
         if (value !== undefined) {
           query[`features.${key}`] = value;
@@ -192,6 +214,10 @@ class RentOrSalesService {
       ];
     }
 
+    if (filters.propertyType) {
+      query.propertyType = filters.propertyType;
+    }
+
     return query;
   }
 
@@ -204,6 +230,8 @@ class RentOrSalesService {
       case 'date_desc':
         return { createdAt: -1 };
       case 'date_asc':
+        return { createdAt: 1 };
+      case 'asc':
         return { createdAt: 1 };
       default:
         return { createdAt: -1 };
