@@ -45,6 +45,7 @@ class AuthRoute extends Route {
     );
     this.router.post(
       `${this.path}/name`,
+      isAuthenticated,
       // validateOtp,
       validate,
       this.controller.updateUserName

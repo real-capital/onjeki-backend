@@ -63,6 +63,7 @@ class AuthController {
     }
 
     try {
+      console.log(req.user.id);
       const user = await authService.updateUserName(req.body.name, req.user.id);
       res
         .status(StatusCodes.OK)

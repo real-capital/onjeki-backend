@@ -112,6 +112,7 @@ class AuthService {
       // const userId = req.user.id; // Get user ID from token
 
       const user = await UserModel.findById(userId);
+      console.log(user);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
