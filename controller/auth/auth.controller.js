@@ -63,7 +63,7 @@ class AuthController {
     }
 
     try {
-      const user = await authService.updateUserName(req.body,req.user.id);
+      const user = await authService.updateUserName(req.body.name, req.user.id);
       res
         .status(StatusCodes.OK)
         .json({ statusCode: StatusCodes.OK, status: 'success', user });
