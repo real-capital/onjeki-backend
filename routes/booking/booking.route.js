@@ -1,51 +1,109 @@
-// routes/property/property.route.js
+// routes/booking/booking.route.js
 import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
-import BookingController from '../../controller/controller/booking.controller';
 import { isAuthenticated } from '../../middlewares/auth.js';
+import ServiceContainer from '../../services/ServiceContainer.js';
+import { logger } from '../../utils/logger.js';
+import BookingController from '../../controller/controller/booking.controller.js';
+
 class BookingRoute extends Route {
   constructor() {
-    super(express.Router());
+    super();
     this.path = '/booking';
-    this.controller = new BookingController();
-    this.initializeRoute();
+
+    try {
+      const bookingService = ServiceContainer.get('bookingService');
+      this.controller = new BookingController(bookingService);
+      this.initializeRoutes();
+    } catch (error) {
+      logger.error('Error initializing BookingRoute:', error);
+      throw error;
+    }
   }
-  initializeRoute() {
+
+  initializeRoutes() {
+    // Create booking
     this.router.post(
       `${this.path}`,
       isAuthenticated,
       this.controller.createBooking
     );
+
+    // Get booking by ID
+    this.router.get(
+      `${this.path}/:bookingId`,
+      isAuthenticated,
+      this.controller.getBooking
+    );
+
+    // Get user bookings
+    this.router.get(
+      `${this.path}/user/bookings`,
+      isAuthenticated,
+      this.controller.getUserBookings
+    );
+
+    // Get host bookings
+    this.router.get(
+      `${this.path}/host/bookings`,
+      isAuthenticated,
+      this.controller.getHostBookings
+    );
+
+    // Get pending bookings
+    this.router.get(
+      `${this.path}/pending`,
+      isAuthenticated,
+      this.controller.getPendingBookings
+    );
+
+    // Accept booking
+    this.router.patch(
+      `${this.path}/:id/accept`,
+      isAuthenticated,
+      this.controller.acceptBooking
+    );
+
+    // Reject booking
+    this.router.patch(
+      `${this.path}/:id/reject`,
+      isAuthenticated,
+      this.controller.rejectBooking
+    );
+
+    // Cancel booking
+    this.router.patch(
+      `${this.path}/:bookingId/cancel`,
+      isAuthenticated,
+      this.controller.cancelBooking
+    );
   }
 }
 
 export default BookingRoute;
+// router.post(
+//   '/properties/:propertyId/calculate',
+//   authMiddleware,
+//   validateBookingDates,
+//   catchAsync(bookingController.calculatePrice)
+// );
 
+// router.post(
+//   '/bookings',
+//   authMiddleware,
+//   validateBookingCreate,
+//   catchAsync(bookingController.createBooking)
+// );
 
+// router.get(
+//   '/bookings/:bookingId',
+//   authMiddleware,
+//   catchAsync(bookingController.getBooking)
+// );
 
-// router
-//   .route('/')
-//   .get(bookingController.getMyBookings)
-//   .post(validateBooking, bookingController.createBooking);
-
-// router
-//   .route('/:id')
-//   .get(bookingController.getBooking)
-//   .patch(validateBooking, bookingController.updateBooking)
-//   .delete(bookingController.cancelBooking);
-
-// router
-//   .route('/:id/confirm')
-//   .post(restrictTo('host'), bookingController.confirmBooking);
-
-// router
-//   .route('/:id/reject')
-//   .post(restrictTo('host'), bookingController.rejectBooking);
-
-// router
-//   .route('/:id/check-in')
-//   .post(restrictTo('host'), bookingController.checkInGuest);
-
-// router
-//   .route('/:id/check-out')
-//   .post(restrictTo('host'), bookingController.checkOutGuest);
+// router.post(
+//   '/bookings/:bookingId/cancel',
+//   authMiddleware,
+//   validateCancellation,
+//   catchAsync(bookingController.cancelBooking)
+// );

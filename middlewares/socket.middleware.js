@@ -49,4 +49,20 @@ export class SocketMiddleware {
       logger.info(`User disconnected: ${socket.user.id}`);
     });
   }
+
+  // middlewares/socket.middleware.js
+// export const handleSocketError = (err, req, res, next) => {
+//   if (err.message.includes('SocketService')) {
+//     logger.error('Socket Service Error:', err);
+//     return res.status(500).json({
+//       status: 'error',
+//       message: 'Socket communication error',
+//       errorCode: 'SOCKET_ERROR'
+//     });
+//   }
+//   next(err);
+// };
+
+// // Add to your app.js
+// this.app.use(handleSocketError);
 }

@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      font-family: Arial, sans-serif;
+      color: #333;
+    }
+    .header {
+      background-color: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+    }
+    .booking-details {
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .detail-row {
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .price-details {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .total {
+      font-size: 18px;
+      font-weight: bold;
+      border-top: 2px solid #ddd;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      display: inline-block;
+      margin: 20px 0;
+    }
+    .important-info {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Booking Confirmation</h1>
+      <p>Booking ID: {{bookingId}}</p>
+    </div>
+
+    <p>Dear {{guestName}},</p>
+    <p>Your booking has been confirmed! Here are your booking details:</p>
+
+    <div class="booking-details">
+      <h2>{{propertyTitle}}</h2>
+      <p>{{propertyAddress}}</p>
+
+      <div class="detail-row">
+        <strong>Check-in:</strong>
+        <span>{{checkIn}} (after 2:00 PM)</span>
+      </div>
+      <div class="detail-row">
+        <strong>Check-out:</strong>
+        <span>{{checkOut}} (before 11:00 AM)</span>
+      </div>
+      <div class="detail-row">
+        <strong>Guests:</strong>
+        <span>{{guests}}</span>
+      </div>
+    </div>
+
+    <div class="price-details">
+      <h3>Price Details</h3>
+      {{#each priceBreakdown}}
+        <div class="detail-row">
+          <span>{{this.label}}</span>
+          <span>{{this.amount}}</span>
+        </div>
+      {{/each}}
+      <div class="total">
+        <div class="detail-row">
+          <span>Total Amount</span>
+          <span>{{amount}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="important-info">
+      <h3>Important Information</h3>
+      <p><strong>Host Details:</strong></p>
+      <p>Name: {{hostName}}</p>
+      <p>Phone: {{hostPhone}}</p>
+      
+      <p><strong>Check-in Instructions:</strong></p>
+      <ul>
+        <li>Check-in time starts at 2:00 PM</li>
+        <li>Please contact your host before arrival</li>
+        <li>Have your booking ID ready</li>
+      </ul>
+    </div>
+
+    <center>
+      <a href="{{actionUrl}}" class="button">View Booking Details</a>
+    </center>
+
+    <div class="footer">
+      <p>Need help with your booking?</p>
+      <p>Contact our support team at {{supportEmail}}</p>
+      <p>© {{year}} {{companyName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -22,7 +22,8 @@ import { handleMulterError } from './middlewares/upload.middleware.js';
 import rateLimit from 'express-rate-limit';
 import { SocketService } from './services/chat/socket.service.js';
 import ChatService from './services/chat/chat.service.js';
-
+import BookingService from './services/booking/booking.service.js';
+import ServiceContainer from './services/ServiceContainer.js';
 
 // Load environment variables
 dotenv.config();
@@ -33,11 +34,13 @@ class app {
     this.app = express();
     this.port = process.env.PORT || 8000;
     this.server = createServer(this.app);
-    this.socketService = null;
 
     // Initialize middlewares, routes, error handling, etc.
+
+    // Initialize in correct order
     this.initializeMiddlewares();
-    this.initializeSocket();
+    // this.initializeSocket();
+    this.initializeServices();
     this.initializeRoutes(routes);
     this.initializeErrorHandling();
     this.listRoutes();
@@ -70,37 +73,101 @@ class app {
     //   })
     // );
   }
- 
-  initializeSocket() {
-    // Initialize Socket.IO with server
-    this.socketService = new SocketService(this.server);
+  // initializeSocket() {
+  //   // Initialize Socket.IO with server
+  //   this.socketService = new SocketService(this.server);
 
-    // Get the io instance from socket service
-    const io = this.socketService.getIO();
+  //   // Log to check if socketService is initialized
+  //   if (!this.socketService) {
+  //     console.error('SocketService is not initialized');
+  //     return;
+  //   }
+  //   console.log('SocketService initialized successfully');
 
-    // Initialize chat service with io instance
-    this.chatService = new ChatService(io);
-    this.chatService.initialize();
+  //   // Get the io instance from socket service
+  //   const io = this.socketService.getIO();
 
-    // Make services available throughout the application
-    this.app.set('socketService', this.socketService);
-    this.app.set('chatService', this.chatService);
-  }
+  //   // Initialize services with socketService
+  //   this.chatService = new ChatService(io);
+  //   this.bookingService = new BookingService(this.socketService); // Pass correct socketService
 
+  //   // Log to check if the service is being correctly passed
+  //   console.log('SocketService passed to BookingService', this.socketService);
+
+  //   // Initialize chat service
+  //   this.chatService.initialize();
+
+  //   // Make services available throughout the application
+  //   this.app.set('socketService', this.socketService);
+  //   this.app.set('chatService', this.chatService);
+  //   this.app.set('bookingService', this.bookingService);
+  // }
 
   // Initialize Routes
+
+  // initializeSocket() {
+  //   try {
+  //     this.socketService = new SocketService(this.server);
+  //     console.log('Socket service initialized successfully');
+  //   } catch (error) {
+  //     console.error('Failed to initialize socket service:', error);
+  //     throw error;
+  //   }
+  // }
+
+  // initializeServices() {
+  //   if (!this.socketService) {
+  //     throw new Error('Socket service must be initialized first');
+  //   }
+
+  //   // Initialize services
+  //   this.chatService = new ChatService(this.socketService.getIO());
+  //   this.bookingService = new BookingService(this.socketService);
+
+  //   // Make services available throughout the application
+  //   this.app.set('socketService', this.socketService);
+  //   this.app.set('chatService', this.chatService);
+  //   this.app.set('bookingService', this.bookingService);
+  // }
+
+  initializeServices() {
+    try {
+      // Initialize socket service first
+      const socketService = new SocketService(this.server);
+
+      // Register services in container
+      ServiceContainer.register('socketService', socketService);
+
+      // Initialize and register booking service
+      const bookingService = new BookingService(socketService);
+      ServiceContainer.register('bookingService', bookingService);
+
+      // Initialize and register chat service
+      const chatService = new ChatService(socketService.getIO());
+      ServiceContainer.register('chatService', chatService);
+
+      // Log successful initialization
+      logger.info('All services initialized successfully');
+    } catch (error) {
+      logger.error('Error initializing services:', error);
+      throw error;
+    }
+  }
+
   initializeRoutes(routes) {
-    routes.forEach((route) => {
-      this.app.use('/api/v1', route.router); // Register each route with version prefix
-      // this.app.use(
-      //   '/api/v1/auth',
-      //   rateLimit({
-      //     windowMs: 15 * 60 * 1000, // 15 minutes
-      //     max: 100, // limit each IP to 100 requests per windowMs
-      //   })
-      // ); // Register each route with version prefix
+    routes.forEach((Route) => {
+      try {
+        const route = new Route();
+        if (!route.router) {
+          throw new Error(`Router not initialized for ${Route.name}`);
+        }
+        this.app.use('/api/v1', route.getRouter());
+        logger.info(`Route initialized: ${Route.name}`);
+      } catch (error) {
+        logger.error(`Error initializing route: ${Route.name}`, error);
+        throw error;
+      }
     });
-    // this.app.use(handleMulterError);
   }
 
   // Initialize Error Handling
@@ -162,6 +229,12 @@ class app {
     });
   }
 
+  cleanup() {
+    if (this.socketService) {
+      this.socketService.getIO().close();
+    }
+  }
+
   // Database connection
   async DBconnection() {
     await connectDB();
@@ -184,8 +257,10 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// Initialize the app with routes
-// const app = new App(routes); // `routes` would be passed to the constructor
-// app.listen();
-
+// Add cleanup handlers
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received. Cleaning up...');
+  app.cleanup();
+  process.exit(0);
+});
 export default app;

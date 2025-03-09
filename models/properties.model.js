@@ -1,5 +1,3 @@
-
-
 import mongoose, { Schema, model } from 'mongoose';
 import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js';
 import slugify from 'slugify';
@@ -223,6 +221,28 @@ const propertySchema = new Schema(
 
     // Availability
     availability: {
+      bookedDates: [
+        {
+          startDate: {
+            type: Date,
+            required: true,
+          },
+          endDate: {
+            type: Date,
+            required: true,
+          },
+          bookingId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Booking',
+          },
+          status: {
+            type: String,
+            enum: ['CONFIRMED', 'PENDING', 'CANCELLED'],
+            default: 'CONFIRMED',
+          },
+        },
+      ],
+
       minimumStay: {
         nights: {
           type: Number,
@@ -320,6 +340,10 @@ const propertySchema = new Schema(
           isBlocked: Boolean,
           customPrice: Number,
           notes: String,
+          bookingId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Booking',
+          },
         },
       ],
       instantBooking: {
@@ -417,6 +441,54 @@ propertySchema.pre('save', function (next) {
   }
   next();
 });
+
+propertySchema.methods.updateBookedDates = async function (booking) {
+  // Add new booked dates
+  this.availability.bookedDates.push({
+    startDate: booking.checkIn,
+    endDate: booking.checkOut,
+    bookingId: booking._id,
+    status: booking.status,
+  });
+
+  // Update calendar entries
+  const dates = this.getDatesInRange(booking.checkIn, booking.checkOut);
+  dates.forEach((date) => {
+    this.availability.calendar.push({
+      date: date,
+      isBlocked: true,
+      bookingId: booking._id,
+      notes: `Booked: ${booking._id}`,
+    });
+  });
+
+  await this.save();
+};
+propertySchema.methods.removeBookedDates = async function (bookingId) {
+  // Remove from bookedDates
+  this.availability.bookedDates = this.availability.bookedDates.filter(
+    (date) => !date.bookingId.equals(bookingId)
+  );
+
+  // Remove from calendar
+  this.availability.calendar = this.availability.calendar.filter(
+    (entry) => !entry.bookingId || !entry.bookingId.equals(bookingId)
+  );
+
+  await this.save();
+};
+
+propertySchema.methods.getDatesInRange = function (startDate, endDate) {
+  const dates = [];
+  let currentDate = new Date(startDate);
+
+  while (currentDate <= endDate) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return dates;
+};
 
 // Helper Methods
 propertySchema.methods = {
@@ -557,6 +629,16 @@ propertySchema.methods = {
       return false;
     if (this.availability.restrictedDays?.checkOut?.includes(checkOutDay))
       return false;
+
+    const hasOverlap = this.availability.bookedDates.some((booking) => {
+      return (
+        (checkIn >= booking.startDate && checkIn < booking.endDate) ||
+        (checkOut > booking.startDate && checkOut <= booking.endDate) ||
+        (checkIn <= booking.startDate && checkOut >= booking.endDate)
+      );
+    });
+
+    return !hasOverlap;
 
     return true;
   },

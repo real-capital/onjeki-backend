@@ -1,0 +1,30 @@
+
+<html>
+  <head>
+    <style>
+      /* Add your email styles here */
+    </style>
+  </head>
+  <body>
+    <div class='email-container'>
+      <h1>New Booking Request</h1>
+      <p>Hello {{hostName}},</p>
+      <p>You have received a new booking request for {{propertyTitle}}.</p>
+
+      <div class='booking-details'>
+        <h2>Booking Details</h2>
+        <p><strong>Check-in:</strong> {{checkIn}}</p>
+        <p><strong>Check-out:</strong> {{checkOut}}</p>
+        <p><strong>Guests:</strong> {{guests}}</p>
+        <p><strong>Guest Name:</strong> {{guestName}}</p>
+        <p><strong>Amount:</strong> {{amount}}</p>
+      </div>
+
+      <div class='action-button'>
+        <a href='{{actionUrl}}' class='button'>View Booking</a>
+      </div>
+
+      <p>Please respond to this booking request as soon as possible.</p>
+    </div>
+  </body>
+</html>

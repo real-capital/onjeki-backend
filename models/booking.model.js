@@ -1,5 +1,6 @@
 import mongoose, { model, Schema } from 'mongoose';
-import { BookingStatus } from '../enum/booking.enum'; // Assuming `BookingStatus` is an enum
+import { BookingStatus } from '../enum/booking.enum.js'; // Assuming `BookingStatus` is an enum
+import Conversation from './conversation.model.js';
 
 const bookingSchema = new Schema(
   {
@@ -26,22 +27,7 @@ const bookingSchema = new Schema(
       required: true,
       ref: 'User',
     },
-    // duration: {
-    //     type: Number,
-    //     required: true
-    // },
-    // discount: {
-    //     type: Number,
-    //     required: true
-    // },
-    // status: {
-    //     type: String,
-    //     enum: Object.values(BookingStatus) // Assuming `BookingStatus` is an enum
-    // },
-    // totalPrice: {
-    //     type: Number,
-    //     required: true
-    // },
+
     pricing: {
       nightlyRate: {
         type: Number,
@@ -126,19 +112,92 @@ const bookingSchema = new Schema(
       estimatedArrivalTime: String,
       actualCheckInTime: Date,
       checkInNotes: String,
+      checkInPhotos: [String],
+      isCheckedIn: { type: Boolean, default: false }
     },
+  
     checkOutDetails: {
       checkOutTime: Date,
       checkOutNotes: String,
+      checkOutPhotos: [String],
+      isCheckedOut: { type: Boolean, default: false }
     },
+  
     review: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Review',
+      guest: {
+        rating: Number,
+        comment: String,
+        createdAt: Date
+      },
+      host: {
+        rating: Number,
+        comment: String,
+        createdAt: Date
+      }
     },
+  
     conversation: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Conversation',
+      type: Schema.Types.ObjectId,
+      ref: 'Conversation'
     },
+    // checkInDetails: {
+    //   estimatedArrivalTime: String,
+    //   actualCheckInTime: Date,
+    //   checkInNotes: String,
+    // },
+    // checkOutDetails: {
+    //   checkOutTime: Date,
+    //   checkOutNotes: String,
+    // },
+    // review: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'Review',
+    // },
+    // conversation: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'Conversation',
+    // },
+    hostActions: {
+      isReviewed: { type: Boolean, default: false },
+      acceptedAt: Date,
+      rejectedAt: Date,
+      rejectionReason: String,
+    },
+
+    guestActions: {
+      isReviewed: { type: Boolean, default: false },
+      checkedInAt: Date,
+      checkedOutAt: Date,
+    },
+
+    notifications: [
+      {
+        type: String,
+        message: String,
+        createdAt: { type: Date, default: Date.now },
+        isRead: { type: Boolean, default: false },
+      },
+    ],
+
+    timeline: [
+      {
+        status: {
+          type: String,
+          enum: [
+            'CREATED',
+            'PENDING_HOST_APPROVAL',
+            'ACCEPTED',
+            'REJECTED',
+            'CANCELLED',
+            'CHECKED_IN',
+            'CHECKED_OUT',
+            'COMPLETED',
+          ],
+        },
+        message: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -155,7 +214,7 @@ bookingSchema.index({ host: 1, status: 1 });
 bookingSchema.pre('save', async function (next) {
   if (this.isNew) {
     // Create conversation for booking
-    const conversation = await mongoose.model('Conversation').create({
+    const conversation = await Conversation.create({
       booking: this._id,
       participants: [this.guest, this.host],
     });
@@ -164,8 +223,78 @@ bookingSchema.pre('save', async function (next) {
   next();
 });
 
+bookingSchema.methods.acceptByHost = async function () {
+  this.status = BookingStatus.CONFIRMED;
+  this.hostActions.acceptedAt = new Date();
+  this.timeline.push({
+    status: 'ACCEPTED',
+    message: 'Booking accepted by host',
+  });
+
+  // Create or update calendar availability
+  await this.updateCalendarAvailability();
+
+  // Send notification to guest
+  await this.notifyGuest('booking_accepted');
+
+  return this.save();
+};
+
+bookingSchema.methods.rejectByHost = async function (reason) {
+  this.status = BookingStatus.REJECTED;
+  this.hostActions.rejectedAt = new Date();
+  this.hostActions.rejectionReason = reason;
+  this.timeline.push({
+    status: 'REJECTED',
+    message: `Booking rejected by host: ${reason}`,
+  });
+
+  // Process refund if payment was made
+  if (this.payment.status === 'PAID') {
+    await this.processRefund();
+  }
+
+  // Send notification to guest
+  await this.notifyGuest('booking_rejected');
+
+  return this.save();
+};
 // Methods
 bookingSchema.methods = {
+  async checkInUser(details) {
+    this.checkInDetails = {
+      ...this.checkInDetails,
+      ...details,
+      actualCheckInTime: new Date(),
+      isCheckedIn: true
+    };
+    
+    this.timeline.push({
+      status: 'CHECKED_IN',
+      message: 'Guest checked in'
+    });
+
+    await this.save();
+    await this.notifyHost('guest_checked_in');
+  },
+
+  async checkOutUser(details) {
+    this.checkOutDetails = {
+      ...this.checkOutDetails,
+      ...details,
+      checkOutTime: new Date(),
+      isCheckedOut: true
+    };
+
+    this.status = BookingStatus.COMPLETED;
+    this.timeline.push({
+      status: 'CHECKED_OUT',
+      message: 'Guest checked out'
+    });
+
+    await this.save();
+    await this.notifyHost('guest_checked_out');
+  },
   async cancel(userId, reason) {
     const now = new Date();
 

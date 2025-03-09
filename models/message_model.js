@@ -4,10 +4,10 @@ import mongoose from 'mongoose';
 // models/Message.js
 const messageSchema = new mongoose.Schema(
   {
-    chat: {
+    conversation: {
       // Add this
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Chat',
+      ref: 'Conversation',
       required: true,
     },
     sender: {
