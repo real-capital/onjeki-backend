@@ -9,6 +9,7 @@ import WishlistRoute from './routes/wishlist/wishlist.routes.js';
 import ChatRoute from './routes/message/chat.route.js';
 import BookingRoute from './routes/booking/booking.route.js';
 import { logger } from './utils/logger.js';
+import PaymentRoute from './routes/payment/payment.route.js';
 
 try {
   // Make sure all route classes are properly exported
@@ -21,6 +22,7 @@ try {
     WishlistRoute,
     ChatRoute,
     BookingRoute,
+    PaymentRoute,
   ];
 
   // Validate routes

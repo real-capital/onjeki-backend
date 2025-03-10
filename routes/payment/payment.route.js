@@ -9,8 +9,10 @@ class PaymentRoute extends Route {
     this.controller = new WebhookController();
     this.initializeRoute();
   }
-  initializeRoutes() {
+  initializeRoute() {
     this.router.post(`${this.path}/paystack/webhook`, this.controller.webhook);
     // this.router.post(`${this.path}/paystack/webhook`, this.controller.g);
   }
 }
+
+export default PaymentRoute;
