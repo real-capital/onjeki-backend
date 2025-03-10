@@ -8,6 +8,7 @@ import { BookingStatus } from '../../enum/booking.enum.js';
 import PaystackService from '../../services/payment/payment.service.js';
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
+import PaymentModel from '../../models/paymentModel.js';
 
 const paystackService = new PaystackService();
 
