@@ -130,7 +130,6 @@ class BookingController {
         .json({ status: 'error', message: 'Webhook processing failed' });
     }
   }
-  
 
   async handleSuccessfulCharge(data) {
     await webhookMonitorService.logWebhookEvent(
@@ -139,7 +138,6 @@ class BookingController {
       data,
       { success: true }
     );
-
   }
 
   async handleFailedCharge(data) {
@@ -201,16 +199,18 @@ class BookingController {
 
   // Helper functions for webhook event handling
   async handleChargeSuccess(chargeData) {
-    // const payment = await PaymentModel.findOne({
-    //   transactionReference: chargeData.reference,
-    // }).populate('booking');
+    const payment = await PaymentModel.findOne({
+      transactionReference: chargeData.reference,
+    }).populate('booking');
 
-    // if (!payment) {
-    //   logger.warn('Payment not found for successful charge', {
-    //     reference: chargeData.reference,
-    //   });
-    //   return;
-    // }
+    if (!payment) {
+      logger.warn('Payment not found for successful charge', {
+        reference: chargeData.reference,
+      });
+      return;
+    }
+    // Update payment and booking status
+    await this.bookingService.confirmBookingPayment(payment.booking._id);
     await webhookMonitorService.logWebhookEvent(
       'PAYSTACK',
       'charge.success',
