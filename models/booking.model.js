@@ -186,6 +186,8 @@ const bookingSchema = new Schema(
           enum: [
             'CREATED',
             'PENDING_HOST_APPROVAL',
+            'PAYMENT_INITIATED',
+            'PAYMENT_CONFIRMED',
             'ACCEPTED',
             'REJECTED',
             'CANCELLED',

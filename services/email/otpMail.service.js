@@ -38,6 +38,33 @@ class EmailService {
     await this.transporter.sendMail(mailOptions);
   }
 
+  async sendPaymentFailureEmail(booking) {
+    await this.sendEmail({
+      from: `"Onjeki" <${process.env.MAIL_USER}>`,
+      to: booking.guest.email,
+      subject: 'Payment Failed for Your Booking',
+      template: 'payment-failure',
+      context: {
+        bookingId: booking._id,
+        propertyTitle: booking.property.title,
+        bookingDate: booking.createdAt,
+      },
+    });
+  }
+
+  async sendPaymentCancellationEmail(booking) {
+    await this.sendEmail({
+      to: booking.guest.email,
+      subject: 'Booking Payment Cancelled',
+      template: 'payment-cancellation',
+      context: {
+        bookingId: booking._id,
+        propertyTitle: booking.property.title,
+        bookingDate: booking.createdAt,
+      },
+    });
+  }
+
   async sendBookingRequestEmail(booking) {
     const host = await UserModel.findById(booking.host);
     const guest = await UserModel.findById(booking.guest);
@@ -63,29 +90,6 @@ class EmailService {
     });
   }
   async sendBookingConfirmationEmail(booking) {
-    // const guest = await UserModel.findById(booking.guest);
-    // const template = await this.getEmailTemplate('booking-confirmation', {
-    //   guestName: guest.name,
-    //   propertyTitle: booking.property.title,
-    //   checkIn: format(booking.checkIn, 'MMM d, yyyy'),
-    //   checkOut: format(booking.checkOut, 'MMM d, yyyy'),
-    //   guests: `${booking.guests.adults} adults${
-    //     booking.guests.children ? `, ${booking.guests.children} children` : ''
-    //   }`,
-    //   amount: formatCurrency(booking.pricing.total, booking.pricing.currency),
-    //   bookingId: booking._id,
-    //   propertyAddress: booking.property.location.address,
-    //   hostName: booking.host.name,
-    //   hostPhone: booking.host.phoneNumber,
-    //   actionUrl: `${process.env.APP_URL}/bookings/${booking._id}`,
-    // });
-
-    // await this.transporter.sendMail({
-    //   from: `"Onjeki" <${process.env.MAIL_USER}>`,
-    //   to: guest.email,
-    //   subject: 'Booking Confirmation',
-    //   html: template,
-    // });
     try {
       const guest = await UserModel.findById(booking.guest);
       const host = await UserModel.findById(booking.host);

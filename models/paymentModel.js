@@ -17,17 +17,17 @@ const paymentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    enum: ['PENDING', 'PROCESSING', 'PAID', 'FAILED', 'REFUNDED'],
     default: 'PENDING',
   },
   paymentMethod: {
     type: String,
-    enum: ['CARD', 'BANK_TRANSFER', 'WALLET'],
+    enum: ['CARD', 'BANK_TRANSFER', 'BANK'],
   },
   transactionReference: String,
   paymentGateway: {
     type: String,
-    enum: ['PAYSTACK', 'FLUTTERWAVE'],
+    enum: ['PAYSTACK'],
   },
   gatewayResponse: Schema.Types.Mixed,
   paidAt: Date,

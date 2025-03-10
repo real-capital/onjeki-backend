@@ -28,6 +28,17 @@ class BookingRoute extends Route {
       isAuthenticated,
       this.controller.createBooking
     );
+    this.router.post(
+      `${this.path}/:id/initiate-payment`,
+      isAuthenticated,
+      this.controller.initiatePayment
+    );
+    this.router.post(
+      `${this.path}/:id/verify-payment`,
+      isAuthenticated,
+      this.controller.verifyPayment
+    );
+    this.router.get(`${this.path}/paystack/callback`, this.controller.callback);
 
     // Get booking by ID
     this.router.get(

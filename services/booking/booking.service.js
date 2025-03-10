@@ -9,8 +9,10 @@ import emailService from '../../services/email/otpMail.service.js';
 import { SocketService } from '../chat/socket.service.js';
 import PaymentModel from '../../models/paymentModel.js';
 import { logger } from '../../utils/logger.js';
+import PaystackService from '../payment/payment.service.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
+const paystackService = new PaystackService();
 class BookingService {
   constructor(socketService) {
     if (!socketService) {
@@ -302,45 +304,17 @@ class BookingService {
         { session }
       );
 
-      // Update property availability
-      // await PropertyModel.findByIdAndUpdate(
-      //   bookingData.propertyId,
-      //   {
-      //     $push: {
-      //       bookedDates: {
-      //         start: bookingData.checkIn,
-      //         end: bookingData.checkOut,
-      //         bookingId: booking._id,
-      //       },
-      //     },
-      //   },
-      //   { session }
-      // );
-
-      // Notify host
-      // await NotificationModel.create(
-      //   [
-      //     {
-      //       user: property.owner,
-      //       type: 'NEW_BOOKING',
-      //       title: 'New Booking',
-      //       booking: booking._id,
-      //       message: 'New booking request received',
-      //     },
-      //   ],
-      //   { session }
-      // );
-
       // ✅ Commit transaction before external async operations
       await session.commitTransaction();
       session.endSession(); // End session immediately after commit
 
       // Send notifications after transaction is committed
-      await this.sendBookingNotifications(booking);
+      // await this.sendBookingNotifications(booking);
 
       return {
         booking,
         payment: payment[0],
+        paymentOptions: await this.getPaymentOptions(),
       };
     } catch (error) {
       if (session.inTransaction()) {
@@ -353,6 +327,408 @@ class BookingService {
     }
   }
 
+  async getPaymentOptions() {
+    return [
+      {
+        id: 'card',
+        name: 'Credit/Debit Card',
+        description: 'Pay with your card',
+        icon: 'card_icon.png',
+      },
+      {
+        id: 'bank_transfer',
+        name: 'Bank Transfer',
+        description: 'Pay directly from your bank',
+        icon: 'bank_transfer_icon.png',
+      },
+      // {
+      //   id: 'ussd',
+      //   name: 'USSD',
+      //   description: 'Pay via USSD code',
+      //   icon: 'ussd_icon.png',
+      // },
+      {
+        id: 'bank',
+        name: 'Bank',
+        description: 'Pay through your bank app',
+        icon: 'bank_icon.png',
+      },
+    ];
+  }
+
+  // Method to initiate payment
+  async initiatePayment(bookingId, userId, paymentMethod) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        guest: userId,
+        status: BookingStatus.PENDING,
+      }).populate('guest property');
+
+      if (!booking) {
+        throw new HttpException(404, 'Booking not found or already processed');
+      }
+
+      // Find the associated payment
+      const payment = await PaymentModel.findOne({
+        booking: bookingId,
+        status: 'PENDING',
+      });
+
+      if (!payment) {
+        throw new HttpException(404, 'Payment record not found');
+      }
+
+      // Initialize Paystack transaction
+      const paystackResponse = await paystackService.initializeTransaction({
+        amount: payment.amount,
+        email: booking.guest.email, // Assume you have guest email
+        reference: `BOOKING_${bookingId}_${Date.now()}`,
+        channels: [paymentMethod],
+        metadata: {
+          bookingId: booking._id,
+          userId: userId,
+        },
+      });
+
+      // Update payment with transaction details
+      payment.paymentMethod = paymentMethod;
+      payment.transactionReference = paystackResponse.reference;
+      payment.status = 'PROCESSING';
+      await payment.save({ session });
+
+      // Update booking timeline
+      booking.timeline.push({
+        status: 'PAYMENT_INITIATED',
+        message: `Payment initiated via ${paymentMethod}`,
+      });
+      await booking.save({ session });
+
+      await session.commitTransaction();
+
+      return {
+        paymentUrl: paystackResponse.authorization_url,
+        reference: paystackResponse.reference,
+      };
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      console.log(error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // async getCallback(status, reference) {
+
+  // }
+
+  // Method to verify payment
+  async verifyPayment(reference, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Verify transaction with Paystack
+      const verificationResult = await paystackService.verifyTransaction(
+        reference
+      );
+
+      // Find the payment
+      const payment = await PaymentModel.findOne({
+        transactionReference: reference,
+      }).populate('booking');
+
+      if (!payment) {
+        throw new HttpException(404, 'Payment record not found');
+      }
+
+      // Ensure the payment belongs to the user
+      if (payment.booking.guest.toString() !== userId) {
+        throw new HttpException(403, 'Unauthorized access to payment');
+      }
+
+      // Update payment status
+      payment.status =
+        verificationResult.status === 'success' ? 'PAID' : 'FAILED';
+      payment.gatewayResponse = verificationResult;
+      payment.paidAt = new Date();
+      await payment.save({ session });
+
+      // Update booking status if payment is successful
+      const booking = payment.booking;
+      if (payment.status === 'PAID') {
+        booking.status = BookingStatus.CONFIRMED;
+        booking.timeline.push({
+          status: 'PAYMENT_CONFIRMED',
+          message: 'Payment successfully completed',
+        });
+        await booking.save({ session });
+
+        // Trigger any post-payment processes (e.g., notifications)
+        await this.sendBookingNotifications(booking);
+      }
+
+      await session.commitTransaction();
+
+      return {
+        booking,
+        payment,
+      };
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  // Method to confirm booking payment
+  async confirmBookingPayment(bookingId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking
+      const booking = await BookingModel.findById(bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Find the associated payment
+      const payment = await PaymentModel.findOne({ booking: bookingId });
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      // Update payment status
+      payment.status = 'PAID';
+      payment.paidAt = new Date();
+      await payment.save({ session });
+
+      // Update booking status
+      booking.status = BookingStatus.CONFIRMED;
+      booking.timeline.push({
+        status: 'PAYMENT_CONFIRMED',
+        message: 'Payment successfully completed',
+      });
+      await booking.save({ session });
+
+      // Send confirmation notifications
+      await this.sendBookingNotifications(booking);
+
+      await session.commitTransaction();
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Booking payment confirmation failed', {
+        bookingId,
+        error,
+      });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+  // Method to handle payment failure
+  async handlePaymentFailure(bookingId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking
+      const booking = await BookingModel.findById(bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Find the associated payment
+      const payment = await PaymentModel.findOne({ booking: bookingId });
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      // Update payment status
+      payment.status = 'FAILED';
+      await payment.save({ session });
+
+      // Update booking status
+      booking.status = BookingStatus.CANCELLED;
+      booking.timeline.push({
+        status: 'PAYMENT_FAILED',
+        message: 'Payment process was unsuccessful',
+      });
+      await booking.save({ session });
+
+      // Remove booked dates from property
+      const property = await PropertyModel.findById(booking.property);
+      await property.removeBookedDates(bookingId);
+
+      // Send failure notifications
+      await this.sendPaymentFailureNotifications(booking);
+
+      await session.commitTransaction();
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Payment failure handling failed', {
+        bookingId,
+        error,
+      });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+  // async handlePaymentFailure(bookingId, userId) {
+  //   const session = await mongoose.startSession();
+  //   session.startTransaction();
+
+  //   try {
+  //     // Find the booking
+  //     const booking = await BookingModel.findOne({
+  //       _id: bookingId,
+  //       guest: userId,
+  //       status: BookingStatus.PENDING,
+  //     }).populate('property');
+
+  //     if (!booking) {
+  //       throw new HttpException(404, 'Booking not found');
+  //     }
+
+  //     // Find the associated payment
+  //     const payment = await PaymentModel.findOne({
+  //       booking: bookingId,
+  //       status: { $in: ['PENDING', 'PROCESSING', 'FAILED'] },
+  //     });
+
+  //     // Update payment status
+  //     if (payment) {
+  //       payment.status = 'FAILED';
+  //       await payment.save({ session });
+  //     }
+
+  //     // Revert property booked dates
+  //     const property = booking.property;
+  //     await property.removeBookedDates(bookingId);
+
+  //     // Update booking status
+  //     booking.status = BookingStatus.CANCELLED;
+  //     booking.timeline.push({
+  //       status: 'PAYMENT_FAILED',
+  //       message: 'Payment process was unsuccessful',
+  //     });
+  //     await booking.save({ session });
+
+  //     // Send notification about payment failure
+  //     await this.sendPaymentFailureNotification(booking);
+
+  //     await session.commitTransaction();
+
+  //     return booking;
+  //   } catch (error) {
+  //     if (session.inTransaction()) {
+  //       await session.abortTransaction();
+  //     }
+  //     throw error;
+  //   } finally {
+  //     session.endSession();
+  //   }
+  // }
+
+  async handlePaymentCancellation(bookingId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        guest: userId,
+        status: BookingStatus.PENDING,
+      }).populate('property');
+
+      if (!booking) {
+        throw new HttpException(404, 'Booking not found');
+      }
+
+      // Find the associated payment
+      const payment = await PaymentModel.findOne({
+        booking: bookingId,
+        status: { $in: ['PENDING', 'PROCESSING'] },
+      });
+
+      // Update payment status
+      if (payment) {
+        payment.status = 'CANCELLED';
+        await payment.save({ session });
+      }
+
+      // Revert property booked dates
+      const property = booking.property;
+      await property.removeBookedDates(bookingId);
+
+      // Update booking status
+      booking.status = BookingStatus.CANCELLED;
+      booking.timeline.push({
+        status: 'PAYMENT_CANCELLED',
+        message: 'Payment process was cancelled by user',
+      });
+      await booking.save({ session });
+
+      // Send notification about payment cancellation
+      await this.sendPaymentCancellationNotification(booking);
+
+      await session.commitTransaction();
+
+      return booking;
+    } catch (error) {
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async sendPaymentFailureNotification(booking) {
+    // Send email to guest about payment failure
+    await emailService.sendPaymentFailureEmail(booking);
+
+    // Create notification record
+    await NotificationModel.create({
+      user: booking.guest,
+      type: 'PAYMENT_FAILED',
+      title: 'Payment Failed',
+      message: `Payment for booking ${booking._id} was unsuccessful`,
+      booking: booking._id,
+    });
+  }
+
+  async sendPaymentCancellationNotification(booking) {
+    // Send email to guest about payment cancellation
+    await emailService.sendPaymentCancellationEmail(booking);
+
+    // Create notification record
+    await NotificationModel.create({
+      user: booking.guest,
+      type: 'PAYMENT_CANCELLED',
+      title: 'Payment Cancelled',
+      message: `Payment for booking ${booking._id} was cancelled`,
+      booking: booking._id,
+    });
+  }
   notifyHost(booking) {
     try {
       if (!this.socketService) {
