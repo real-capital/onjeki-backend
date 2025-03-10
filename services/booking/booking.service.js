@@ -516,16 +516,40 @@ class BookingService {
 
       // Update booking status
       booking.status = BookingStatus.CONFIRMED;
+      booking.payment.status = 'PAID';
       booking.timeline.push({
         status: 'PAYMENT_CONFIRMED',
         message: 'Payment successfully completed',
       });
       await booking.save({ session });
 
-      // Send confirmation notifications
-      await this.sendBookingNotifications(booking);
+      // Find the availability for the property
+      const property = await PropertyModel.findById(booking.property._id);
+      if (!property) {
+        throw new Error('Property not found');
+      }
+
+      // Find the booked date entry and update its status to 'confirmed'
+      const bookedDateIndex = property.availability.bookedDates.findIndex(
+        (date) =>
+          date.bookingId.toString() === bookingId.toString() &&
+          date.startDate === booking.checkIn
+      );
+
+      if (bookedDateIndex === -1) {
+        throw new Error('Booked date not found');
+      }
+
+      // Update the status of the found booked date to 'confirmed'
+      property.availability.bookedDates[bookedDateIndex].status = 'CONFIRMED';
+
+      // Save the updated property availability
+      await property.save({ session });
 
       await session.commitTransaction();
+
+      // Send confirmation notifications
+      await this.sendBookingNotifications(booking);
 
       return booking;
     } catch (error) {
