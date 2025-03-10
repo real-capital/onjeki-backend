@@ -81,7 +81,7 @@ class PaystackService {
 
   verifyWebhookSignature(body, signature) {
     const hash = crypto
-      .createHmac('sha512', this.secretKey)
+      .createHmac('sha512', 'sk_test_0878d8880fb3c31445795a4b632941c3f2cba4ec')
       .update(JSON.stringify(body))
       .digest('hex');
 
