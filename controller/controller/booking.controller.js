@@ -6,6 +6,7 @@ import { StatusCodes } from 'http-status-codes';
 import BookingModel from '../../models/booking.model.js';
 import { BookingStatus } from '../../enum/booking.enum.js';
 import PaystackService from '../../services/payment/payment.service.js';
+import { logger } from '../../utils/logger.js';
 
 const paystackService = new PaystackService();
 
