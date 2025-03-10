@@ -4,6 +4,7 @@ import BookingService from '../../services/booking/booking.service.js';
 import HttpException from '../../utils/exception.js';
 import { StatusCodes } from 'http-status-codes';
 import BookingModel from '../../models/booking.model.js';
+import { BookingStatus } from '../../enum/booking.enum.js';
 
 class BookingController {
   constructor(bookingService) {
@@ -99,7 +100,7 @@ class BookingController {
         );
       }
 
-      booking.status = 'Confirmed';
+      booking.status = BookingStatus.CONFIRMED;
       await booking.save();
 
       res.status(StatusCodes.OK).json({

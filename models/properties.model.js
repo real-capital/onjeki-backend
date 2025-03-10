@@ -1,6 +1,7 @@
 import mongoose, { Schema, model } from 'mongoose';
 import { EHouseSpace, EListStatus, EPurpose } from '../enum/house.enum.js';
 import slugify from 'slugify';
+import { BookingStatus } from '../enum/booking.enum.js';
 
 const propertySchema = new Schema(
   {
@@ -237,8 +238,8 @@ const propertySchema = new Schema(
           },
           status: {
             type: String,
-            enum: ['CONFIRMED', 'PENDING', 'CANCELLED'],
-            default: 'CONFIRMED',
+            enum: Object.values(BookingStatus),
+            default: BookingStatus.CONFIRMED,
           },
         },
       ],
@@ -442,56 +443,54 @@ propertySchema.pre('save', function (next) {
   next();
 });
 
-propertySchema.methods.updateBookedDates = async function (booking) {
-  // Add new booked dates
-  this.availability.bookedDates.push({
-    startDate: booking.checkIn,
-    endDate: booking.checkOut,
-    bookingId: booking._id,
-    status: booking.status,
-  });
-
-  // Update calendar entries
-  const dates = this.getDatesInRange(booking.checkIn, booking.checkOut);
-  dates.forEach((date) => {
-    this.availability.calendar.push({
-      date: date,
-      isBlocked: true,
-      bookingId: booking._id,
-      notes: `Booked: ${booking._id}`,
-    });
-  });
-
-  await this.save();
-};
-propertySchema.methods.removeBookedDates = async function (bookingId) {
-  // Remove from bookedDates
-  this.availability.bookedDates = this.availability.bookedDates.filter(
-    (date) => !date.bookingId.equals(bookingId)
-  );
-
-  // Remove from calendar
-  this.availability.calendar = this.availability.calendar.filter(
-    (entry) => !entry.bookingId || !entry.bookingId.equals(bookingId)
-  );
-
-  await this.save();
-};
-
-propertySchema.methods.getDatesInRange = function (startDate, endDate) {
-  const dates = [];
-  let currentDate = new Date(startDate);
-
-  while (currentDate <= endDate) {
-    dates.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  return dates;
-};
-
 // Helper Methods
 propertySchema.methods = {
+  async removeBookedDates(bookingId) {
+    // Remove from bookedDates
+    this.availability.bookedDates = this.availability.bookedDates.filter(
+      (date) => !date.bookingId.equals(bookingId)
+    );
+
+    // Remove from calendar
+    this.availability.calendar = this.availability.calendar.filter(
+      (entry) => !entry.bookingId || !entry.bookingId.equals(bookingId)
+    );
+
+    await this.save();
+  },
+  getDatesInRange(startDate, endDate) {
+    const dates = [];
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dates;
+  },
+  async updateBookedDates(booking) {
+    // Add new booked dates
+    this.availability.bookedDates.push({
+      startDate: booking.checkIn,
+      endDate: booking.checkOut,
+      bookingId: booking._id,
+      status: booking.status,
+    });
+
+    // Update calendar entries
+    const dates = this.getDatesInRange(booking.checkIn, booking.checkOut);
+    dates.forEach((date) => {
+      this.availability.calendar.push({
+        date: date,
+        isBlocked: true,
+        bookingId: booking._id,
+        notes: `Booked: ${booking._id}`,
+      });
+    });
+
+    await this.save();
+  },
   // Helper method to validate dates
   _validateDates(startDate, endDate) {
     if (!(startDate instanceof Date) || !(endDate instanceof Date)) {
@@ -588,8 +587,16 @@ propertySchema.methods = {
 
     await this.save();
   },
-
   isAvailable(startDate, endDate) {
+    // Ensure startDate and endDate are Date objects
+    startDate = new Date(startDate);
+    endDate = new Date(endDate);
+
+    // Check if the date conversion is valid
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new Error('Invalid date format');
+    }
+
     this._validateDates(startDate, endDate);
     const nights = this.calculateNights(startDate, endDate);
 
@@ -617,30 +624,35 @@ propertySchema.methods = {
     );
     if (isBlocked) return false;
 
+    console.log(startDate);
     // Check restricted days
+    // Correct the use of toLocaleDateString to get the weekday in long form
     const checkInDay = startDate.toLocaleDateString('en-US', {
-      weekday: 'lowercase',
+      weekday: 'long', // This gives full weekday name like 'Monday', 'Tuesday', etc.
     });
     const checkOutDay = endDate.toLocaleDateString('en-US', {
-      weekday: 'lowercase',
+      weekday: 'long', // This gives full weekday name like 'Monday', 'Tuesday', etc.
     });
 
-    if (this.availability.restrictedDays?.checkIn?.includes(checkInDay))
+    // Convert to lowercase
+    const checkInDayLower = checkInDay.toLowerCase();
+    const checkOutDayLower = checkOutDay.toLowerCase();
+
+    // Now you can use the lowercase values
+    if (this.availability.restrictedDays?.checkIn?.includes(checkInDayLower))
       return false;
-    if (this.availability.restrictedDays?.checkOut?.includes(checkOutDay))
+    if (this.availability.restrictedDays?.checkOut?.includes(checkOutDayLower))
       return false;
 
     const hasOverlap = this.availability.bookedDates.some((booking) => {
       return (
-        (checkIn >= booking.startDate && checkIn < booking.endDate) ||
-        (checkOut > booking.startDate && checkOut <= booking.endDate) ||
-        (checkIn <= booking.startDate && checkOut >= booking.endDate)
+        (startDate >= booking.startDate && startDate < booking.endDate) ||
+        (endDate > booking.startDate && endDate <= booking.endDate) ||
+        (startDate <= booking.startDate && endDate >= booking.endDate)
       );
     });
 
     return !hasOverlap;
-
-    return true;
   },
 
   calculatePrice(startDate, endDate) {

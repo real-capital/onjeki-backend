@@ -91,7 +91,7 @@ const bookingSchema = new Schema(
     status: {
       type: String,
       enum: Object.values(BookingStatus),
-      default: 'PENDING',
+      default: BookingStatus.PENDING,
     },
 
     cancellation: {
@@ -113,32 +113,32 @@ const bookingSchema = new Schema(
       actualCheckInTime: Date,
       checkInNotes: String,
       checkInPhotos: [String],
-      isCheckedIn: { type: Boolean, default: false }
+      isCheckedIn: { type: Boolean, default: false },
     },
-  
+
     checkOutDetails: {
       checkOutTime: Date,
       checkOutNotes: String,
       checkOutPhotos: [String],
-      isCheckedOut: { type: Boolean, default: false }
+      isCheckedOut: { type: Boolean, default: false },
     },
-  
+
     review: {
       guest: {
         rating: Number,
         comment: String,
-        createdAt: Date
+        createdAt: Date,
       },
       host: {
         rating: Number,
         comment: String,
-        createdAt: Date
-      }
+        createdAt: Date,
+      },
     },
-  
+
     conversation: {
       type: Schema.Types.ObjectId,
-      ref: 'Conversation'
+      ref: 'Conversation',
     },
     // checkInDetails: {
     //   estimatedArrivalTime: String,
@@ -223,55 +223,54 @@ bookingSchema.pre('save', async function (next) {
   next();
 });
 
-bookingSchema.methods.acceptByHost = async function () {
-  this.status = BookingStatus.CONFIRMED;
-  this.hostActions.acceptedAt = new Date();
-  this.timeline.push({
-    status: 'ACCEPTED',
-    message: 'Booking accepted by host',
-  });
-
-  // Create or update calendar availability
-  await this.updateCalendarAvailability();
-
-  // Send notification to guest
-  await this.notifyGuest('booking_accepted');
-
-  return this.save();
-};
-
-bookingSchema.methods.rejectByHost = async function (reason) {
-  this.status = BookingStatus.REJECTED;
-  this.hostActions.rejectedAt = new Date();
-  this.hostActions.rejectionReason = reason;
-  this.timeline.push({
-    status: 'REJECTED',
-    message: `Booking rejected by host: ${reason}`,
-  });
-
-  // Process refund if payment was made
-  if (this.payment.status === 'PAID') {
-    await this.processRefund();
-  }
-
-  // Send notification to guest
-  await this.notifyGuest('booking_rejected');
-
-  return this.save();
-};
 // Methods
 bookingSchema.methods = {
+  async acceptByHost() {
+    this.status = BookingStatus.CONFIRMED;
+    this.hostActions.acceptedAt = new Date();
+    this.timeline.push({
+      status: 'ACCEPTED',
+      message: 'Booking accepted by host',
+    });
+
+    // Create or update calendar availability
+    await this.updateCalendarAvailability();
+
+    // Send notification to guest
+    await this.notifyGuest('booking_accepted');
+
+    return this.save();
+  },
+  async rejectByHost(reason) {
+    this.status = BookingStatus.REJECTED;
+    this.hostActions.rejectedAt = new Date();
+    this.hostActions.rejectionReason = reason;
+    this.timeline.push({
+      status: 'REJECTED',
+      message: `Booking rejected by host: ${reason}`,
+    });
+
+    // Process refund if payment was made
+    if (this.payment.status === 'PAID') {
+      await this.processRefund();
+    }
+
+    // Send notification to guest
+    await this.notifyGuest('booking_rejected');
+
+    return this.save();
+  },
   async checkInUser(details) {
     this.checkInDetails = {
       ...this.checkInDetails,
       ...details,
       actualCheckInTime: new Date(),
-      isCheckedIn: true
+      isCheckedIn: true,
     };
-    
+
     this.timeline.push({
       status: 'CHECKED_IN',
-      message: 'Guest checked in'
+      message: 'Guest checked in',
     });
 
     await this.save();
@@ -283,13 +282,13 @@ bookingSchema.methods = {
       ...this.checkOutDetails,
       ...details,
       checkOutTime: new Date(),
-      isCheckedOut: true
+      isCheckedOut: true,
     };
 
     this.status = BookingStatus.COMPLETED;
     this.timeline.push({
       status: 'CHECKED_OUT',
-      message: 'Guest checked out'
+      message: 'Guest checked out',
     });
 
     await this.save();

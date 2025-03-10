@@ -53,7 +53,7 @@ class BookingService {
     // }
 
     // Calculate additional guest fees
-    const totalGuests = guests.adults + guests.children;
+    const totalGuests = guests.adults + guests.children + guests.infant;
     let additionalGuestFee = 0;
     if (totalGuests > property.baseGuests) {
       const extraGuests = totalGuests - property.baseGuests;
@@ -126,37 +126,101 @@ class BookingService {
   }
 
   async checkAvailability(propertyId, checkIn, checkOut) {
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
+    try {
+      const startDate = new Date(checkIn);
+      const endDate = new Date(checkOut);
+      console.log(startDate);
+      console.log(endDate);
 
-    // Check if there are any overlapping bookings
-    const existingBooking = await BookingModel.findOne({
-      property: propertyId,
-      status: { $in: ['CONFIRMED', 'PENDING'] },
-      $or: [
-        {
-          checkIn: { $lt: endDate },
-          checkOut: { $gt: startDate },
-        },
-        {
-          checkIn: { $gte: startDate, $lt: endDate },
-        },
-        {
-          checkOut: { $gt: startDate, $lte: endDate },
-        },
-      ],
-    });
+      // 1. Check if there are any overlapping bookings
+      const existingBooking = await BookingModel.findOne({
+        property: propertyId,
+        status: { $in: ['CONFIRMED', 'PENDING'] },
+        $or: [
+          {
+            checkIn: { $lt: endDate },
+            checkOut: { $gt: startDate },
+          },
+          {
+            checkIn: { $gte: startDate, $lt: endDate },
+          },
+          {
+            checkOut: { $gt: startDate, $lte: endDate },
+          },
+        ],
+      });
+      console.log('existingBooking');
+      console.log(existingBooking);
+      if (existingBooking) {
+        return false; // Dates are already booked
+      }
 
-    // Check if property is blocked for these dates
-    // const blockedDates = await BlockedDatesModel.findOne({
-    //   property: propertyId,
-    //   startDate: { $lt: endDate },
-    //   endDate: { $gt: startDate },
-    // });
+      // 2. Check if the property is blocked for these dates (Blocked Dates)
+      const blockedDates = await PropertyModel.findOne({
+        _id: propertyId,
+        'availability.blockedDates.startDate': { $lt: endDate },
+        'availability.blockedDates.endDate': { $gt: startDate },
+      });
 
-    // return !existingBooking && !blockedDates;
-    return !existingBooking;
+      console.log('blockedDates');
+      console.log(blockedDates);
+
+      if (blockedDates) {
+        return false; // Dates are blocked
+      }
+
+      // 3. Check if the property is already booked for these dates (Booked Dates in availability model)
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+      });
+
+      if (
+        property.availability &&
+        property.availability.bookedDates.length > 0
+      ) {
+        const overlappingBooking = property.availability.bookedDates.some(
+          (booking) => {
+            const bookedStart = new Date(booking.startDate);
+            const bookedEnd = new Date(booking.endDate);
+
+            // Check if the requested dates overlap with any booked dates
+            return (
+              (bookedStart < endDate && bookedEnd > startDate) ||
+              (bookedStart >= startDate && bookedStart < endDate) ||
+              (bookedEnd > startDate && bookedEnd <= endDate)
+            );
+          }
+        );
+
+        console.log('overlappingBooking');
+        console.log(overlappingBooking);
+
+        if (overlappingBooking) {
+          return false; // Dates are already booked
+        }
+      }
+
+      // 4. Check the property calendar to see if the dates are blocked
+      const calendar = await PropertyModel.findOne({
+        _id: propertyId,
+        'availability.calendar.date': { $gte: startDate, $lte: endDate },
+        'availability.calendar.isBlocked': true,
+      });
+
+      console.log('calendar');
+      console.log(calendar);
+
+      if (calendar) {
+        return false; // Dates are blocked in the calendar
+      }
+
+      return true; // Dates are available
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(400, error);
+    }
   }
+
   async createBooking(bookingData, userId) {
     console.log('creating');
     const session = await mongoose.startSession();
@@ -239,19 +303,19 @@ class BookingService {
       );
 
       // Update property availability
-      await PropertyModel.findByIdAndUpdate(
-        bookingData.propertyId,
-        {
-          $push: {
-            bookedDates: {
-              start: bookingData.checkIn,
-              end: bookingData.checkOut,
-              bookingId: booking._id,
-            },
-          },
-        },
-        { session }
-      );
+      // await PropertyModel.findByIdAndUpdate(
+      //   bookingData.propertyId,
+      //   {
+      //     $push: {
+      //       bookedDates: {
+      //         start: bookingData.checkIn,
+      //         end: bookingData.checkOut,
+      //         bookingId: booking._id,
+      //       },
+      //     },
+      //   },
+      //   { session }
+      // );
 
       // Notify host
       // await NotificationModel.create(
@@ -400,9 +464,9 @@ class BookingService {
 
     await booking.save();
 
-      // Remove booked dates from property
-      const property = await PropertyModel.findById(booking.property);
-      await property.removeBookedDates(bookingId);
+    // Remove booked dates from property
+    const property = await PropertyModel.findById(booking.property);
+    await property.removeBookedDates(bookingId);
 
     // Process refund if payment was made
     if (booking.payment.status === 'PAID') {

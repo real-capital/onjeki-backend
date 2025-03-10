@@ -3,6 +3,7 @@ import { sendNotification } from '../../services/notificationService';
 import Review from '../../models/review.model.js';
 import BookingModel from '../../models/booking.model.js';
 import { StatusCodes } from 'http-status-codes';
+import { BookingStatus } from '../../enum/booking.enum.js';
 class ReviewController {
   createReview = async (req, res, next) => {
     try {
@@ -16,7 +17,7 @@ class ReviewController {
       }
 
       // Verify review eligibility
-      if (booking.status !== 'completed') {
+      if (booking.status !== BookingStatus.COMPLETED) {
         return next(
           new HttpException(
             StatusCodes.BAD_REQUEST,
@@ -64,10 +65,10 @@ class ReviewController {
       // Send notification
       const recipientId =
         reviewType === 'guest_review' ? booking.host : booking.guest;
-    //   await sendNotification(recipientId, 'new_review', {
-    //     bookingId: booking._id,
-    //     reviewId: review._id,
-    //   });
+      //   await sendNotification(recipientId, 'new_review', {
+      //     bookingId: booking._id,
+      //     reviewId: review._id,
+      //   });
 
       res.status(201).json({
         status: 'success',
@@ -114,10 +115,10 @@ class ReviewController {
 
       // Send notification
       const recipientId = isHost ? review.booking.guest : review.booking.host;
-    //   await sendNotification(recipientId, 'review_response', {
-    //     bookingId: review.booking._id,
-    //     reviewId: review._id,
-    //   });
+      //   await sendNotification(recipientId, 'review_response', {
+      //     bookingId: review.booking._id,
+      //     reviewId: review._id,
+      //   });
 
       res.status(200).json({
         status: 'success',
