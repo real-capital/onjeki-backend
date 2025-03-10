@@ -356,7 +356,7 @@ class BookingController {
         );
 
         // Find the associated payment
-        const payment = await PaymentModel.findOne({
+        const payment = await PaymentModel.findOxne({
           transactionReference: reference,
         }).populate('booking');
 

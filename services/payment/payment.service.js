@@ -56,7 +56,7 @@ class PaystackService {
           },
         }
       );
-      console.log(response);
+    //   console.log(response);
       console.log({
         status: response.data.data.status,
         amount: response.data.data.amount / 100, // Convert back from kobo
