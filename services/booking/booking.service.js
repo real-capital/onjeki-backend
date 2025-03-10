@@ -524,24 +524,24 @@ class BookingService {
       await booking.save({ session });
 
       // Find the availability for the property
-      const property = await PropertyModel.findById(booking.property._id);
+      const property = await PropertyModel.findOne({
+        'availability.bookedDates.bookingId': bookingId,
+      }).session(session);
+
       if (!property) {
-        throw new Error('Property not found');
+        throw new Error('Property or booked date not found');
       }
 
-      // Find the booked date entry and update its status to 'confirmed'
-      const bookedDateIndex = property.availability.bookedDates.findIndex(
-        (date) =>
-          date.bookingId.toString() === bookingId.toString() &&
-          date.startDate === booking.checkIn
+      // Find the booked date and update its status to 'CONFIRMED'
+      const bookedDate = property.availability.bookedDates.find(
+        (date) => date.bookingId.toString() === bookingId.toString()
       );
 
-      if (bookedDateIndex === -1) {
+      if (!bookedDate) {
         throw new Error('Booked date not found');
       }
 
-      // Update the status of the found booked date to 'confirmed'
-      property.availability.bookedDates[bookedDateIndex].status = 'CONFIRMED';
+      bookedDate.status = BookingStatus.CONFIRMED;
 
       // Save the updated property availability
       await property.save({ session });

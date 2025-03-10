@@ -239,7 +239,7 @@ const propertySchema = new Schema(
           status: {
             type: String,
             enum: Object.values(BookingStatus),
-            default: BookingStatus.CONFIRMED,
+            default: BookingStatus.PENDING,
           },
         },
       ],
