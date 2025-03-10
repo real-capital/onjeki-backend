@@ -18,9 +18,7 @@ class PaystackService {
         {
           amount: Math.round(transactionData.amount * 100), // Convert to kobo
           email: transactionData.email,
-          callback_url:
-            process.env.FRONTEND_CALLBACK_URL ||
-            'http://localhost:8084/payment/callback',
+          callback_url: process.env.FRONTEND_CALLBACK_URL,
 
           channels: transactionData.channels,
           metadata: transactionData.metadata,
@@ -91,7 +89,7 @@ class PaystackService {
   // Method to generate callback URL
   generateCallbackUrl(bookingId) {
     // Generate a unique callback URL for each booking
-    return `${process.env.APP_URL}/payments/paystack/callback?bookingId=${bookingId}`;
+    return `${process.env.APP_URL}/booking/paystack/callback?bookingId=${bookingId}`;
   }
 
   async initiateRefund(refundData) {
