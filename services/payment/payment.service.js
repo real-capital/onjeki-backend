@@ -56,6 +56,13 @@ class PaystackService {
           },
         }
       );
+      console.log(response);
+      console.log({
+        status: response.data.data.status,
+        amount: response.data.data.amount / 100, // Convert back from kobo
+        reference: response.data.data.reference,
+        metadata: response.data.data.metadata,
+      });
 
       return {
         status: response.data.data.status,
@@ -67,7 +74,7 @@ class PaystackService {
       console.log('Paystack Error:', error.response?.data || error.message);
       throw new Error(
         `Paystack verification failed: ${
-          error.response?.data?.message || error.message
+          error.response?.data?.message || error
         }`
       );
     }

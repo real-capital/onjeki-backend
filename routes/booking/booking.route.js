@@ -39,6 +39,7 @@ class BookingRoute extends Route {
       this.controller.verifyPayment
     );
     this.router.get(`${this.path}/paystack/callback`, this.controller.callback);
+    this.router.post(`${this.path}/paystack/webhook`, this.controller.webhook);
 
     // Get booking by ID
     this.router.get(
