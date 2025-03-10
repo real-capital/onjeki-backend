@@ -261,7 +261,7 @@ const propertySchema = new Schema(
       maximumStay: {
         nights: {
           type: Number,
-          default: 0,
+          default: 365,
         },
         customRules: [
           {
