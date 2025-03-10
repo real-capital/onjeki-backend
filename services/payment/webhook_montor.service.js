@@ -1,4 +1,4 @@
-import WebhookEvent from '../../models/webhook.model';
+import WebhookEvent from '../../models/webhook.model.js';
 
 class WebhookMonitorService {
   async logWebhookEvent(service, eventType, payload, processingResult = {}) {
@@ -39,4 +39,4 @@ class WebhookMonitorService {
   }
 }
 
-export default new WebhookMonitorService();
+export default  WebhookMonitorService;

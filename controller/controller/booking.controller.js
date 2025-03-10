@@ -9,8 +9,10 @@ import PaystackService from '../../services/payment/payment.service.js';
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
 import PaymentModel from '../../models/paymentModel.js';
+import WebhookMonitorService from '../../services/payment/webhook_montor.service.js';
 
 const paystackService = new PaystackService();
+const webhookMonitorService = new WebhookMonitorService();
 
 class BookingController {
   constructor(bookingService) {
@@ -105,6 +107,7 @@ class BookingController {
       }
 
       const event = req.body;
+      console.log(event);
 
       switch (event.event) {
         case 'charge.success':
@@ -128,31 +131,37 @@ class BookingController {
   }
 
   async handleSuccessfulCharge(data) {
-    const payment = await PaymentModel.findOne({
-      transactionReference: data.reference,
-    }).populate('booking');
+    // const payment = await PaymentModel.findOne({
+    //   transactionReference: data.reference,
+    // }).populate('booking');
 
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
+    // if (!payment) {
+    //   throw new Error('Payment not found');
+    // }
 
-    // Update payment status
-    payment.status = 'PAID';
-    payment.paidAt = new Date();
-    payment.gatewayResponse = data;
-    await payment.save();
+    // // Update payment status
+    // payment.status = 'PAID';
+    // payment.paidAt = new Date();
+    // payment.gatewayResponse = data;
+    // await payment.save();
 
-    // Update booking status
-    const booking = payment.booking;
-    booking.status = BookingStatus.CONFIRMED;
-    booking.timeline.push({
-      status: 'PAYMENT_CONFIRMED',
-      message: 'Payment successfully completed',
-    });
-    await booking.save();
+    // // Update booking status
+    // const booking = payment.booking;
+    // booking.status = BookingStatus.CONFIRMED;
+    // booking.timeline.push({
+    //   status: 'PAYMENT_CONFIRMED',
+    //   message: 'Payment successfully completed',
+    // });
+    // await booking.save();
+    await webhookMonitorService.logWebhookEvent(
+      'PAYSTACK',
+      'charge.success',
+      data,
+      { success: true }
+    );
 
     // Send confirmation notifications
-    await this.bookingService.sendBookingNotifications(booking);
+    // await this.bookingService.sendBookingNotifications(booking);
   }
 
   async handleFailedCharge(data) {
@@ -169,6 +178,12 @@ class BookingController {
     payment.gatewayResponse = data;
     await payment.save();
 
+    await webhookMonitorService.logWebhookEvent(
+      'PAYSTACK',
+      'charge.fail',
+      data,
+      { success: true }
+    );
     // Update booking status
     const booking = payment.booking;
     await this.bookingService.handlePaymentFailure(booking._id, booking.guest);
@@ -198,6 +213,12 @@ class BookingController {
       refundedAt: new Date(),
     };
     await booking.save();
+    await webhookMonitorService.logWebhookEvent(
+      'PAYSTACK',
+      'charge.refund',
+      data,
+      { success: true }
+    );
   }
 
   // Helper functions for webhook event handling
@@ -212,7 +233,12 @@ class BookingController {
       });
       return;
     }
-
+    await webhookMonitorService.logWebhookEvent(
+      'PAYSTACK',
+      'charge.success',
+      data,
+      { success: true }
+    );
     await this.bookingService.confirmBookingPayment(payment.booking._id);
   }
 
