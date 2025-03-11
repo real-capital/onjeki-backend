@@ -140,23 +140,7 @@ const bookingSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Conversation',
     },
-    // checkInDetails: {
-    //   estimatedArrivalTime: String,
-    //   actualCheckInTime: Date,
-    //   checkInNotes: String,
-    // },
-    // checkOutDetails: {
-    //   checkOutTime: Date,
-    //   checkOutNotes: String,
-    // },
-    // review: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: 'Review',
-    // },
-    // conversation: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: 'Conversation',
-    // },
+
     hostActions: {
       isReviewed: { type: Boolean, default: false },
       acceptedAt: Date,
