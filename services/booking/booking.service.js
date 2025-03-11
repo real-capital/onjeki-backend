@@ -879,26 +879,26 @@ class BookingService {
     return booking;
   }
 
-  async getUserBookings(userId, status) {
+  async getUserBookings(userId) {
     try {
       const query = { guest: userId };
-      if (status) {
-        query.status = status;
-      }
+      // if (status) {
+      //   query.status = status;
+      // }
 
       const bookings = await BookingModel.find(query)
-        .populate('guest', 'name email photo phone')
-        .populate('host', 'name email photo phone')
+        .populate('guest', 'name email photo phoneNumber')
+        .populate('host', 'name email photo phoneNumber')
         .populate({
           path: 'property',
           select: 'title location rules photo guests owner', // Only fetch specific fields for property
           populate: {
             path: 'owner',
-            select: 'name email phone', // Only fetch selected fields for owner
+            select: 'name email phoneNumber', // Only fetch selected fields for owner
           },
         })
         .sort('-createdAt'); // Converts Mongoose docs to plain JavaScript objects
-
+      console.log('Bookings count:', bookings.length);
       return bookings;
 
       // return bookings;

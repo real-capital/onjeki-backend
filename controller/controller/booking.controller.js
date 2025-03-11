@@ -423,10 +423,7 @@ class BookingController {
 
   getUserBookings = async (req, res, next) => {
     try {
-      const bookings = await this.bookingService.getUserBookings(
-        req.user._id,
-        req.query.status
-      );
+      const bookings = await this.bookingService.getUserBookings(req.user._id);
 
       res.status(StatusCodes.OK).json({
         status: 'success',
