@@ -880,7 +880,6 @@ class BookingService {
   }
 
   async getUserBookings(userId, status) {
-
     try {
       const query = { guest: userId };
       if (status) {
@@ -890,8 +889,12 @@ class BookingService {
       const bookings = await BookingModel.find(query)
         .populate('guest', 'name email photo phone')
         .populate('host', 'name email photo phone')
-        .populate('property')
-        .sort('-createdAt');
+        .populate({
+          path: 'property',
+          populate: [{ path: 'owner' }],
+        })
+        .sort('-createdAt')
+        .lean();
 
       return bookings;
     } catch (error) {
