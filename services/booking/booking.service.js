@@ -897,12 +897,11 @@ class BookingService {
             select: 'name email phone', // Only fetch selected fields for owner
           },
         })
-        .sort('-createdAt')
-        .lean(); // Converts Mongoose docs to plain JavaScript objects
+        .sort('-createdAt'); // Converts Mongoose docs to plain JavaScript objects
 
       return bookings;
 
-      return bookings;
+      // return bookings;
     } catch (error) {
       throw new HttpException(
         StatusCodes.INTERNAL_SERVER_ERROR,
