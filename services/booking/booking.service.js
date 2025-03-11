@@ -880,8 +880,9 @@ class BookingService {
   }
 
   async getUserBookings(userId, status) {
+
     try {
-      const query = { user: userId };
+      const query = { guest: userId };
       if (status) {
         query.status = status;
       }
