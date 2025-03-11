@@ -891,10 +891,16 @@ class BookingService {
         .populate('host', 'name email photo phone')
         .populate({
           path: 'property',
-          populate: [{ path: 'owner' }],
+          select: 'title location rules photo guests owner', // Only fetch specific fields for property
+          populate: {
+            path: 'owner',
+            select: 'name email phone', // Only fetch selected fields for owner
+          },
         })
         .sort('-createdAt')
-        .lean();
+        .lean(); // Converts Mongoose docs to plain JavaScript objects
+
+      return bookings;
 
       return bookings;
     } catch (error) {
