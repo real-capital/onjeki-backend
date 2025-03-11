@@ -50,7 +50,7 @@ class BookingRoute extends Route {
 
     // Get user bookings
     this.router.get(
-      `${this.path}/user/bookings`,
+      `${this.path}`,
       isAuthenticated,
       this.controller.getUserBookings
     );
