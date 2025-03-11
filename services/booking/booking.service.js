@@ -887,6 +887,8 @@ class BookingService {
       }
 
       const bookings = await BookingModel.find(query)
+        .populate('guest', 'name email photo phone')
+        .populate('host', 'name email photo phone')
         .populate('property')
         .sort('-createdAt');
 
