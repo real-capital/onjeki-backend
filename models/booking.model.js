@@ -285,7 +285,7 @@ bookingSchema.methods = {
 
     // Calculate refund amount based on cancellation policy
     const property = await mongoose.model('Property').findById(this.property);
-    const refundAmount = await this.calculateRefundAmount(
+    const refundAmount = this.calculateRefundAmount(
       property.rules.cancellationPolicy
     );
 

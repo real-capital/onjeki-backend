@@ -10,9 +10,11 @@ import { SocketService } from '../chat/socket.service.js';
 import PaymentModel from '../../models/paymentModel.js';
 import { logger } from '../../utils/logger.js';
 import PaystackService from '../payment/payment.service.js';
+import RefundService from '../payment/refund.service.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
+const refundService = new RefundService();
 class BookingService {
   constructor(socketService) {
     if (!socketService) {
@@ -819,19 +821,35 @@ class BookingService {
   }
 
   async getBookingById(bookingId, userId) {
-    const booking = await BookingModel.findOne({
-      _id: bookingId,
-      $or: [{ guest: userId }, { host: userId }],
-    })
-      .populate('guest', 'name email photo phone')
-      .populate('host', 'name email photo phone')
-      .populate('property');
+    try {
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        guest: userId,
+        // $or: [{ guest: userId }, { host: userId }],
+      })
+        .populate('guest', 'name email photo phoneNumber')
+        .populate('host', 'name email photo phoneNumber')
+        .populate({
+          path: 'property',
+          select: 'title location rules photo guests owner', // Only fetch specific fields for property
+          populate: {
+            path: 'owner',
+            select: 'name email phoneNumber', // Only fetch selected fields for owner
+          },
+        })
+        .sort('-createdAt');
 
-    if (!booking) {
-      throw new HttpException(404, 'Booking not found');
+      if (!booking) {
+        throw new HttpException(404, 'Booking not found');
+      }
+
+      return booking;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching bookings'
+      );
     }
-
-    return booking;
   }
 
   async cancelBooking(bookingId, userId, reason) {
@@ -846,7 +864,7 @@ class BookingService {
     }
 
     // Calculate refund amount based on cancellation policy
-    const refundAmount = await this.calculateRefundAmount(booking);
+    const refundAmount = await booking.calculateRefundAmount(booking);
 
     // Update booking status
     booking.status = BookingStatus.CANCELLED;
@@ -855,6 +873,7 @@ class BookingService {
       reason,
       cancelledAt: new Date(),
       refundAmount,
+      refundStatus: 'Pending',
     };
 
     booking.timeline.push({
@@ -870,7 +889,7 @@ class BookingService {
 
     // Process refund if payment was made
     if (booking.payment.status === 'PAID') {
-      await this.processRefund(booking, refundAmount);
+      await refundService.processRefund(booking, userId);
     }
 
     // Send notifications
@@ -898,7 +917,6 @@ class BookingService {
           },
         })
         .sort('-createdAt'); // Converts Mongoose docs to plain JavaScript objects
-      console.log('Bookings count:', bookings.length);
       return bookings;
 
       // return bookings;
