@@ -10,7 +10,7 @@ import ConversationController from '../../controller/conversation/conversation.c
 class ConversationRoute extends Route {
   constructor() {
     super(express.Router()); // Initialize the parent class
-    this.path = '/properties';
+    this.path = '/conversations';
     this.controller = new ConversationController();
     this.initializeRoutes();
   }
@@ -18,7 +18,7 @@ class ConversationRoute extends Route {
   initializeRoutes() {
     // Create a new conversation
     this.router.post(
-      '/conversations',
+      `${this.path}`,
       isAuthenticated,
       //   createConversationValidation,
       this.controller.createConversation
@@ -26,7 +26,7 @@ class ConversationRoute extends Route {
 
     // Send a message in a conversation
     this.router.post(
-      '/conversations/:conversationId/messages',
+      `${this.path}/:conversationId/messages`,
       isAuthenticated,
       //   sendMessageValidation,
       this.controller.sendMessage
@@ -34,21 +34,21 @@ class ConversationRoute extends Route {
 
     // Get user's conversations
     this.router.get(
-      '/conversations',
+      `${this.path}`,
       isAuthenticated,
       this.controller.getConversations
     );
 
     // Get messages in a specific conversation
     this.router.get(
-      '/conversations/:conversationId/messages',
+      `${this.path}/:conversationId/messages`,
       isAuthenticated,
       this.controller.getConversationMessages
     );
 
     // Archive a conversation
     this.router.patch(
-      '/conversations/:conversationId/archive',
+      `${this.path}/:conversationId/archive`,
       isAuthenticated,
       this.controller.archiveConversation
     );
