@@ -1,9 +1,13 @@
 import Conversation from '../../models/conversation.model.js';
 import Message from '../../models/message_model.js';
 import HttpException from '../../utils/exception.js';
+import { SocketService } from '../chat/socket.service.js';
 
 class ConversationService {
   constructor(socketService) {
+    if (!socketService) {
+      throw new Error('SocketService is required for ConversationService');
+    }
     this.socketService = socketService;
   }
 
@@ -91,14 +95,27 @@ class ConversationService {
       await conversation.save();
 
       // Notify other participants via socket
+      if (!this.socketService) {
+        throw new Error('SocketService not initialized');
+      }
 
+      // Get socket instance if using singleton pattern
+      const socketService =
+        this.socketService instanceof SocketService
+          ? this.socketService
+          : SocketService.getInstance();
+
+      if (!socketService) {
+        throw new Error('Could not get SocketService instance');
+      }
       console.log(`🔔 Notifying participants...`);
+
       const otherParticipants = conversation.participants.filter(
         (id) => id.toString() !== senderId.toString()
       );
 
       otherParticipants.forEach((participantId) => {
-        this.socketService.notifyUser(participantId, 'new_message', {
+        socketService.notifyUser(participantId, 'new_message', {
           conversationId,
           message,
           sender: senderId,
@@ -106,19 +123,6 @@ class ConversationService {
       });
 
       return message;
-      //   const otherParticipants = conversation.participants.filter(
-      //     (id) => id.toString() !== senderId.toString()
-      //   );
-
-      //   otherParticipants.forEach((participantId) => {
-      //     this.socketService.notifyUser(participantId, 'new_message', {
-      //       conversationId,
-      //       message,
-      //       sender: senderId,
-      //     });
-      //   });
-
-      //   return message;
     } catch (error) {
       console.error('❌ Error sending message:', error);
       throw new HttpException(500, 'Error sending message');

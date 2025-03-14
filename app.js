@@ -24,6 +24,7 @@ import { SocketService } from './services/chat/socket.service.js';
 import ChatService from './services/chat/chat.service.js';
 import BookingService from './services/booking/booking.service.js';
 import ServiceContainer from './services/ServiceContainer.js';
+import ConversationService from './services/conversation/conversation.service.js';
 
 // Load environment variables
 dotenv.config();
@@ -64,10 +65,7 @@ class app {
     this.app.use(xss()); // Prevent XSS attacks
     this.app.use(hpp()); // Prevent HTTP parameter pollution
     this.app.use(morganMiddleware); // Request logging middleware
-
-
   }
-
 
   initializeServices() {
     try {
@@ -80,6 +78,9 @@ class app {
       // Initialize and register booking service
       const bookingService = new BookingService(socketService);
       ServiceContainer.register('bookingService', bookingService);
+
+      const conversationService = new ConversationService(socketService);
+      ServiceContainer.register('conversationService', conversationService);
 
       // Initialize and register chat service
       const chatService = new ChatService(socketService.getIO());

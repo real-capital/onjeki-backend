@@ -2,6 +2,8 @@ import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import ConversationController from '../../controller/conversation/conversation.controller.js';
+import ServiceContainer from '../../services/ServiceContainer.js';
+import { logger } from '../../utils/logger.js';
 // import {
 //   createConversationValidation,
 //   sendMessageValidation
@@ -9,10 +11,17 @@ import ConversationController from '../../controller/conversation/conversation.c
 
 class ConversationRoute extends Route {
   constructor() {
-    super(express.Router()); // Initialize the parent class
+    super(); // Initialize the parent class
     this.path = '/conversations';
-    this.controller = new ConversationController();
-    this.initializeRoutes();
+
+    try {
+      const conversationService = ServiceContainer.get('conversationService');
+      this.controller = new ConversationController(conversationService);
+      this.initializeRoutes();
+    } catch (error) {
+      logger.error('Error initializing ConversationRoute:', error);
+      throw error;
+    }
   }
 
   initializeRoutes() {

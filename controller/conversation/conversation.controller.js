@@ -1,16 +1,26 @@
 import { StatusCodes } from 'http-status-codes';
 import ConversationService from '../../services/conversation/conversation.service.js';
 
-const conversationService = new ConversationService();
+// const conversationService = new ConversationService();
 class ConversationController {
-  //   constructor(conversationService) {
-  //     conversationService = conversationService;
-  //   }
+  constructor(conversationService) {
+    if (!conversationService) {
+      throw new Error('Conversation Service is required');
+    }
+
+    this.conversationService = conversationService;
+
+    this.createConversation = this.createConversation.bind(this);
+    this.sendMessage = this.sendMessage.bind(this);
+    this.getConversations = this.getConversations.bind(this);
+    this.getConversationMessages = this.getConversationMessages.bind(this);
+    this.archiveConversation = this.archiveConversation.bind(this);
+  }
 
   createConversation = async (req, res, next) => {
     try {
       const { participants, metadata } = req.body;
-      const conversation = await conversationService.createConversation(
+      const conversation = await this.conversationService.createConversation(
         participants,
         metadata
       );
@@ -30,7 +40,7 @@ class ConversationController {
       const { content, attachments } = req.body;
       const senderId = req.user._id;
 
-      const message = await conversationService.sendMessage(
+      const message = await this.conversationService.sendMessage(
         senderId,
         conversationId,
         content,
@@ -51,9 +61,13 @@ class ConversationController {
       const userId = req.user._id;
       const { page, limit, status } = req.query;
 
-      const conversations = await conversationService.getConversations(
+      const conversations = await this.conversationService.getConversations(
         userId,
-        { page, limit, status }
+        {
+          page,
+          limit,
+          status,
+        }
       );
 
       res.status(StatusCodes.OK).json({
@@ -71,7 +85,7 @@ class ConversationController {
       const userId = req.user._id;
       const { page, limit } = req.query;
 
-      const messages = await conversationService.getConversationMessages(
+      const messages = await this.conversationService.getConversationMessages(
         conversationId,
         userId,
         { page, limit }
@@ -91,7 +105,7 @@ class ConversationController {
       const { conversationId } = req.params;
       const userId = req.user._id;
 
-      const conversation = await conversationService.archiveConversation(
+      const conversation = await this.conversationService.archiveConversation(
         conversationId,
         userId
       );
