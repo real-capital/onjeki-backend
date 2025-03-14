@@ -35,14 +35,30 @@ class ConversationService {
 
   async sendMessage(senderId, conversationId, content, attachments = []) {
     try {
-      const conversation = await Conversation.findById(conversationId);
+      //   const conversation = await Conversation.findById(conversationId);
 
+      //   if (!conversation) {
+      //     throw new HttpException(404, 'Conversation not found');
+      //   }
+
+      //   // Validate sender is part of conversation
+      //   if (!conversation.participants.includes(senderId)) {
+      //     throw new HttpException(403, 'Unauthorized to send message');
+      //   }
+      console.log(
+        `📩 New message from ${senderId} in conversation ${conversationId}`
+      );
+      console.log(`📝 Message content: ${content}`);
+
+      const conversation = await Conversation.findById(conversationId);
       if (!conversation) {
+        console.error('❌ Conversation not found');
         throw new HttpException(404, 'Conversation not found');
       }
 
-      // Validate sender is part of conversation
+      // Check if sender is part of the conversation
       if (!conversation.participants.includes(senderId)) {
+        console.error('❌ Unauthorized to send message');
         throw new HttpException(403, 'Unauthorized to send message');
       }
 
@@ -54,6 +70,7 @@ class ConversationService {
       });
 
       await message.save();
+      console.log(`✅ Message saved with ID: ${message._id}`);
 
       // Update conversation's last message
       conversation.lastMessage = message._id;
@@ -74,6 +91,8 @@ class ConversationService {
       await conversation.save();
 
       // Notify other participants via socket
+
+      console.log(`🔔 Notifying participants...`);
       const otherParticipants = conversation.participants.filter(
         (id) => id.toString() !== senderId.toString()
       );
@@ -87,7 +106,21 @@ class ConversationService {
       });
 
       return message;
+      //   const otherParticipants = conversation.participants.filter(
+      //     (id) => id.toString() !== senderId.toString()
+      //   );
+
+      //   otherParticipants.forEach((participantId) => {
+      //     this.socketService.notifyUser(participantId, 'new_message', {
+      //       conversationId,
+      //       message,
+      //       sender: senderId,
+      //     });
+      //   });
+
+      //   return message;
     } catch (error) {
+      console.error('❌ Error sending message:', error);
       throw new HttpException(500, 'Error sending message');
     }
   }
@@ -101,7 +134,15 @@ class ConversationService {
         status,
       })
         .populate('participants', 'name photo')
-        .populate('lastMessage')
+        .populate({
+          path: 'lastMessage',
+          // select: 'title location rules photo guests owner', // Only fetch specific fields for property
+          populate: {
+            path: 'sender',
+            //   select: 'name email phoneNumber', // Only fetch selected fields for owner
+          },
+        })
+        // .populate('lastMessage')
         .sort({ updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit);
