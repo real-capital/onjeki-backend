@@ -24,7 +24,7 @@ const conversationSchema = new mongoose.Schema(
     unreadCounts: {
       type: Map,
       of: Number,
-      default: new Map(),
+      default: {},
     },
     status: {
       type: String,
@@ -34,12 +34,14 @@ const conversationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
 conversationSchema.index({ participants: 1 });
 conversationSchema.index({ booking: 1 });
-conversationSchema.index({ 'unreadCounts.userId': 1 });
+// conversationSchema.index({ 'unreadCounts.userId': 1 });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 

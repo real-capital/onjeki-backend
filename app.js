@@ -65,70 +65,9 @@ class app {
     this.app.use(hpp()); // Prevent HTTP parameter pollution
     this.app.use(morganMiddleware); // Request logging middleware
 
-    // this.app.use();
-    // this.app.use(
-    //   rateLimit({
-    //     windowMs: 15 * 60 * 1000, // 15 minutes
-    //     max: 100, // limit each IP to 100 requests per windowMs
-    //   })
-    // );
+
   }
-  // initializeSocket() {
-  //   // Initialize Socket.IO with server
-  //   this.socketService = new SocketService(this.server);
 
-  //   // Log to check if socketService is initialized
-  //   if (!this.socketService) {
-  //     console.error('SocketService is not initialized');
-  //     return;
-  //   }
-  //   console.log('SocketService initialized successfully');
-
-  //   // Get the io instance from socket service
-  //   const io = this.socketService.getIO();
-
-  //   // Initialize services with socketService
-  //   this.chatService = new ChatService(io);
-  //   this.bookingService = new BookingService(this.socketService); // Pass correct socketService
-
-  //   // Log to check if the service is being correctly passed
-  //   console.log('SocketService passed to BookingService', this.socketService);
-
-  //   // Initialize chat service
-  //   this.chatService.initialize();
-
-  //   // Make services available throughout the application
-  //   this.app.set('socketService', this.socketService);
-  //   this.app.set('chatService', this.chatService);
-  //   this.app.set('bookingService', this.bookingService);
-  // }
-
-  // Initialize Routes
-
-  // initializeSocket() {
-  //   try {
-  //     this.socketService = new SocketService(this.server);
-  //     console.log('Socket service initialized successfully');
-  //   } catch (error) {
-  //     console.error('Failed to initialize socket service:', error);
-  //     throw error;
-  //   }
-  // }
-
-  // initializeServices() {
-  //   if (!this.socketService) {
-  //     throw new Error('Socket service must be initialized first');
-  //   }
-
-  //   // Initialize services
-  //   this.chatService = new ChatService(this.socketService.getIO());
-  //   this.bookingService = new BookingService(this.socketService);
-
-  //   // Make services available throughout the application
-  //   this.app.set('socketService', this.socketService);
-  //   this.app.set('chatService', this.chatService);
-  //   this.app.set('bookingService', this.bookingService);
-  // }
 
   initializeServices() {
     try {

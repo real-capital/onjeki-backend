@@ -616,61 +616,7 @@ class BookingService {
       session.endSession();
     }
   }
-  // async handlePaymentFailure(bookingId, userId) {
-  //   const session = await mongoose.startSession();
-  //   session.startTransaction();
 
-  //   try {
-  //     // Find the booking
-  //     const booking = await BookingModel.findOne({
-  //       _id: bookingId,
-  //       guest: userId,
-  //       status: BookingStatus.PENDING,
-  //     }).populate('property');
-
-  //     if (!booking) {
-  //       throw new HttpException(404, 'Booking not found');
-  //     }
-
-  //     // Find the associated payment
-  //     const payment = await PaymentModel.findOne({
-  //       booking: bookingId,
-  //       status: { $in: ['PENDING', 'PROCESSING', 'FAILED'] },
-  //     });
-
-  //     // Update payment status
-  //     if (payment) {
-  //       payment.status = 'FAILED';
-  //       await payment.save({ session });
-  //     }
-
-  //     // Revert property booked dates
-  //     const property = booking.property;
-  //     await property.removeBookedDates(bookingId);
-
-  //     // Update booking status
-  //     booking.status = BookingStatus.CANCELLED;
-  //     booking.timeline.push({
-  //       status: 'PAYMENT_FAILED',
-  //       message: 'Payment process was unsuccessful',
-  //     });
-  //     await booking.save({ session });
-
-  //     // Send notification about payment failure
-  //     await this.sendPaymentFailureNotification(booking);
-
-  //     await session.commitTransaction();
-
-  //     return booking;
-  //   } catch (error) {
-  //     if (session.inTransaction()) {
-  //       await session.abortTransaction();
-  //     }
-  //     throw error;
-  //   } finally {
-  //     session.endSession();
-  //   }
-  // }
 
   async handlePaymentCancellation(bookingId, userId) {
     const session = await mongoose.startSession();

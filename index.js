@@ -9,6 +9,7 @@ import WishlistRoute from './routes/wishlist/wishlist.routes.js';
 import ChatRoute from './routes/message/chat.route.js';
 import BookingRoute from './routes/booking/booking.route.js';
 import { logger } from './utils/logger.js';
+import ConversationRoute from './routes/conversation/conversation.route.js';
 // import PaymentRoute from './routes/payment/payment.route.js';
 
 try {
@@ -22,6 +23,7 @@ try {
     WishlistRoute,
     ChatRoute,
     BookingRoute,
+    ConversationRoute,
     // PaymentRoute,
   ];
 
