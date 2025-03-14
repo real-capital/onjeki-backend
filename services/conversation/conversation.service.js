@@ -39,16 +39,7 @@ class ConversationService {
 
   async sendMessage(senderId, conversationId, content, attachments = []) {
     try {
-      //   const conversation = await Conversation.findById(conversationId);
-
-      //   if (!conversation) {
-      //     throw new HttpException(404, 'Conversation not found');
-      //   }
-
-      //   // Validate sender is part of conversation
-      //   if (!conversation.participants.includes(senderId)) {
-      //     throw new HttpException(403, 'Unauthorized to send message');
-      //   }
+  
       console.log(
         `📩 New message from ${senderId} in conversation ${conversationId}`
       );

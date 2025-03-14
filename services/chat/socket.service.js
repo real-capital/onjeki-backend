@@ -102,30 +102,14 @@ export class SocketService {
       this.connectedUsers.delete(socket.user._id.toString());
       console.log(`User disconnected: ${socket.user._id}`);
     });
-    // try {
-    //   // Add socket to user's socket set
-    //   if (!this.userSockets.has(userId)) {
-    //     this.userSockets.set(userId, new Set());
-    //   }
-    //   this.userSockets.get(userId).add(socket.id);
-    //   socket.userId = userId;
-
-    //   // Join user-specific room
-    //   socket.join(`user_${userId}`);
-
-    //   logger.info(`User ${userId} authenticated on socket ${socket.id}`);
-    // } catch (error) {
-    //   logger.error(`Authentication error: ${error.message}`);
-    //   socket.emit('auth_error', { message: 'Authentication failed' });
-    // }
   }
   handleDisconnect(socket) {
     if (socket.userId) {
-      const userSockets = this.userSockets.get(socket.userId);
-      if (userSockets) {
-        userSockets.delete(socket.id);
-        if (userSockets.size === 0) {
-          this.userSockets.delete(socket.userId);
+      const connectedUsers = this.connectedUsers.get(socket.userId);
+      if (connectedUsers) {
+        connectedUsers.delete(socket.id);
+        if (connectedUsers.size === 0) {
+          this.connectedUsers.delete(socket.userId);
         }
       }
     }
@@ -268,9 +252,9 @@ export class SocketService {
 
   // Utility methods for emitting events
   notifyUser(userId, event, data) {
-    const userSockets = this.userSockets.get(userId);
-    if (userSockets) {
-      userSockets.forEach((socketId) => {
+    const connectedUsers = this.connectedUsers.get(userId);
+    if (connectedUsers) {
+      connectedUsers.forEach((socketId) => {
         this.io.to(socketId).emit(event, data);
       });
       logger.debug(`Notification sent to user ${userId}: ${event}`);
@@ -292,8 +276,9 @@ export class SocketService {
   }
 
   isUserOnline(userId) {
-    const userSockets = this.userSockets.get(userId);
-    return userSockets != null && userSockets.size > 0;
+    const connectedUsers = this.connectedUsers.get(userId);
+    console.log(connectedUsers);
+    return connectedUsers != null && connectedUsers.size > 0;
   }
 
   getIO() {
