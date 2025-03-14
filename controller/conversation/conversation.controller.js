@@ -4,13 +4,13 @@ import ConversationService from '../../services/conversation/conversation.servic
 const conversationService = new ConversationService();
 class ConversationController {
   //   constructor(conversationService) {
-  //     this.conversationService = conversationService;
+  //     conversationService = conversationService;
   //   }
 
   createConversation = async (req, res, next) => {
     try {
       const { participants, metadata } = req.body;
-      const conversation = await this.conversationService.createConversation(
+      const conversation = await conversationService.createConversation(
         participants,
         metadata
       );
@@ -30,7 +30,7 @@ class ConversationController {
       const { content, attachments } = req.body;
       const senderId = req.user._id;
 
-      const message = await this.conversationService.sendMessage(
+      const message = await conversationService.sendMessage(
         senderId,
         conversationId,
         content,
@@ -51,7 +51,7 @@ class ConversationController {
       const userId = req.user._id;
       const { page, limit, status } = req.query;
 
-      const conversations = await this.conversationService.getConversations(
+      const conversations = await conversationService.getConversations(
         userId,
         { page, limit, status }
       );
@@ -71,7 +71,7 @@ class ConversationController {
       const userId = req.user._id;
       const { page, limit } = req.query;
 
-      const messages = await this.conversationService.getConversationMessages(
+      const messages = await conversationService.getConversationMessages(
         conversationId,
         userId,
         { page, limit }
@@ -91,7 +91,7 @@ class ConversationController {
       const { conversationId } = req.params;
       const userId = req.user._id;
 
-      const conversation = await this.conversationService.archiveConversation(
+      const conversation = await conversationService.archiveConversation(
         conversationId,
         userId
       );
