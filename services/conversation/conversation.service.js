@@ -1,5 +1,5 @@
 import Conversation from '../../models/conversation.model.js';
-import Message from '../../models/message.model.js';
+import Message from '../../models/message_model.js';
 import HttpException from '../../utils/exception.js';
 
 class ConversationService {
@@ -11,10 +11,10 @@ class ConversationService {
     try {
       // Check for existing conversation
       const existingConversation = await Conversation.findOne({
-        participants: { 
+        participants: {
           $all: participants,
-          $size: participants.length 
-        }
+          $size: participants.length,
+        },
       });
 
       if (existingConversation) {
@@ -23,7 +23,7 @@ class ConversationService {
 
       const conversation = new Conversation({
         participants,
-        ...metadata
+        ...metadata,
       });
 
       await conversation.save();
@@ -36,7 +36,7 @@ class ConversationService {
   async sendMessage(senderId, conversationId, content, attachments = []) {
     try {
       const conversation = await Conversation.findById(conversationId);
-      
+
       if (!conversation) {
         throw new HttpException(404, 'Conversation not found');
       }
@@ -50,23 +50,24 @@ class ConversationService {
         conversation: conversationId,
         sender: senderId,
         content,
-        attachments
+        attachments,
       });
 
       await message.save();
 
       // Update conversation's last message
       conversation.lastMessage = message._id;
-      
+
       // Update unread counts
-      conversation.unreadCounts.set(
-        senderId.toString(), 
-        0
-      );
-      conversation.participants.forEach(participantId => {
+      conversation.unreadCounts.set(senderId.toString(), 0);
+      conversation.participants.forEach((participantId) => {
         if (participantId.toString() !== senderId.toString()) {
-          const currentCount = conversation.unreadCounts.get(participantId.toString()) || 0;
-          conversation.unreadCounts.set(participantId.toString(), currentCount + 1);
+          const currentCount =
+            conversation.unreadCounts.get(participantId.toString()) || 0;
+          conversation.unreadCounts.set(
+            participantId.toString(),
+            currentCount + 1
+          );
         }
       });
 
@@ -74,14 +75,14 @@ class ConversationService {
 
       // Notify other participants via socket
       const otherParticipants = conversation.participants.filter(
-        id => id.toString() !== senderId.toString()
+        (id) => id.toString() !== senderId.toString()
       );
 
-      otherParticipants.forEach(participantId => {
+      otherParticipants.forEach((participantId) => {
         this.socketService.notifyUser(participantId, 'new_message', {
           conversationId,
           message,
-          sender: senderId
+          sender: senderId,
         });
       });
 
@@ -92,22 +93,18 @@ class ConversationService {
   }
 
   async getConversations(userId, options = {}) {
-    const { 
-      page = 1, 
-      limit = 20, 
-      status = 'active' 
-    } = options;
+    const { page = 1, limit = 20, status = 'active' } = options;
 
     try {
       const conversations = await Conversation.find({
         participants: userId,
-        status
+        status,
       })
-      .populate('participants', 'name photo')
-      .populate('lastMessage')
-      .sort({ updatedAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+        .populate('participants', 'name photo')
+        .populate('lastMessage')
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit);
 
       return conversations;
     } catch (error) {
@@ -116,14 +113,11 @@ class ConversationService {
   }
 
   async getConversationMessages(conversationId, userId, options = {}) {
-    const { 
-      page = 1, 
-      limit = 50 
-    } = options;
+    const { page = 1, limit = 50 } = options;
 
     try {
       const conversation = await Conversation.findById(conversationId);
-      
+
       if (!conversation) {
         throw new HttpException(404, 'Conversation not found');
       }
@@ -135,26 +129,26 @@ class ConversationService {
 
       const messages = await Message.find({
         conversation: conversationId,
-        deletedFor: { $ne: userId }
+        deletedFor: { $ne: userId },
       })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate('sender', 'name photo');
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('sender', 'name photo');
 
       // Mark messages as read for this user
       await Message.updateMany(
-        { 
-          conversation: conversationId, 
-          'readBy.user': { $ne: userId } 
+        {
+          conversation: conversationId,
+          'readBy.user': { $ne: userId },
         },
-        { 
-          $push: { 
-            readBy: { 
-              user: userId, 
-              readAt: new Date() 
-            } 
-          } 
+        {
+          $push: {
+            readBy: {
+              user: userId,
+              readAt: new Date(),
+            },
+          },
         }
       );
 
@@ -171,7 +165,7 @@ class ConversationService {
   async archiveConversation(conversationId, userId) {
     try {
       const conversation = await Conversation.findById(conversationId);
-      
+
       if (!conversation) {
         throw new HttpException(404, 'Conversation not found');
       }

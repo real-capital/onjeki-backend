@@ -1,4 +1,5 @@
 import express from 'express';
+import { Route } from '../../interfaces/route.interface.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import ConversationController from '../../controller/conversation/conversation.controller.js';
 // import {
@@ -6,7 +7,7 @@ import ConversationController from '../../controller/conversation/conversation.c
 //   sendMessageValidation
 // } from '../validations/conversation.validation.js';
 
-class ConversationRoute {
+class ConversationRoute extends Route {
   constructor() {
     super(express.Router()); // Initialize the parent class
     this.path = '/properties';

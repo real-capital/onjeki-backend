@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger.js';
 
 import UserModel from '../../models/user.model.js';
 import MessageModel from '../../models/message_model.js';
-import ConversationModel from '../../models/conversation_model.js';
+import ConversationModel from '../../models/conversation.model.js';
 import jwt from 'jsonwebtoken';
 
 // services/socket.service.js

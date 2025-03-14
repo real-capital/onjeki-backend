@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import ConversationService from '../../services/conversation/conversation.service';
+import ConversationService from '../../services/conversation/conversation.service.js';
 
 const conversationService = new ConversationService();
 class ConversationController {
