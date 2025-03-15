@@ -1,5 +1,5 @@
 import Conversation from '../../models/conversation.model.js';
-import Message from '../../models/message_model.js';
+import Message from '../../models/message.model.js';
 import HttpException from '../../utils/exception.js';
 import { SocketService } from '../chat/socket.service.js';
 
@@ -39,7 +39,6 @@ class ConversationService {
 
   async sendMessage(senderId, conversationId, content, attachments = []) {
     try {
-  
       console.log(
         `📩 New message from ${senderId} in conversation ${conversationId}`
       );
@@ -106,6 +105,7 @@ class ConversationService {
       );
 
       otherParticipants.forEach((participantId) => {
+        console.log(participantId);
         socketService.notifyUser(participantId, 'new_message', {
           conversationId,
           message,

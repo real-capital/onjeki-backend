@@ -1,5 +1,5 @@
 import ChatModel from '../../models/chat.model.js';
-import Message from '../../models/message_model.js';
+import Message from '../../models/message.model.js';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import RentOrSaleNotificationService from '../notification/rent-or-sale-notification.service.js';

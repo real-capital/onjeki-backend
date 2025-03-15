@@ -1,4 +1,4 @@
-import Message from '../../models/message_model';
+import Message from '../../models/message.model.js';
 import Conversation from '../../models/conversation.model';
 import { uploadFile } from './uploadService';
 import { emitSocketEvent } from './socketService';

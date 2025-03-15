@@ -1,6 +1,6 @@
 import MessageService from '../../services/chat/message.service';
 import Conversation from '../../models/conversation.model';
-import Message from '../../models/message_model';
+import Message from '../../models/message.model.js';
 import { StatusCodes } from 'http-status-codes';
 
 const messageService = new MessageService();

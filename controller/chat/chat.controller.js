@@ -1,7 +1,7 @@
 // chat.controller.js
 
 import ChatModel from '../../models/chat.model.js';
-import Message from '../../models/message_model.js';
+import Message from '../../models/message.model.js';
 import ChatService from '../../services/chat/chat.service.js';
 
 const chatService = new ChatService();

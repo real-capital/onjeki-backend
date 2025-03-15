@@ -1,19 +1,18 @@
-// services/notification.service.js
-import notificationModel from '../../models/notification.model.js';
+import NotificationModel from '../../models/notifications.model.js';
 import UserModel from '../../models/user.model.js';
-import { sendPushNotification } from '../../utils/pushNotification.js';
+// import { sendPushNotification } from '../../utils/pushNotification.js';
 
 class NotificationService {
   async createNotification(userId, notification) {
     try {
-      const newNotification = await notificationModel.create({
+      const newNotification = await NotificationModel.create({
         ...notification,
-        date: new Date()
+        date: new Date(),
       });
 
       // Add notification to user's notifications array
       await UserModel.findByIdAndUpdate(userId, {
-        $push: { notification: newNotification._id }
+        $push: { notification: newNotification._id },
       });
 
       // Send push notification if user has device token
@@ -21,7 +20,7 @@ class NotificationService {
       if (user.deviceToken) {
         await sendPushNotification(user.deviceToken, {
           title: notification.header,
-          body: notification.message
+          body: notification.message,
         });
       }
 
@@ -65,10 +64,6 @@ class NotificationService {
 }
 
 export default NotificationService;
-
-
-
-
 
 // import { Notification } from '../models/Notification';
 // import { emitSocketEvent } from './socketService';
@@ -173,7 +168,7 @@ export default NotificationService;
 //         };
 
 //       // Add more notification types as needed
-      
+
 //       default:
 //         return {
 //           title: 'New Notification',
