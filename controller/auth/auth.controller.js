@@ -214,11 +214,12 @@ class AuthController {
   };
   selfDeclareVerification = async (req, res, next) => {
     try {
-      const verificationData = req.body;
+      // const verificationData = req.body;
       const userId = req.user.id;
       const result = await authService.selfDeclareVerification(
         userId,
-        verificationData
+        req.body.fullName,
+        req.body.address
       );
       res.status(200).json({ status: 'success', data: result });
     } catch (error) {

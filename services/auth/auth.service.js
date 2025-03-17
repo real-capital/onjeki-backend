@@ -16,6 +16,7 @@ import { Vonage } from '@vonage/server-sdk';
 import { SMS } from '@vonage/messages';
 import UserVerification from '../../models/userVerification.model.js';
 import PropertyModel from '../../models/properties.model.js';
+import { EListStatus } from '../../enum/house.enum.js';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -489,11 +490,11 @@ class AuthService {
 
       // Update status
       if (
-        (verification.legalNameVerification.isVerified = true) &&
-        (verification.addressVerification.isVerified = true)
+        verification.legalNameVerification.isVerified == true &&
+        verification.addressVerification.isVerified == true
       ) {
         verification.status = 'fully_verified';
-        await this.publishUserListings(userId);
+        // await this.publishUserListings(userId);
       } else {
         verification.status = 'partially_verified';
       }
@@ -502,6 +503,9 @@ class AuthService {
       await verification.save();
 
       // Publish all user's unpublished listings
+      if ((verification.status = 'fully_verified')) {
+        await this.publishUserListings(userId);
+      }
       // await this.publishUserListings(userId);
 
       // Delete the used OTP record
@@ -607,9 +611,9 @@ class AuthService {
     }
   }
   // Self-Declaration Verification
-  async selfDeclareVerification(userId, verificationData) {
+  async selfDeclareVerification(userId, fullName, address) {
     try {
-      const { fullName, address } = verificationData;
+      // const { fullName, address } = verificationData;
 
       // Validate input
       if (!fullName || !address) {
@@ -649,15 +653,18 @@ class AuthService {
       });
 
       // Update status
-      if ((verification.phoneVerification.isVerified = true)) {
+      if (verification.phoneVerification.isVerified) {
         verification.status = 'fully_verified';
-        await this.publishUserListings(userId);
+        // await this.publishUserListings(userId);
       } else {
         verification.status = 'partially_verified';
       }
 
       // Save verification record
       await verification.save();
+      if (verification.status == 'fully_verified') {
+        await this.publishUserListings(userId);
+      }
 
       return {
         message: 'Details verified successfully',
@@ -753,10 +760,11 @@ class AuthService {
 
     // Define listing publication rules
     const canPublishListings =
-      verification.legalNameVerification.isVerified &&
-      verification.addressVerification.isVerified &&
-      verification.phoneVerification.isVerified;
-
+      verification.legalNameVerification.isVerified == true &&
+      verification.addressVerification.isVerified == true &&
+      verification.phoneVerification.isVerified == true;
+    console.log('canPublishListings');
+    console.log(canPublishListings);
     return {
       status: verification.status,
       verificationMethod: verification.verificationMethod,
@@ -783,11 +791,11 @@ class AuthService {
       // Update all unpublished properties of the user to published
       const result = await PropertyModel.updateMany(
         {
-          userId,
-          listStatus: 'under_review', // Assuming you have a draft status
+          owner: userId,
+          listStatus: EListStatus.UNDER_REVIEW, // Assuming you have a draft status
         },
         {
-          listStatus: 'Approved',
+          listStatus: EListStatus.APPROVED,
         }
       );
 
