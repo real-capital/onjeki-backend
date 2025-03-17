@@ -397,48 +397,129 @@ class AuthService {
   //   }
 
   // Send OTP
-  async sendPhoneOtp(userId) {
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
-    }
+  async sendPhoneOtp(userId, phoneNumber) {
+    try {
+      // Find the user
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+      // Mark phone as verified
+      await UserModel.findByIdAndUpdate(userId, {
+        phoneNumber: phoneNumber,
+      });
 
-    if (!user.phoneNumber) {
-      throw new HttpException(
-        StatusCodes.BAD_REQUEST,
-        'Phone number is required'
+      // Validate phone number
+      if (!phoneNumber) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Phone number is required'
+        );
+      }
+
+      // Generate OTP
+      const otp = otpGenerator.generate(6, {
+        digits: true,
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars: false,
+      });
+
+      // Create OTP record in database
+
+      await OtpModel.create({
+        userId,
+        otp,
+        expiration: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes expiry
+      });
+
+      // Send OTP via SMS
+      const response = await vonage.messages.send(
+        new SMS(
+          `Your Onjeki verification code is ${otp}. \n Do not share this with anyone.`,
+          phoneNumber,
+          'Onjeki'
+        )
       );
+
+      return {
+        message: 'OTP sent successfully',
+        requestId: response,
+      };
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      throw new HttpException(StatusCodes.BAD_REQUEST, 'Failed to send OTP');
     }
-
-    const response = await vonage.messages.send(
-      new SMS('1234', user.phoneNumber, 'Onjeki')
-    );
-
-    console.log(response);
-
-    // if (response.status !== '0') {
-    //   throw new HttpException(StatusCodes.BAD_REQUEST, 'Failed to send OTP');
-    // }
-    // console.log(response);
-
-    return { requestId: response };
   }
 
   // Verify OTP
-  async verifyPhoneOtp(userId, requestId, code) {
-    const response = await vonage.verify.check({
-      request_id: requestId,
-      code,
-    });
+  async verifyPhoneOtp(userId, code) {
+    try {
+      // Find the user
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
 
-    if (response.status !== '0') {
-      throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid OTP');
+      // Find the OTP record
+      const otpRecord = await OtpModel.findOne({
+        userId,
+        otp: code,
+        expiration: { $gt: new Date() }, // Check if OTP is not expired
+      });
+
+      if (!otpRecord) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Invalid or expired OTP'
+        );
+      }
+
+      // Mark phone as verified
+      await UserModel.findByIdAndUpdate(userId, {
+        isPhoneVerified: true,
+      });
+
+      // Publish all user's unpublished listings
+      // await this.publishUserListings(userId);
+
+      // Delete the used OTP record
+      await OtpModel.deleteOne({ _id: otpRecord._id });
+
+      return {
+        message: 'Phone number verified successfully',
+      };
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      throw new HttpException(
+        StatusCodes.BAD_REQUEST,
+        'Error Verifying Otp. Please try again later.'
+      );
     }
+  }
 
-    // Mark phone as verified
-    await UserModel.findByIdAndUpdate(userId, { isPhoneVerified: true });
+  // Publish all user's listings
+  async publishUserListings(userId) {
+    try {
+      // Update all unpublished properties of the user to published
+      const result = await PropertyModel.updateMany(
+        {
+          userId,
+          status: 'draft', // Assuming you have a draft status
+        },
+        {
+          status: 'published',
+          publishedAt: new Date(),
+        }
+      );
 
-    return { message: 'Phone number verified successfully' };
+      console.log(
+        `Published ${result.modifiedCount} listings for user ${userId}`
+      );
+    } catch (error) {
+      console.error('Error publishing listings:', error);
+      // Don't rethrow to prevent blocking phone verification
+    }
   }
 }
 

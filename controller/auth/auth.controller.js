@@ -193,7 +193,8 @@ class AuthController {
   sendPhoneOtp = async (req, res, next) => {
     try {
       const userId = req.user.id;
-      const result = await authService.sendPhoneOtp(userId);
+      const { phoneNumber } = req.body;
+      const result = await authService.sendPhoneOtp(userId, phoneNumber);
       res.status(StatusCodes.OK).json({ status: 'success', data: result });
     } catch (error) {
       console.log(error);
@@ -203,9 +204,9 @@ class AuthController {
 
   verifyPhoneOtp = async (req, res, next) => {
     try {
-      const { requestId, code } = req.body;
+      const { code } = req.body;
       const userId = req.user.id;
-      const result = await authService.verifyPhoneOtp(userId, requestId, code);
+      const result = await authService.verifyPhoneOtp(userId, code);
       res.status(200).json({ status: 'success', data: result });
     } catch (error) {
       next(error);
