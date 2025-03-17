@@ -70,6 +70,21 @@ class AuthRoute extends Route {
       isAuthenticated,
       this.controller.verifyPhoneOtp
     );
+    this.router.post(
+      `${this.path}/verify/self-declare`,
+      isAuthenticated,
+      this.controller.selfDeclareVerification
+    );
+    this.router.get(
+      `${this.path}/verify/status`,
+      isAuthenticated,
+      this.controller.getVerificationStatus
+    );
+    this.router.post(
+      `${this.path}/verify/publish`,
+      isAuthenticated,
+      this.controller.publishUserListings
+    );
     // this.router.get(
     //   `${this.path}/my-profile`,
     //   UserGuard.createInstance,

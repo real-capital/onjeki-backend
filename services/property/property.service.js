@@ -452,13 +452,13 @@ class PropertyService {
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error);
     }
   }
-  async getAllListingInProgress() {
+  async getAllListingInProgress(userId) {
     // pagination = { page: 1, limit: 10 }
     try {
       // const query = this.buildSearchQuery(filters);
       // const skip = (pagination.page - 1) * pagination.limit;
 
-      const properties = await OnboardingModel.find()
+      const properties = await OnboardingModel.find({ user: userId })
 
         // .skip(skip)
         // .limit(pagination.limit)

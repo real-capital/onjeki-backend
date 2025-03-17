@@ -26,7 +26,9 @@ class PropertyController {
   };
   deleteCompletedOnboarding = async (req, res, next) => {
     try {
-      const progress = await propertyService.deleteCompletedOnboarding(req.user.id);
+      const progress = await propertyService.deleteCompletedOnboarding(
+        req.user.id
+      );
 
       res.status(StatusCodes.OK).json({
         status: 'success',
@@ -354,7 +356,8 @@ class PropertyController {
   getAllListingsInProgress = async (req, res, next) => {
     try {
       // const { pagination } = req.query;
-      const result = await propertyService.getAllListingInProgress();
+      const userId = req.user.id;
+      const result = await propertyService.getAllListingInProgress(userId);
 
       res.status(StatusCodes.OK).json({
         status: 'success',

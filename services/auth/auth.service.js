@@ -14,6 +14,8 @@ import {
 } from '../../config/index.js';
 import { Vonage } from '@vonage/server-sdk';
 import { SMS } from '@vonage/messages';
+import UserVerification from '../../models/userVerification.model.js';
+import PropertyModel from '../../models/properties.model.js';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -474,11 +476,30 @@ class AuthService {
           'Invalid or expired OTP'
         );
       }
+      // Find or create verification record
+      let verification = await UserVerification.findOne({ userId });
+      if (!verification) {
+        verification = new UserVerification({ userId });
+      }
 
       // Mark phone as verified
       await UserModel.findByIdAndUpdate(userId, {
         isPhoneVerified: true,
       });
+
+      // Update status
+      if (
+        (verification.legalNameVerification.isVerified = true) &&
+        (verification.addressVerification.isVerified = true)
+      ) {
+        verification.status = 'fully_verified';
+        await this.publishUserListings(userId);
+      } else {
+        verification.status = 'partially_verified';
+      }
+
+      // Save verification record
+      await verification.save();
 
       // Publish all user's unpublished listings
       // await this.publishUserListings(userId);
@@ -498,24 +519,285 @@ class AuthService {
     }
   }
 
+  // Verify Legal Name
+  async verifyLegalName(userId, verificationData) {
+    try {
+      // Validate input
+      const { documentType, documentNumber, fullName } = verificationData;
+
+      if (!documentType || !documentNumber || !fullName) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Missing required verification details'
+        );
+      }
+
+      // Find or create verification record
+      let verification = await UserVerification.findOne({ userId });
+      if (!verification) {
+        verification = new UserVerification({ userId });
+      }
+
+      // Update legal name verification
+      verification.legalNameVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        documentType,
+        documentNumber,
+      };
+
+      // Update user's full name
+      await UserModel.findByIdAndUpdate(userId, {
+        name: fullName.trim(),
+      });
+
+      // Save verification record
+      await verification.save();
+
+      return {
+        message: 'Legal name verified successfully',
+        status: verification.status,
+      };
+    } catch (error) {
+      console.error('Legal name verification error:', error);
+      throw error;
+    }
+  }
+
+  // Verify Address
+  async verifyAddress(userId, verificationData) {
+    try {
+      const { proofType, address } = verificationData;
+
+      if (!proofType || !address) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Missing required address verification details'
+        );
+      }
+
+      // Find or create verification record
+      let verification = await UserVerification.findOne({ userId });
+      if (!verification) {
+        verification = new UserVerification({ userId });
+      }
+
+      // Update address verification
+      verification.addressVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        proofType,
+      };
+
+      // Update user's address
+      await UserModel.findByIdAndUpdate(userId, {
+        address: address,
+      });
+
+      // Save verification record
+      await verification.save();
+
+      return {
+        message: 'Address verified successfully',
+        status: verification.status,
+      };
+    } catch (error) {
+      console.error('Address verification error:', error);
+      throw error;
+    }
+  }
+  // Self-Declaration Verification
+  async selfDeclareVerification(userId, verificationData) {
+    try {
+      const { fullName, address } = verificationData;
+
+      // Validate input
+      if (!fullName || !address) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Full name and address are required'
+        );
+      }
+
+      // Find or create verification record
+      let verification = await UserVerification.findOne({ userId });
+      if (!verification) {
+        verification = new UserVerification({ userId });
+      }
+
+      // Update verification details
+      verification.verificationMethod = 'self_declaration';
+
+      // Verify Legal Name
+      verification.legalNameVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        method: 'self_declaration',
+      };
+
+      // Verify Address
+      verification.addressVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        method: 'self_declaration',
+      };
+
+      // Update user profile
+      await UserModel.findByIdAndUpdate(userId, {
+        name: fullName,
+        address: address,
+      });
+
+      // Update status
+      if ((verification.phoneVerification.isVerified = true)) {
+        verification.status = 'fully_verified';
+        await this.publishUserListings(userId);
+      } else {
+        verification.status = 'partially_verified';
+      }
+
+      // Save verification record
+      await verification.save();
+
+      return {
+        message: 'Details verified successfully',
+        status: verification.status,
+      };
+    } catch (error) {
+      console.error('Self-declaration verification error:', error);
+      throw error;
+    }
+  }
+
+  // Document-based Verification
+  async documentVerification(userId, verificationData, documents) {
+    try {
+      const { fullName, address } = verificationData;
+
+      // Validate input
+      if (!fullName || !address || !documents || documents.length === 0) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Full details and documents are required'
+        );
+      }
+
+      // Find or create verification record
+      let verification = await UserVerification.findOne({ userId });
+      if (!verification) {
+        verification = new UserVerification({ userId });
+      }
+
+      // Update verification method
+      verification.verificationMethod = 'document';
+
+      // Process uploaded documents
+      const processedDocuments = documents.map((doc) => ({
+        type: doc.type,
+        documentType: doc.documentType,
+        documentNumber: doc.documentNumber,
+        documentImageUrl: doc.documentImageUrl,
+        issuedBy: doc.issuedBy,
+        expiryDate: doc.expiryDate,
+      }));
+
+      // Add documents to verification record
+      verification.verificationDocuments = processedDocuments;
+
+      // Verify Legal Name
+      verification.legalNameVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        method: 'document',
+      };
+
+      // Verify Address
+      verification.addressVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+        method: 'document',
+      };
+
+      // Update user profile
+      await UserModel.findByIdAndUpdate(userId, {
+        fullName: fullName.trim(),
+        address: address,
+      });
+
+      // Update status
+      verification.status = 'fully_verified';
+
+      // Save verification record
+      await verification.save();
+
+      return {
+        message: 'Verification completed successfully',
+        status: verification.status,
+      };
+    } catch (error) {
+      console.error('Document verification error:', error);
+      throw error;
+    }
+  }
+
+  // Check Verification Status
+  async getVerificationStatus(userId) {
+    const verification = await UserVerification.findOne({ userId });
+
+    if (!verification) {
+      return {
+        status: 'not_started',
+        canPublishListings: false,
+      };
+    }
+
+    // Define listing publication rules
+    const canPublishListings =
+      verification.legalNameVerification.isVerified &&
+      verification.addressVerification.isVerified &&
+      verification.phoneVerification.isVerified;
+
+    return {
+      status: verification.status,
+      verificationMethod: verification.verificationMethod,
+      legalNameVerified: verification.legalNameVerification.isVerified,
+      addressVerified: verification.addressVerification.isVerified,
+      phoneVerified: verification.phoneVerification.isVerified,
+      canPublishListings,
+    };
+  }
+
   // Publish all user's listings
   async publishUserListings(userId) {
     try {
+      // Check verification status
+      const verificationStatus = await this.getVerificationStatus(userId);
+      // Check if user can publish listings
+      if (!verificationStatus.canPublishListings) {
+        throw new HttpException(
+          StatusCodes.FORBIDDEN,
+          'Verification is incomplete. Please complete verification steps.'
+        );
+      }
+
       // Update all unpublished properties of the user to published
       const result = await PropertyModel.updateMany(
         {
           userId,
-          status: 'draft', // Assuming you have a draft status
+          listStatus: 'under_review', // Assuming you have a draft status
         },
         {
-          status: 'published',
-          publishedAt: new Date(),
+          listStatus: 'Approved',
         }
       );
 
       console.log(
         `Published ${result.modifiedCount} listings for user ${userId}`
       );
+      return {
+        message: 'Listings published successfully',
+        publishedCount: result.modifiedCount,
+      };
     } catch (error) {
       console.error('Error publishing listings:', error);
       // Don't rethrow to prevent blocking phone verification
