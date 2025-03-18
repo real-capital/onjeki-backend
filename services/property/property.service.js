@@ -458,7 +458,7 @@ class PropertyService {
       // const query = this.buildSearchQuery(filters);
       // const skip = (pagination.page - 1) * pagination.limit;
 
-      const properties = await OnboardingModel.find({ user: userId })
+      const properties = await OnboardingModel.find({ userId: userId })
 
         // .skip(skip)
         // .limit(pagination.limit)
