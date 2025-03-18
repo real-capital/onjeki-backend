@@ -456,10 +456,10 @@ class AuthService {
   }
 
   // Verify OTP
-  async verifyPhoneOtp(userId, code) {
+  async verifyPhoneOtp(userId, code, phoneNumber) {
     try {
       // Find the user
-      const user = await UserModel.findById(userId);
+      const user = await UserModel.findOne({ phoneNumber: phoneNumber });
       if (!user) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
       }
@@ -506,7 +506,7 @@ class AuthService {
       await verification.save();
 
       // Publish all user's unpublished listings
-      if ((verification.status = 'fully_verified')) {
+      if ((verification.status  == 'fully_verified')) {
         await this.publishUserListings(userId);
       }
       // await this.publishUserListings(userId);
@@ -520,8 +520,8 @@ class AuthService {
     } catch (error) {
       console.error('Error verifying OTP:', error);
       throw new HttpException(
-        StatusCodes.BAD_REQUEST,
-        'Error Verifying Otp. Please try again later.'
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        error.message || 'Error Verifying OTP. Please try again later.'
       );
     }
   }

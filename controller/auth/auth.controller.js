@@ -204,9 +204,13 @@ class AuthController {
 
   verifyPhoneOtp = async (req, res, next) => {
     try {
-      const { code } = req.body;
+      const { code, phoneNumber } = req.body;
       const userId = req.user.id;
-      const result = await authService.verifyPhoneOtp(userId, code);
+      const result = await authService.verifyPhoneOtp(
+        userId,
+        code,
+        phoneNumber
+      );
       res.status(200).json({ status: 'success', data: result });
     } catch (error) {
       next(error);
