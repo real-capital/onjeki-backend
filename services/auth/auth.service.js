@@ -494,12 +494,15 @@ class AuthService {
         verification.addressVerification.isVerified == true
       ) {
         verification.status = 'fully_verified';
+        user.verification_status = 'verified';
         // await this.publishUserListings(userId);
       } else {
         verification.status = 'partially_verified';
+        user.verification_status = 'partially';
       }
 
       // Save verification record
+      await user.save();
       await verification.save();
 
       // Publish all user's unpublished listings
@@ -614,7 +617,10 @@ class AuthService {
   async selfDeclareVerification(userId, fullName, address) {
     try {
       // const { fullName, address } = verificationData;
-
+      let user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
       // Validate input
       if (!fullName || !address) {
         throw new HttpException(
@@ -647,21 +653,30 @@ class AuthService {
       };
 
       // Update user profile
-      await UserModel.findByIdAndUpdate(userId, {
-        name: fullName,
-        address: address,
-      });
+      user.name = fullName;
+      user.address = address;
+      user.isLegalNameVerified = true;
+      user.isAddressVerified = true;
+      // await UserModel.findByIdAndUpdate(userId, {
+      //   name: fullName,
+      //   address: address,
+      //   isLegalNameVerified: true,
+      //   isAddressVerified: true,
+      // });
 
       // Update status
       if (verification.phoneVerification.isVerified) {
         verification.status = 'fully_verified';
+        user.verification_status = 'verified';
         // await this.publishUserListings(userId);
       } else {
         verification.status = 'partially_verified';
+        user.verification_status = 'partially';
       }
 
       // Save verification record
       await verification.save();
+      await user.save();
       if (verification.status == 'fully_verified') {
         await this.publishUserListings(userId);
       }

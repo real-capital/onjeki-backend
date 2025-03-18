@@ -93,6 +93,26 @@ const userSchema = new Schema(
       enum: ['active', 'inactive', 'suspended'],
       default: 'active',
     },
+    verification_status: {
+      type: String,
+      enum: [
+        'verified',
+        'unverified',
+        'suspended',
+        'partially',
+        'pending',
+        'rejected',
+      ],
+      default: 'unverified',
+    },
+    isLegalNameVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isAddressVerified: {
+      type: Boolean,
+      default: false,
+    },
     lastLogin: Date,
   },
   {
