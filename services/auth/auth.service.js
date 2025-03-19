@@ -498,6 +498,10 @@ class AuthService {
       await UserModel.findByIdAndUpdate(userId, {
         isPhoneVerified: true,
       });
+      verification.phoneVerification = {
+        isVerified: true,
+        verifiedAt: new Date(),
+      };
 
       // Update status
       if (
@@ -676,7 +680,7 @@ class AuthService {
       // });
 
       // Update status
-      if (verification.phoneVerification.isVerified) {
+      if (verification.phoneVerification.isVerified == true) {
         verification.status = 'fully_verified';
         user.verification_status = 'verified';
         // await this.publishUserListings(userId);
