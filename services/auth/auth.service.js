@@ -480,7 +480,7 @@ class AuthService {
         throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid OTP');
       }
 
-      if (otpRecord.otp !== validUser.otp) {
+      if (otpRecord.otp !== otp) {
         throw new HttpException(StatusCodes.BAD_REQUEST, 'Incorrect OTP');
       }
 
