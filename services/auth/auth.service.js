@@ -97,6 +97,7 @@ class AuthService {
     // Clear OTP after validation
     await OtpModel.findByIdAndDelete(user.otp);
     user.otp = undefined;
+    user.isEmailVerified = true;
     await user.save();
 
     return { token, user, needsName: !user.name };
