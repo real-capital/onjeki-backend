@@ -456,7 +456,7 @@ class AuthService {
   }
 
   // Verify OTP
-  async verifyPhoneOtp(userId, code, phoneNumber) {
+  async verifyPhoneOtp(userId, otp, phoneNumber) {
     try {
       // Find the user
       const user = await UserModel.findOne({ phoneNumber: phoneNumber });
@@ -467,7 +467,7 @@ class AuthService {
       // Find the OTP record
       const otpRecord = await OtpModel.findOne({
         userId,
-        otp: code,
+        otp: otp,
         // expiration: { $gt: new Date() }, // Check if OTP is not expired
       });
 
@@ -484,12 +484,6 @@ class AuthService {
         throw new HttpException(StatusCodes.BAD_REQUEST, 'OTP has expired');
       }
 
-      // if (!otpRecord) {
-      //   throw new HttpException(
-      //     StatusCodes.BAD_REQUEST,
-      //     'Invalid or expired OTP'
-      //   );
-      // }
       // Find or create verification record
       let verification = await UserVerification.findOne({ userId });
       if (!verification) {
