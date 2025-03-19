@@ -457,6 +457,8 @@ class AuthService {
 
   // Verify OTP
   async verifyPhoneOtp(userId, otp, phoneNumber) {
+    console.log(otp);
+    console.log(phoneNumber);
     try {
       // Find the user
       const user = await UserModel.findOne({ phoneNumber: phoneNumber });
@@ -470,6 +472,7 @@ class AuthService {
         otp: otp,
         // expiration: { $gt: new Date() }, // Check if OTP is not expired
       });
+      console.log(otpRecord);
 
       // const otpRecord = await OtpModel.findById(user.otp);
       if (!otpRecord) {
