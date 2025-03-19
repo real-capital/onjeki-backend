@@ -204,11 +204,11 @@ class AuthController {
 
   verifyPhoneOtp = async (req, res, next) => {
     try {
-      const { code, phoneNumber } = req.body;
+      const { otp, phoneNumber } = req.body;
       const userId = req.user.id;
       const result = await authService.verifyPhoneOtp(
         userId,
-        code,
+        otp,
         phoneNumber
       );
       res.status(200).json({ status: 'success', data: result });
