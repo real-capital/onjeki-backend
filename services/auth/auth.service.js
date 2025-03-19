@@ -457,6 +457,7 @@ class AuthService {
 
   // Verify OTP
   async verifyPhoneOtp(userId, otp, phoneNumber) {
+    console.log(userId);
     console.log(otp);
     console.log(phoneNumber);
     try {
