@@ -466,7 +466,7 @@ class AuthService {
 
       // Find the OTP record
       const otpRecord = await OtpModel.findOne({
-        // userId,
+        userId,
         otp: code,
         // expiration: { $gt: new Date() }, // Check if OTP is not expired
       });
