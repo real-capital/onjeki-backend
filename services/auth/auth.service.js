@@ -466,17 +466,30 @@ class AuthService {
 
       // Find the OTP record
       const otpRecord = await OtpModel.findOne({
-        userId,
+        // userId,
         otp: code,
-        expiration: { $gt: new Date() }, // Check if OTP is not expired
+        // expiration: { $gt: new Date() }, // Check if OTP is not expired
       });
 
+      // const otpRecord = await OtpModel.findById(user.otp);
       if (!otpRecord) {
-        throw new HttpException(
-          StatusCodes.BAD_REQUEST,
-          'Invalid or expired OTP'
-        );
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'Invalid OTP');
       }
+
+      if (otpRecord.otp !== validUser.otp) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'Incorrect OTP');
+      }
+
+      if (new Date() > otpRecord.expiration) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'OTP has expired');
+      }
+
+      // if (!otpRecord) {
+      //   throw new HttpException(
+      //     StatusCodes.BAD_REQUEST,
+      //     'Invalid or expired OTP'
+      //   );
+      // }
       // Find or create verification record
       let verification = await UserVerification.findOne({ userId });
       if (!verification) {
@@ -506,7 +519,7 @@ class AuthService {
       await verification.save();
 
       // Publish all user's unpublished listings
-      if ((verification.status  == 'fully_verified')) {
+      if (verification.status == 'fully_verified') {
         await this.publishUserListings(userId);
       }
       // await this.publishUserListings(userId);
