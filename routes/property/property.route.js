@@ -170,6 +170,18 @@ class PropertyRoute extends Route {
       // isAuthenticated,
       this.controller.getPropertyNearBy
     );
+    this.router.get(
+      `${this.path}/calendar/:propertyId`,
+      validate,
+      isAuthenticated,
+      this.controller.getPropertyCalendar
+    );
+    this.router.put(
+      `${this.path}/calendar/:propertyId`,
+      validate,
+      isAuthenticated,
+      this.controller.bulkUpdateCalendar
+    );
   }
 }
 

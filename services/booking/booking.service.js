@@ -332,13 +332,13 @@ class BookingService {
   async getPaymentOptions() {
     return [
       {
-        id: 'card',
+        id: 'CARD',
         name: 'Credit/Debit Card',
         description: 'Pay with your card',
         icon: 'card_icon.png',
       },
       {
-        id: 'bank_transfer',
+        id: 'BANK_TRANSFER',
         name: 'Bank Transfer',
         description: 'Pay directly from your bank',
         icon: 'bank_transfer_icon.png',
@@ -350,7 +350,7 @@ class BookingService {
       //   icon: 'ussd_icon.png',
       // },
       {
-        id: 'bank',
+        id: 'BANK',
         name: 'Bank',
         description: 'Pay through your bank app',
         icon: 'bank_icon.png',
@@ -616,7 +616,6 @@ class BookingService {
       session.endSession();
     }
   }
-
 
   async handlePaymentCancellation(bookingId, userId) {
     const session = await mongoose.startSession();

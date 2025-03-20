@@ -507,6 +507,41 @@ class PropertyController {
     };
   };
 
+  async bulkUpdateCalendar(req, res) {
+    try {
+      const { propertyId } = req.params;
+      const { dates, type, price, reason } = req.body;
+
+      const result = await propertyService.bulkUpdateCalendar(
+        propertyId,
+        dates,
+        type,
+        price,
+        reason
+      );
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error('Calendar update error:', error);
+      return res
+        .status(500)
+        .json({ message: 'Failed to update calendar', error: error.message });
+    }
+  }
+  async getPropertyCalendar(req, res) {
+    try {
+      const { propertyId } = req.params;
+      const result = await propertyService.getPropertyCalendar(propertyId);
+
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error('Get calendar error:', error);
+      return res
+        .status(500)
+        .json({ message: 'Failed to fetch calendar', error: error.message });
+    }
+  }
+
   // export const updateAvailability = catchAsync(async (req, res, next) => {
   //   const { dates, status } = req.body;
 

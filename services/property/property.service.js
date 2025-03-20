@@ -840,6 +840,103 @@ class PropertyService {
       );
     }
   }
+
+  async bulkUpdateCalendar(propertyId, dates, type, price, reason) {
+    try {
+      const property = await PropertyModel.findById(propertyId);
+      if (!property) {
+        throw new Error('Property not found');
+      }
+
+      const validDates = dates.map((date) => new Date(date));
+
+      validDates.forEach((date) => {
+        const existingEntryIndex = property.availability.calendar.findIndex(
+          (entry) =>
+            entry.date.toISOString().split('T')[0] ===
+            date.toISOString().split('T')[0]
+        );
+
+        if (existingEntryIndex !== -1) {
+          if (type === 'block') {
+            property.availability.calendar[existingEntryIndex].isBlocked = true;
+            property.availability.calendar[existingEntryIndex].notes =
+              reason || 'Blocked';
+          } else if (type === 'pricing') {
+            property.availability.calendar[existingEntryIndex].customPrice =
+              price;
+            property.availability.calendar[existingEntryIndex].notes =
+              'Custom pricing';
+          }
+        } else {
+          property.availability.calendar.push({
+            date,
+            isBlocked: type === 'block',
+            customPrice: type === 'pricing' ? price : undefined,
+            notes: type === 'block' ? reason || 'Blocked' : 'Custom pricing',
+          });
+        }
+      });
+
+      await property.save();
+
+      return {
+        message: 'Calendar updated successfully',
+        updatedDates: validDates.length,
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async getPropertyCalendar(propertyId) {
+    try {
+      const property = await PropertyModel.findById(propertyId);
+      if (!property) {
+        throw new Error('Property not found');
+      }
+
+      const availabilityMonths =
+        property.availability.availabilityWindow?.months || 12;
+      const customEndDate =
+        property.availability.availabilityWindow?.customEndDate;
+
+      const start = new Date();
+      let end;
+
+      if (customEndDate) {
+        end = new Date(customEndDate);
+      } else {
+        end = new Date(start);
+        end.setMonth(start.getMonth() + availabilityMonths);
+      }
+
+      const calendarEntries = property.availability.calendar.filter(
+        (entry) => entry.date >= start && entry.date <= end
+      );
+
+      const pricing = {
+        basePrice: property.price.base,
+        customPricing: property.price.customPricing || [],
+        seasonalPricing: property.price.seasonalPricing || [],
+      };
+
+      return {
+        calendar: calendarEntries,
+        availabilityWindow: {
+          months: availabilityMonths,
+          customEndDate,
+          startDate: start,
+          endDate: end,
+        },
+        pricing,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
+      // throw new Error(error.message);
+    }
+  }
 }
 
 export default PropertyService;
