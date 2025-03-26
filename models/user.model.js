@@ -30,7 +30,7 @@ const userSchema = new Schema(
     notification: [
       { type: mongoose.Schema.Types.ObjectId, ref: 'notificationModel' },
     ],
-    inbox: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OtherModel' }],
+    inbox: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Wishlist' }],
 
     profile: {

@@ -911,14 +911,11 @@ class PropertyService {
         end.setMonth(start.getMonth() + availabilityMonths);
       }
 
-      const calendarEntries = property.availability.calendar.filter(
-        (entry) => entry.date >= start && entry.date <= end
-      );
+      const calendarEntries = property.availability.calendar;
 
       const pricing = {
         basePrice: property.price.base,
         customPricing: property.price.customPricing || [],
-        seasonalPricing: property.price.seasonalPricing || [],
       };
 
       return {
