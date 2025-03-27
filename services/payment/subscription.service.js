@@ -328,6 +328,12 @@ class SubscriptionService {
     }
 
     const user = await UserModel.findById(userId);
+    // Create or update subscription record
+    let subscription = await SubscriptionModel.findOne({ user: userId });
+
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
 
     // Initialize Paystack transaction
     const paymentInitiation = await paystackService.initializeTransaction({
@@ -339,6 +345,16 @@ class SubscriptionService {
         type: 'subscription',
       },
     });
+
+    // Push new transaction to paymentHistory array
+    subscription.paymentHistory.push({
+      amount: planDetails.price,
+      date: new Date(),
+      status: 'pending',
+      transactionReference: paymentInitiation.reference,
+    });
+
+    await subscription.save();
 
     return {
       authorizationUrl: paymentInitiation.authorization_url,

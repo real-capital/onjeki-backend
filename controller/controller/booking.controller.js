@@ -309,7 +309,7 @@ class BookingController {
       }
 
       // Log failed charge
-      await this.webhookMonitorService.logWebhookEvent(
+      await webhookMonitorService.logWebhookEvent(
         'PAYSTACK',
         'charge.failed',
         chargeData,
@@ -405,7 +405,7 @@ class BookingController {
       }
 
       // Log successful charge
-      await this.webhookMonitorService.logWebhookEvent(
+      await webhookMonitorService.logWebhookEvent(
         'PAYSTACK',
         'charge.success',
         chargeData,
@@ -569,7 +569,7 @@ class BookingController {
 
       try {
         // Verify the transaction with Paystack
-        const verificationResult = await this.paystackService.verifyTransaction(
+        const verificationResult = await paystackService.verifyTransaction(
           reference
         );
 
@@ -631,6 +631,7 @@ class BookingController {
 
         res.redirect(redirectUrl);
       } catch (verificationError) {
+        console.log(verificationError);
         logger.error('Payment verification failed', {
           reference,
           error: verificationError,
