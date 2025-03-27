@@ -576,6 +576,7 @@ class BookingController {
         // Check if this is a subscription-related transaction
         const subscription = await SubscriptionModel.findOne({
           $or: [
+            { 'paymentHistory.transactionReference': reference },
             { renewalTransactionReference: reference },
             { manualRenewalTransactionReference: reference },
           ],
