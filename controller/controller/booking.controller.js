@@ -596,7 +596,7 @@ class BookingController {
             subscription.manualRenewalTransactionReference = null;
             await subscription.save();
 
-            redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=subscription`;
+            redirectUrl = `https://onjeki/payment?reference=${reference}&status=success&type=subscription`;
           } else {
             subscription.status = 'renewal_failed';
             await subscription.save();
