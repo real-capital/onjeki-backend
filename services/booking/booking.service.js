@@ -393,6 +393,7 @@ class BookingService {
         channels: [paymentMethod],
         metadata: {
           bookingId: booking._id,
+          type: 'booking',
           userId: userId,
         },
       });
@@ -492,7 +493,6 @@ class BookingService {
       session.endSession();
     }
   }
-
   // Method to confirm booking payment
   async confirmBookingPayment(bookingId) {
     const session = await mongoose.startSession();

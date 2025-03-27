@@ -10,9 +10,12 @@ import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
 import PaymentModel from '../../models/paymentModel.js';
 import WebhookMonitorService from '../../services/payment/webhook_montor.service.js';
+import SubscriptionModel from '../../models/subscription.model.js';
+import SubscriptionService from '../../services/payment/subscription.service.js';
 
 const paystackService = new PaystackService();
 const webhookMonitorService = new WebhookMonitorService();
+const subscriptionService = new SubscriptionService();
 
 class BookingController {
   constructor(bookingService) {
@@ -41,6 +44,10 @@ class BookingController {
     this.webhook = this.webhook.bind(this);
     this.handlePaystackWebhook = this.handlePaystackWebhook.bind(this);
     this.handleSuccessfulCharge = this.handleSuccessfulCharge.bind(this);
+    this.handleSubscriptionRenewal = this.handleSubscriptionRenewal.bind(this);
+    this.verifySubscriptionRenewal = this.verifySubscriptionRenewal.bind(this);
+    this.handleSubscriptionCreation =
+      this.handleSubscriptionCreation.bind(this);
   }
 
   async handlePaystackWebhook(req, res) {
@@ -84,7 +91,6 @@ class BookingController {
       res.status(500).json({ status: 'error', message: error.message });
     }
   }
-
   async webhook(req, res) {
     try {
       const paystackService = new PaystackService();
@@ -107,7 +113,7 @@ class BookingController {
 
       const event = req.body;
 
-      // Handle different Paystack events
+      // Enhanced event handling
       switch (event.event) {
         case 'charge.success':
           await this.handleChargeSuccess(event.data);
@@ -117,6 +123,12 @@ class BookingController {
           break;
         case 'refund.processed':
           await this.handleRefundProcessed(event.data);
+          break;
+        case 'subscription.create':
+          await this.handleSubscriptionCreation(event.data);
+          break;
+        case 'subscription.renewal':
+          await this.handleSubscriptionRenewal(event.data);
           break;
         default:
           logger.info('Unhandled Paystack event', { event: event.event });
@@ -131,6 +143,132 @@ class BookingController {
     }
   }
 
+  // async webhook(req, res) {
+  //   try {
+  //     const paystackService = new PaystackService();
+
+  //     // Verify webhook signature
+  //     const isValidWebhook = paystackService.verifyWebhookSignature(
+  //       req.body,
+  //       req.headers['x-paystack-signature']
+  //     );
+
+  //     if (!isValidWebhook) {
+  //       logger.warn('Invalid Paystack webhook', {
+  //         body: req.body,
+  //         headers: req.headers,
+  //       });
+  //       return res
+  //         .status(401)
+  //         .json({ status: 'error', message: 'Invalid webhook' });
+  //     }
+
+  //     const event = req.body;
+
+  //     // Handle different Paystack events
+  //     switch (event.event) {
+  //       case 'charge.success':
+  //         await this.handleChargeSuccess(event.data);
+  //         break;
+  //       case 'charge.failed':
+  //         await this.handleChargeFailed(event.data);
+  //         break;
+  //       case 'refund.processed':
+  //         await this.handleRefundProcessed(event.data);
+  //         break;
+  //       default:
+  //         logger.info('Unhandled Paystack event', { event: event.event });
+  //     }
+
+  //     res.status(200).json({ status: 'success' });
+  //   } catch (error) {
+  //     logger.error('Webhook processing error', error);
+  //     res
+  //       .status(500)
+  //       .json({ status: 'error', message: 'Webhook processing failed' });
+  //   }
+  // }
+
+  // New method to handle subscription-related events
+  async handleSubscriptionCreation(data) {
+    try {
+      // Check if this is a subscription-related transaction
+      if (data.metadata && data.metadata.type === 'subscription_renewal') {
+        await this.verifySubscriptionRenewal(data.reference);
+      }
+    } catch (error) {
+      logger.error('Subscription creation webhook error', error);
+    }
+  }
+
+  // New method to handle subscription renewal
+  async handleSubscriptionRenewal(data) {
+    try {
+      // Verify the renewal transaction
+      await this.verifySubscriptionRenewal(data.reference);
+    } catch (error) {
+      logger.error('Subscription renewal webhook error', error);
+    }
+  }
+
+  // Method to verify subscription renewal
+  async verifySubscriptionRenewal(reference) {
+    try {
+      // Verify Paystack transaction
+      const verificationResult = await paystackService.verifyTransaction(
+        reference
+      );
+
+      // Find subscription by renewal reference
+      const subscription = await SubscriptionModel.findOne({
+        $or: [
+          { renewalTransactionReference: reference },
+          { manualRenewalTransactionReference: reference },
+        ],
+      }).populate('user');
+
+      if (!subscription) {
+        logger.warn('Subscription not found for renewal', { reference });
+        return;
+      }
+
+      // Check payment status
+      if (verificationResult.status === 'success') {
+        // Update subscription details
+        subscription.status = 'active';
+        subscription.currentPeriodStart = new Date();
+        subscription.currentPeriodEnd = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+        );
+        subscription.renewalTransactionReference = null;
+        subscription.manualRenewalTransactionReference = null;
+
+        await subscription.save();
+
+        // Send renewal confirmation notification
+        // await this.notificationService.send({
+        //   userId: subscription.user._id,
+        //   type: 'subscription_renewed',
+        //   message: `Your ${subscription.plan} subscription has been successfully renewed.`,
+        // });
+      } else {
+        // Update subscription status to failed
+        subscription.status = 'renewal_failed';
+        await subscription.save();
+
+        // Send renewal failure notification
+        // await this.notificationService.send({
+        //   userId: subscription.user._id,
+        //   type: 'subscription_renewal_failed',
+        //   message: `Subscription renewal failed. Please manually renew to continue access.`,
+        // });
+      }
+    } catch (error) {
+      logger.error('Subscription renewal verification failed', error);
+      throw error;
+    }
+  }
+
   async handleSuccessfulCharge(data) {
     await webhookMonitorService.logWebhookEvent(
       'PAYSTACK',
@@ -138,6 +276,49 @@ class BookingController {
       data,
       { success: true }
     );
+  }
+  async handleChargeFailed(chargeData) {
+    try {
+      const metadata = chargeData.metadata || {};
+
+      if (metadata.type === 'subscription') {
+        // Handle subscription payment failure
+        const subscription = await SubscriptionModel.findOne({
+          'paymentHistory.transactionReference': chargeData.reference,
+        });
+
+        if (subscription) {
+          subscription.status = 'renewal_failed';
+          await subscription.save();
+        }
+      } else {
+        // Handle booking payment failure
+        const payment = await PaymentModel.findOne({
+          transactionReference: chargeData.reference,
+        }).populate('booking');
+
+        if (!payment) {
+          this.logger.warn('Payment not found for failed charge', {
+            reference: chargeData.reference,
+          });
+          return;
+        }
+
+        // Handle payment failure
+        await this.bookingService.handlePaymentFailure(payment.booking._id);
+      }
+
+      // Log failed charge
+      await this.webhookMonitorService.logWebhookEvent(
+        'PAYSTACK',
+        'charge.failed',
+        chargeData,
+        { success: true }
+      );
+    } catch (error) {
+      this.logger.error('Error in handleChargeFailed', error);
+      throw error;
+    }
   }
 
   async handleFailedCharge(data) {
@@ -199,41 +380,78 @@ class BookingController {
 
   // Helper functions for webhook event handling
   async handleChargeSuccess(chargeData) {
-    const payment = await PaymentModel.findOne({
-      transactionReference: chargeData.reference,
-    }).populate('booking');
+    try {
+      // Check if this is a subscription or booking payment
+      const metadata = chargeData.metadata || {};
 
-    if (!payment) {
-      logger.warn('Payment not found for successful charge', {
-        reference: chargeData.reference,
-      });
-      return;
+      if (metadata.type === 'subscription') {
+        // Handle subscription payment
+        await subscriptionService.verifyPayment(chargeData.reference);
+      } else {
+        // Handle booking payment
+        const payment = await PaymentModel.findOne({
+          transactionReference: chargeData.reference,
+        }).populate('booking');
+
+        if (!payment) {
+          logger.warn('Payment not found for successful charge', {
+            reference: chargeData.reference,
+          });
+          return;
+        }
+
+        // Confirm booking payment
+        await this.bookingService.confirmBookingPayment(payment.booking._id);
+      }
+
+      // Log successful charge
+      await this.webhookMonitorService.logWebhookEvent(
+        'PAYSTACK',
+        'charge.success',
+        chargeData,
+        { success: true }
+      );
+    } catch (error) {
+      logger.error('Error in handleChargeSuccess', error);
+      throw error;
     }
-    // Update payment and booking status
-    await this.bookingService.confirmBookingPayment(payment.booking._id);
-    await webhookMonitorService.logWebhookEvent(
-      'PAYSTACK',
-      'charge.success',
-      chargeData,
-      { success: true }
-    );
-    // await this.bookingService.confirmBookingPayment(payment.booking._id);
   }
+  // async handleChargeSuccess(chargeData) {
+  //   const payment = await PaymentModel.findOne({
+  //     transactionReference: chargeData.reference,
+  //   }).populate('booking');
 
-  async handleChargeFailed(chargeData) {
-    const payment = await PaymentModel.findOne({
-      transactionReference: chargeData.reference,
-    }).populate('booking');
+  //   if (!payment) {
+  //     logger.warn('Payment not found for successful charge', {
+  //       reference: chargeData.reference,
+  //     });
+  //     return;
+  //   }
+  //   // Update payment and booking status
+  //   await this.bookingService.confirmBookingPayment(payment.booking._id);
+  //   await webhookMonitorService.logWebhookEvent(
+  //     'PAYSTACK',
+  //     'charge.success',
+  //     chargeData,
+  //     { success: true }
+  //   );
+  //   // await this.bookingService.confirmBookingPayment(payment.booking._id);
+  // }
 
-    if (!payment) {
-      logger.warn('Payment not found for failed charge', {
-        reference: chargeData.reference,
-      });
-      return;
-    }
+  // async handleChargeFailed(chargeData) {
+  //   const payment = await PaymentModel.findOne({
+  //     transactionReference: chargeData.reference,
+  //   }).populate('booking');
 
-    await this.bookingService.handlePaymentFailure(payment.booking._id);
-  }
+  //   if (!payment) {
+  //     logger.warn('Payment not found for failed charge', {
+  //       reference: chargeData.reference,
+  //     });
+  //     return;
+  //   }
+
+  //   await this.bookingService.handlePaymentFailure(payment.booking._id);
+  // }
 
   async handleRefundProcessed(refundData) {
     const payment = await PaymentModel.findOne({
@@ -351,32 +569,64 @@ class BookingController {
 
       try {
         // Verify the transaction with Paystack
-        const verificationResult = await paystackService.verifyTransaction(
+        const verificationResult = await this.paystackService.verifyTransaction(
           reference
         );
 
-        // Find the associated payment
-        const payment = await PaymentModel.findOxne({
-          transactionReference: reference,
-        }).populate('booking');
+        // Check if this is a subscription-related transaction
+        const subscription = await SubscriptionModel.findOne({
+          $or: [
+            { renewalTransactionReference: reference },
+            { manualRenewalTransactionReference: reference },
+          ],
+        });
 
-        if (!payment) {
-          logger.error('Payment not found for reference', { reference });
-          return res.status(404).json({
-            status: 'error',
-            message: 'Payment record not found',
-          });
-        }
-
-        // Determine redirect URL based on payment status
         let redirectUrl;
-        if (verificationResult.status === 'success') {
-          // Update payment and booking status
-          await this.bookingService.confirmBookingPayment(payment.booking._id);
-          redirectUrl = `onjeki://payment?reference=${reference}&status=success`;
+        if (subscription) {
+          // Subscription-related callback
+          if (verificationResult.status === 'success') {
+            // Update subscription
+            subscription.status = 'active';
+            subscription.currentPeriodStart = new Date();
+            subscription.currentPeriodEnd = new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+            );
+            subscription.renewalTransactionReference = null;
+            subscription.manualRenewalTransactionReference = null;
+            await subscription.save();
+
+            redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=subscription`;
+          } else {
+            subscription.status = 'renewal_failed';
+            await subscription.save();
+
+            redirectUrl = `onjeki://payment?reference=${reference}&status=failed&type=subscription`;
+          }
         } else {
-          await this.bookingService.handlePaymentFailure(payment.booking._id);
-          redirectUrl = `onjeki://payment?reference=${reference}&status=failed`;
+          // Find the associated booking payment
+          const payment = await PaymentModel.findOne({
+            transactionReference: reference,
+          }).populate('booking');
+
+          if (!payment) {
+            logger.error('Payment not found for reference', { reference });
+            return res.status(404).json({
+              status: 'error',
+              message: 'Payment record not found',
+            });
+          }
+
+          // Existing booking payment logic
+          if (verificationResult.status === 'success') {
+            // Update payment and booking status
+            await this.bookingService.confirmBookingPayment(
+              payment.booking._id
+            );
+            redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=booking`;
+          } else {
+            await this.bookingService.handlePaymentFailure(payment.booking._id);
+            redirectUrl = `onjeki://payment?reference=${reference}&status=failed&type=booking`;
+          }
         }
 
         res.redirect(redirectUrl);
@@ -393,6 +643,63 @@ class BookingController {
       res.redirect('onjeki://payment?status=error');
     }
   }
+
+  // async callback(req, res) {
+  //   try {
+  //     const { reference, status } = req.query;
+  //     console.log(reference);
+
+  //     if (!reference) {
+  //       return res.status(400).json({
+  //         status: 'error',
+  //         message: 'No reference provided',
+  //       });
+  //     }
+
+  //     try {
+  //       // Verify the transaction with Paystack
+  //       const verificationResult = await paystackService.verifyTransaction(
+  //         reference
+  //       );
+
+  //       // Find the associated payment
+  //       const payment = await PaymentModel.findOxne({
+  //         transactionReference: reference,
+  //       }).populate('booking');
+
+  //       if (!payment) {
+  //         logger.error('Payment not found for reference', { reference });
+  //         return res.status(404).json({
+  //           status: 'error',
+  //           message: 'Payment record not found',
+  //         });
+  //       }
+
+  //       // Determine redirect URL based on payment status
+  //       let redirectUrl;
+  //       if (verificationResult.status === 'success') {
+  //         // Update payment and booking status
+  //         await this.bookingService.confirmBookingPayment(payment.booking._id);
+  //         redirectUrl = `onjeki://payment?reference=${reference}&status=success`;
+  //       } else {
+  //         await this.bookingService.handlePaymentFailure(payment.booking._id);
+  //         redirectUrl = `onjeki://payment?reference=${reference}&status=failed`;
+  //       }
+
+  //       res.redirect(redirectUrl);
+  //     } catch (verificationError) {
+  //       logger.error('Payment verification failed', {
+  //         reference,
+  //         error: verificationError,
+  //       });
+  //       const errorRedirectUrl = `onjeki://payment?reference=${reference}&status=error`;
+  //       res.redirect(errorRedirectUrl);
+  //     }
+  //   } catch (error) {
+  //     logger.error('Paystack callback error', error);
+  //     res.redirect('onjeki://payment?status=error');
+  //   }
+  // }
 
   confirmBooking = async (req, res, next) => {
     try {

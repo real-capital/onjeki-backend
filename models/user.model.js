@@ -32,6 +32,17 @@ const userSchema = new Schema(
     ],
     inbox: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Wishlist' }],
+    paymentMethod: {
+      type: {
+        cardType: String,
+        last4: String,
+        expiryMonth: String,
+        expiryYear: String,
+        authorizationCode: String,
+      },
+      default: null,
+    },
+    paystackCustomerId: String,
 
     profile: {
       name: {

@@ -47,6 +47,7 @@ class PaystackService {
   }
 
   async verifyTransaction(reference) {
+    console.log(reference);
     try {
       const response = await axios.get(
         `${this.baseUrl}/transaction/verify/${reference}`,
