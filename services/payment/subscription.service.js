@@ -134,6 +134,7 @@ class SubscriptionService {
 
     if (!subscription) {
       throw new Error('Subscription not found');
+      return;
     }
 
     // Update payment history
