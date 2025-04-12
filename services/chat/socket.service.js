@@ -83,6 +83,13 @@ export class SocketService {
       socket.on('user-join', (data) => {
         this.connectedUsers.set(data, socket.id);
       });
+      // When user enters a conversation
+      socket.on('join_conversation', (conversationId) => {
+        socket.join(conversationId);
+        console.log(
+          `📥 ${socket.user._id} joined conversation ${conversationId}`
+        );
+      });
 
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
@@ -148,6 +155,10 @@ export class SocketService {
       conversationId,
       isTyping,
     });
+
+    console.log(
+      `✍️ ${socket.user._id} isTyping=${isTyping} in ${conversationId}`
+    );
   }
 
   async handleMessageSend(socket, data) {
