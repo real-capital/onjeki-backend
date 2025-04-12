@@ -203,6 +203,7 @@ bookingSchema.pre('save', async function (next) {
     const conversation = await Conversation.create({
       booking: this._id,
       participants: [this.guest, this.host],
+      property: this.property
     });
     this.conversation = conversation._id;
   }
