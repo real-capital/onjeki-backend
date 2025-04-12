@@ -123,36 +123,6 @@ export class SocketService {
     });
   }
 
-  // handleAuthentication(socket) {
-  //   console.log(`User connected now: ${socket.user._id}`);
-  //   console.log(`User connected: ${socket.user._id}`);
-
-  //   // ✅ Add user to `connectedUsers`
-  //   this.connectedUsers.set(socket.user._id.toString(), socket.id);
-  //   console.log(
-  //     `✅ Added to connectedUsers: ${socket.user._id} -> ${socket.id}`
-  //   );
-
-  //   // Join user's personal room
-  //   socket.join(socket.user._id.toString());
-
-  //   // Typing events
-  //   socket.on('typing', this.handleTypingEvent.bind(this, socket));
-
-  //   // Message sending
-  //   // socket.on('send_message', this.handleMessageSend.bind(this, socket));
-  //   socket.on('send_message', (data) => {
-  //     console.log(data);
-  //   });
-
-  //   // Read receipts
-  //   socket.on('mark_read', this.handleMessageRead.bind(this, socket));
-
-  //   socket.on('disconnect', () => {
-  //     this.connectedUsers.delete(socket.user._id.toString());
-  //     console.log(`User disconnected: ${socket.user._id}`);
-  //   });
-  // }
   handleDisconnect(socket) {
     if (socket.userId) {
       const connectedUsers = this.connectedUsers.get(socket.userId);
@@ -169,7 +139,10 @@ export class SocketService {
   async handleTypingEvent(socket, data) {
     const { conversationId, isTyping } = data;
 
-    // Broadcast typing status to other participants
+    // ✅ Make sure socket joins this room first
+    socket.join(conversationId);
+
+    // Then broadcast typing to others
     socket.to(conversationId).emit('typing', {
       userId: socket.user._id,
       conversationId,
@@ -281,7 +254,9 @@ export class SocketService {
       const userId = socket.user._id.toString();
 
       console.log(`📩 Read receipt received for message: ${messageId}`);
-      console.log(`✅ Marking message ${messageId} as read in conversation ${conversationId}`);
+      console.log(
+        `✅ Marking message ${messageId} as read in conversation ${conversationId}`
+      );
 
       // ✅ Validate message existence
       const message = await MessageModel.findById(messageId);
@@ -357,130 +332,6 @@ export class SocketService {
     }
   }
 
-  // async handleMessageSend(socket, data) {
-  //   logger.info(data);
-  //   console.log('data =======');
-  //   console.log(data);
-  //   try {
-  //     const { conversationId, content, attachments } = data;
-
-  //     // Validate conversation
-  //     const conversation = await ConversationModel.findById(
-  //       conversationId
-  //     ).populate('participants');
-
-  //     // console.log('conversation');
-  //     // console.log(conversation);
-
-  //     if (!conversation) {
-  //       throw new Error('Conversation not found');
-  //     }
-
-  //     // Create message
-  //     const message = new MessageModel({
-  //       conversation: conversationId,
-  //       sender: socket.user._id,
-  //       content,
-  //       attachments: attachments || [],
-  //       status: 'SENT',
-  //     });
-
-  //     await message.save();
-  //     // Update conversation
-  //     conversation.lastMessage = message._id;
-  //     console.log('message._id');
-  //     console.log(conversation.lastMessage);
-  //     conversation.unreadCounts = this.updateUnreadCounts(
-  //       conversation,
-  //       socket.user._id
-  //     );
-  //     await conversation.save();
-
-  //     // ✅ Properly populate the sender details
-  //     const populatedMessage = await MessageModel.findById(
-  //       message._id
-  //     ).populate(sender);
-
-  //     console.log('✅ Message saved:', message._id);
-  //     console.log('📌 Populated message:', populatedMessage);
-
-  //     await populatedMessage.save();
-
-  //     // Broadcast to conversation participants
-  //     const otherParticipants = conversation.participants.filter(
-  //       (p) => p._id.toString() !== socket.user._id.toString()
-  //     );
-  //     console.log(otherParticipants);
-
-  //     otherParticipants.forEach((participant) => {
-  //       const participantSocketId = this.connectedUsers.get(
-  //         participant._id.toString()
-  //       );
-
-  //       console.log('participantSocketId');
-  //       console.log(participantSocketId);
-
-  //       if (participantSocketId) {
-  //         // Send to specific user's room
-  //         this.io.to(participant._id.toString()).emit('new_message', {
-  //           message: populatedMessage,
-  //           conversationId,
-  //         });
-
-  //         // Send push notification
-  //         this.sendPushNotification(participant, populatedMessage);
-  //       }
-  //     });
-
-  //     // Acknowledge message send
-  //     socket.emit('message_sent', {
-  //       messageId: message._id,
-  //       sentAt: message.createdAt,
-  //     });
-  //   } catch (error) {
-  //     socket.emit('message_error', {
-  //       error: error.message,
-  //     });
-  //   }
-  // }
-
-  // updateUnreadCounts(conversation, senderId) {
-  //   const unreadCounts = { ...conversation.unreadCounts };
-
-  //   conversation.participants.forEach((participant) => {
-  //     if (participant._id.toString() !== senderId.toString()) {
-  //       unreadCounts[participant._id.toString()] =
-  //         (unreadCounts[participant._id.toString()] || 0) + 1;
-  //     }
-  //   });
-
-  //   return unreadCounts;
-  // }
-
-  // async handleMessageRead(socket, data) {
-  //   const { messageId, conversationId } = data;
-
-  //   try {
-  //     // Mark message as read
-  //     await MessageModel.findByIdAndUpdate(messageId, {
-  //       $addToSet: {
-  //         readBy: {
-  //           user: socket.user._id,
-  //           readAt: new Date(),
-  //         },
-  //       },
-  //     });
-
-  //     // Broadcast read receipt to other participants
-  //     socket.to(conversationId).emit('message_read', {
-  //       messageId,
-  //       userId: socket.user._id,
-  //     });
-  //   } catch (error) {
-  //     console.error('Read receipt error:', error);
-  //   }
-  // }
-
   async sendPushNotification(recipient, message) {
     try {
       await NotificationService.sendPushNotification({
@@ -509,20 +360,6 @@ export class SocketService {
       console.log(`❌ User ${userId} is not online.`);
     }
   }
-
-  // notifyUser(userId, event, data) {
-  //   console.log('notifying');
-  //   console.log(userId);
-  //   const connectedUsers = this.connectedUsers.get(userId);
-  //   console.log('connectedUsers');
-  //   console.log(connectedUsers);
-  //   if (connectedUsers) {
-  //     connectedUsers.forEach((socketId) => {
-  //       this.io.to(socketId).emit(event, data);
-  //     });
-  //     logger.debug(`Notification sent to user ${userId}: ${event}`);
-  //   }
-  // }
 
   notifyUsers(userIds, event, data) {
     userIds.forEach((userId) => {
