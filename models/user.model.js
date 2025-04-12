@@ -50,7 +50,11 @@ const userSchema = new Schema(
         // required: true,
       },
       phone: String,
-      photo: String,
+      photo: {
+        type: String,
+        default:
+          'https://res.cloudinary.com/dqwulfc1j/image/upload/v1707553702/tw3c16vw47vpizhn6oy7.png',
+      },
       verifications: [
         {
           type: {

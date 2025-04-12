@@ -73,6 +73,26 @@ class AuthController {
     }
   }
 
+  async updateUserImage(req, res, next) {
+    console.log('req.body');
+    console.log(req.body);
+    console.log(req.file);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      console.log(req.user.id);
+      const user = await authService.updateUserImage(req.user.id, req.file);
+      res
+        .status(StatusCodes.OK)
+        .json({ statusCode: StatusCodes.OK, status: 'success', user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUser(req, res, next) {
     try {
       const user = await authService.getUser(req.user.id);
@@ -206,11 +226,7 @@ class AuthController {
     try {
       const { otp, phoneNumber } = req.body;
       const userId = req.user.id;
-      const result = await authService.verifyPhoneOtp(
-        userId,
-        otp,
-        phoneNumber
-      );
+      const result = await authService.verifyPhoneOtp(userId, otp, phoneNumber);
       res.status(200).json({ status: 'success', data: result });
     } catch (error) {
       next(error);

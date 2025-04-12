@@ -2,6 +2,8 @@ import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
 
 import AuthController from '../../controller/auth/auth.controller.js';
+
+const upload = multer({ storage: multer.memoryStorage() });
 import {
   validateCreateAccount,
   validateOtp,
@@ -9,6 +11,8 @@ import {
 } from '../../middlewares/validation.js';
 // import PropertyController from '../../controller/property/property.controller.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
+import { validateImages } from '../../middlewares/image-processing.js';
+import multer from 'multer';
 
 class AuthRoute extends Route {
   constructor() {
@@ -85,11 +89,13 @@ class AuthRoute extends Route {
       isAuthenticated,
       this.controller.publishUserListings
     );
-    // this.router.get(
-    //   `${this.path}/my-profile`,
-    //   UserGuard.createInstance,
-    //   this.controller.getProfile
-    // );
+    this.router.post(
+      `${this.path}/update-image`,
+      isAuthenticated,
+      upload.single('avatar'),
+      // validateImages,
+      this.controller.updateUserImage
+    );
   }
 }
 

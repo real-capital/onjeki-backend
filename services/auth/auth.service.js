@@ -1,6 +1,7 @@
 import axios from 'axios';
 import UserModel from '../../models/user.model.js';
 import OtpModel from '../../models/otp.model.js';
+import cloudinary from '../../config/cloudinary.js';
 import otpGenerator from 'otp-generator';
 import otpEmailService from '../../services/email/otpMail.service.js';
 import Jwt from '../../utils/jwt.js';
@@ -126,6 +127,70 @@ class AuthService {
 
       return user;
     } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+
+  async updateUserImage(userId, imageFile) {
+    const MAX_RETRY_ATTEMPTS = 3;
+    try {
+      let user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+      if (!imageFile) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Image file not found');
+      }
+
+      let result;
+      let retryAttempts = 0;
+
+      while (retryAttempts < MAX_RETRY_ATTEMPTS) {
+        try {
+          console.log(`Uploading image... ${imageFile}`);
+          const fileBuffer = imageFile.buffer;
+
+          const fileString = fileBuffer.toString('base64');
+          result = await cloudinary.uploader.upload(
+            `data:image/jpeg;base64,${fileString}`,
+            {
+              folder: 'avatars',
+            }
+          );
+
+          break;
+        } catch (uploadError) {
+          console.error('Upload attempt failed:', uploadError);
+          retryAttempts++;
+
+          if (retryAttempts >= MAX_RETRY_ATTEMPTS) {
+            throw new HttpException(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              'Failed to upload image after multiple attempts'
+            );
+          }
+          console.log(
+            `Retrying upload... Attempt ${retryAttempts} of ${MAX_RETRY_ATTEMPTS}`
+          );
+        }
+      }
+
+      user = UserModel.findOneAndUpdate(
+        { _id: userId },
+        {
+          $set: {
+            'profile.photo': result.secure_url,
+          },
+        },
+        { new: true }
+      );
+
+      return user;
+    } catch (error) {
+      console.error('Error uploading image:', error);
       throw new HttpException(
         error.statusCode || StatusCodes.BAD_REQUEST,
         error.message
