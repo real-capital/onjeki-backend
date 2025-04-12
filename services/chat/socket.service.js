@@ -152,6 +152,7 @@ export class SocketService {
     // Then broadcast typing to others
     socket.to(conversationId).emit('typing', {
       userId: socket.user._id,
+      userName: socket.user.name, // 👈 Add this
       conversationId,
       isTyping,
     });
