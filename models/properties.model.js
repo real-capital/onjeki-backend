@@ -54,10 +54,10 @@ const propertySchema = new Schema(
         },
       ],
       checkInTime: {
-        from: String,
-        to: String,
+        from: { type: String, default: '15:00' },
+        to: { type: String, default: '20:00' },
       },
-      checkOutTime: String,
+      checkOutTime: { type: String, default: '11:00' },
       maxGuests: { type: Number, required: false },
       petsAllowed: { type: Boolean, default: false },
       cameraPresent: { type: Boolean, default: false },
