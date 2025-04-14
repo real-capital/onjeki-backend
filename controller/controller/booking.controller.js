@@ -646,62 +646,6 @@ class BookingController {
     }
   }
 
-  // async callback(req, res) {
-  //   try {
-  //     const { reference, status } = req.query;
-  //     console.log(reference);
-
-  //     if (!reference) {
-  //       return res.status(400).json({
-  //         status: 'error',
-  //         message: 'No reference provided',
-  //       });
-  //     }
-
-  //     try {
-  //       // Verify the transaction with Paystack
-  //       const verificationResult = await paystackService.verifyTransaction(
-  //         reference
-  //       );
-
-  //       // Find the associated payment
-  //       const payment = await PaymentModel.findOxne({
-  //         transactionReference: reference,
-  //       }).populate('booking');
-
-  //       if (!payment) {
-  //         logger.error('Payment not found for reference', { reference });
-  //         return res.status(404).json({
-  //           status: 'error',
-  //           message: 'Payment record not found',
-  //         });
-  //       }
-
-  //       // Determine redirect URL based on payment status
-  //       let redirectUrl;
-  //       if (verificationResult.status === 'success') {
-  //         // Update payment and booking status
-  //         await this.bookingService.confirmBookingPayment(payment.booking._id);
-  //         redirectUrl = `onjeki://payment?reference=${reference}&status=success`;
-  //       } else {
-  //         await this.bookingService.handlePaymentFailure(payment.booking._id);
-  //         redirectUrl = `onjeki://payment?reference=${reference}&status=failed`;
-  //       }
-
-  //       res.redirect(redirectUrl);
-  //     } catch (verificationError) {
-  //       logger.error('Payment verification failed', {
-  //         reference,
-  //         error: verificationError,
-  //       });
-  //       const errorRedirectUrl = `onjeki://payment?reference=${reference}&status=error`;
-  //       res.redirect(errorRedirectUrl);
-  //     }
-  //   } catch (error) {
-  //     logger.error('Paystack callback error', error);
-  //     res.redirect('onjeki://payment?status=error');
-  //   }
-  // }
 
   confirmBooking = async (req, res, next) => {
     try {
