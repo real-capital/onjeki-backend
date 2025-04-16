@@ -93,6 +93,11 @@ const bookingSchema = new Schema(
       enum: Object.values(BookingStatus),
       default: BookingStatus.PENDING,
     },
+    expiresAt: {
+      type: Date,
+      default: () => Date.now() + 1000 * 60 * 15, // 15 minutes by default
+      index: true, // Optional: if you want to optimize querying
+    },
 
     cancellation: {
       cancelledBy: {
