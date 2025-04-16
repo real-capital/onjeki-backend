@@ -517,12 +517,12 @@ class BookingController {
             subscription.manualRenewalTransactionReference = null;
             await subscription.save();
 
-            redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=subscription`;
+            redirectUrl = `onjeki://app/payment?reference=${reference}&status=success&type=subscription`;
           } else {
             subscription.status = 'renewal_failed';
             await subscription.save();
 
-            redirectUrl = `onjeki://payment?reference=${reference}&status=failed&type=subscription`;
+            redirectUrl = `onjeki://app/payment?reference=${reference}&status=failed&type=subscription`;
           }
         } else {
           // Find the associated booking payment
@@ -544,10 +544,10 @@ class BookingController {
             // await this.bookingService.confirmBookingPayment(
             //   payment.booking._id
             // );
-            redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=booking`;
+            redirectUrl = `onjeki://app/payment?reference=${reference}&status=success&type=booking`;
           } else {
             await this.bookingService.handlePaymentFailure(payment.booking._id);
-            redirectUrl = `onjeki://payment?reference=${reference}&status=failed&type=booking`;
+            redirectUrl = `onjeki://app/payment?reference=${reference}&status=failed&type=booking`;
           }
         }
 
@@ -558,12 +558,12 @@ class BookingController {
           reference,
           error: verificationError,
         });
-        const errorRedirectUrl = `onjeki://payment?reference=${reference}&status=error`;
+        const errorRedirectUrl = `onjeki://app/payment?reference=${reference}&status=error`;
         res.redirect(errorRedirectUrl);
       }
     } catch (error) {
       logger.error('Paystack callback error', error);
-      res.redirect('onjeki://payment?status=error');
+      res.redirect('onjeki://app/payment?status=error');
     }
   }
 
