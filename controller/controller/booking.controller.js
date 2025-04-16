@@ -143,51 +143,6 @@ class BookingController {
     }
   }
 
-  // async webhook(req, res) {
-  //   try {
-  //     const paystackService = new PaystackService();
-
-  //     // Verify webhook signature
-  //     const isValidWebhook = paystackService.verifyWebhookSignature(
-  //       req.body,
-  //       req.headers['x-paystack-signature']
-  //     );
-
-  //     if (!isValidWebhook) {
-  //       logger.warn('Invalid Paystack webhook', {
-  //         body: req.body,
-  //         headers: req.headers,
-  //       });
-  //       return res
-  //         .status(401)
-  //         .json({ status: 'error', message: 'Invalid webhook' });
-  //     }
-
-  //     const event = req.body;
-
-  //     // Handle different Paystack events
-  //     switch (event.event) {
-  //       case 'charge.success':
-  //         await this.handleChargeSuccess(event.data);
-  //         break;
-  //       case 'charge.failed':
-  //         await this.handleChargeFailed(event.data);
-  //         break;
-  //       case 'refund.processed':
-  //         await this.handleRefundProcessed(event.data);
-  //         break;
-  //       default:
-  //         logger.info('Unhandled Paystack event', { event: event.event });
-  //     }
-
-  //     res.status(200).json({ status: 'success' });
-  //   } catch (error) {
-  //     logger.error('Webhook processing error', error);
-  //     res
-  //       .status(500)
-  //       .json({ status: 'error', message: 'Webhook processing failed' });
-  //   }
-  // }
 
   // New method to handle subscription-related events
   async handleSubscriptionCreation(data) {
@@ -416,42 +371,6 @@ class BookingController {
       throw error;
     }
   }
-  // async handleChargeSuccess(chargeData) {
-  //   const payment = await PaymentModel.findOne({
-  //     transactionReference: chargeData.reference,
-  //   }).populate('booking');
-
-  //   if (!payment) {
-  //     logger.warn('Payment not found for successful charge', {
-  //       reference: chargeData.reference,
-  //     });
-  //     return;
-  //   }
-  //   // Update payment and booking status
-  //   await this.bookingService.confirmBookingPayment(payment.booking._id);
-  //   await webhookMonitorService.logWebhookEvent(
-  //     'PAYSTACK',
-  //     'charge.success',
-  //     chargeData,
-  //     { success: true }
-  //   );
-  //   // await this.bookingService.confirmBookingPayment(payment.booking._id);
-  // }
-
-  // async handleChargeFailed(chargeData) {
-  //   const payment = await PaymentModel.findOne({
-  //     transactionReference: chargeData.reference,
-  //   }).populate('booking');
-
-  //   if (!payment) {
-  //     logger.warn('Payment not found for failed charge', {
-  //       reference: chargeData.reference,
-  //     });
-  //     return;
-  //   }
-
-  //   await this.bookingService.handlePaymentFailure(payment.booking._id);
-  // }
 
   async handleRefundProcessed(refundData) {
     const payment = await PaymentModel.findOne({

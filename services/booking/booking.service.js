@@ -11,6 +11,8 @@ import PaymentModel from '../../models/paymentModel.js';
 import { logger } from '../../utils/logger.js';
 import PaystackService from '../payment/payment.service.js';
 import RefundService from '../payment/refund.service.js';
+import EarningService from '../payment/earning.service.js';
+import EarningModel from '../../models/earning.model.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
@@ -613,6 +615,9 @@ class BookingService {
 
       // Save the updated property availability
       await property.save({ session });
+      // Create earning record for the host
+      const earningService = new EarningService();
+      await earningService.createEarning(booking);
 
       await session.commitTransaction();
 
@@ -864,49 +869,77 @@ class BookingService {
   }
 
   async cancelBooking(bookingId, userId, reason) {
-    const booking = await BookingModel.findOne({
-      _id: bookingId,
-      guest: userId,
-      status: { $in: ['PENDING', 'CONFIRMED'] },
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        guest: userId,
+        // status: { $in: ['PENDING', 'CONFIRMED'] },
+      });
 
-    if (!booking) {
-      throw new HttpException(404, 'Booking not found or cannot be cancelled');
+      if (!booking) {
+        throw new HttpException(
+          404,
+          'Booking not found or cannot be cancelled'
+        );
+      }
+
+      // Calculate refund amount based on cancellation policy
+      const refundAmount = await booking.calculateRefundAmount(booking);
+
+      // Update booking status
+      booking.status = BookingStatus.CANCELLED;
+      booking.cancellation = {
+        cancelledBy: userId,
+        reason,
+        cancelledAt: new Date(),
+        refundAmount,
+        refundStatus: 'Pending',
+      };
+      booking.timeline.push({
+        status: 'CANCELLED',
+        message: `Booking cancelled by guest: ${reason}`,
+      });
+
+      await booking.save();
+
+      // Find associated earning
+      const earning = await EarningModel.findOne({ booking: bookingId });
+      if (earning) {
+        // Update earning status to cancelled
+        earning.status = 'cancelled';
+        earning.notes = 'Booking was cancelled';
+        await earning.save({ session });
+
+        logger.info('Earning marked as cancelled due to booking cancellation', {
+          earningId: earning._id,
+          bookingId,
+        });
+      }
+      // Remove booked dates from property
+      const property = await PropertyModel.findById(booking.property);
+      await property.removeBookedDates(bookingId);
+
+      // Process refund if payment was made
+      if (booking.payment.status === 'PAID') {
+        await refundService.processRefund(booking, userId);
+      }
+      await session.commitTransaction();
+      // Send notifications
+      await this.sendCancellationNotifications(booking);
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Error handling booking cancellation', {
+        bookingId,
+        error,
+      });
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    // Calculate refund amount based on cancellation policy
-    const refundAmount = await booking.calculateRefundAmount(booking);
-
-    // Update booking status
-    booking.status = BookingStatus.CANCELLED;
-    booking.cancellation = {
-      cancelledBy: userId,
-      reason,
-      cancelledAt: new Date(),
-      refundAmount,
-      refundStatus: 'Pending',
-    };
-
-    booking.timeline.push({
-      status: 'CANCELLED',
-      message: `Booking cancelled by guest: ${reason}`,
-    });
-
-    await booking.save();
-
-    // Remove booked dates from property
-    const property = await PropertyModel.findById(booking.property);
-    await property.removeBookedDates(bookingId);
-
-    // Process refund if payment was made
-    if (booking.payment.status === 'PAID') {
-      await refundService.processRefund(booking, userId);
-    }
-
-    // Send notifications
-    await this.sendCancellationNotifications(booking);
-
-    return booking;
   }
 
   async getUserBookings(userId) {

@@ -203,7 +203,7 @@ bookingSchema.pre('save', async function (next) {
     const conversation = await Conversation.create({
       booking: this._id,
       participants: [this.guest, this.host],
-      property: this.property
+      property: this.property,
     });
     this.conversation = conversation._id;
   }
@@ -319,7 +319,7 @@ bookingSchema.methods = {
     return this;
   },
 
-  calculateRefundAmount(cancellationPolicy) {
+  async calculateRefundAmount(cancellationPolicy) {
     const now = new Date();
     const checkIn = new Date(this.checkIn);
     const daysUntilCheckIn = Math.ceil((checkIn - now) / (1000 * 60 * 60 * 24));
