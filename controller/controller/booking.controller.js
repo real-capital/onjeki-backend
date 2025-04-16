@@ -541,9 +541,9 @@ class BookingController {
           // Existing booking payment logic
           if (verificationResult.status === 'success') {
             // Update payment and booking status
-            await this.bookingService.confirmBookingPayment(
-              payment.booking._id
-            );
+            // await this.bookingService.confirmBookingPayment(
+            //   payment.booking._id
+            // );
             redirectUrl = `onjeki://payment?reference=${reference}&status=success&type=booking`;
           } else {
             await this.bookingService.handlePaymentFailure(payment.booking._id);
