@@ -30,6 +30,7 @@ class BookingController {
     this.cancelBooking = this.cancelBooking.bind(this);
     this.createBooking = this.createBooking.bind(this);
     this.confirmBooking = this.confirmBooking.bind(this);
+    // this.confirmBookingPayment = this.confirmBookingPayment.bind(this);
     this.getUserBookings = this.getUserBookings.bind(this);
     this.getHostBookings = this.getHostBookings.bind(this);
     this.getPendingBookings = this.getPendingBookings.bind(this);
@@ -46,6 +47,8 @@ class BookingController {
     this.handleSuccessfulCharge = this.handleSuccessfulCharge.bind(this);
     this.handleSubscriptionRenewal = this.handleSubscriptionRenewal.bind(this);
     this.verifySubscriptionRenewal = this.verifySubscriptionRenewal.bind(this);
+    this.callback = this.callback.bind(this);
+
     this.handleSubscriptionCreation =
       this.handleSubscriptionCreation.bind(this);
   }
@@ -142,7 +145,6 @@ class BookingController {
         .json({ status: 'error', message: 'Webhook processing failed' });
     }
   }
-
 
   // New method to handle subscription-related events
   async handleSubscriptionCreation(data) {
@@ -565,29 +567,29 @@ class BookingController {
     }
   }
 
-
   confirmBooking = async (req, res, next) => {
     try {
-      const booking = await BookingModel.findOne({
-        _id: req.params.id,
-        host: req.user.id,
-        status: 'Pending',
-      });
+      await this.bookingService.confirmBookingPayment(payment.booking._id);
+      // const booking = await BookingModel.findOne({
+      //   _id: req.params.id,
+      //   host: req.user.id,
+      //   status: 'Pending',
+      // });
 
-      if (!booking) {
-        throw new HttpException(
-          StatusCodes.NOT_FOUND,
-          'Booking not found or cannot be confirmed'
-        );
-      }
+      // if (!booking) {
+      //   throw new HttpException(
+      //     StatusCodes.NOT_FOUND,
+      //     'Booking not found or cannot be confirmed'
+      //   );
+      // }
 
-      booking.status = BookingStatus.CONFIRMED;
-      await booking.save();
+      // booking.status = BookingStatus.CONFIRMED;
+      // await booking.save();
 
-      res.status(StatusCodes.OK).json({
-        status: 'success',
-        data: { booking },
-      });
+      // res.status(StatusCodes.OK).json({
+      //   status: 'success',
+      //   data: { booking },
+      // });
     } catch (error) {
       next(error);
     }
@@ -672,6 +674,21 @@ class BookingController {
         req.params.bookingId,
         req.user._id,
         req.body.reason
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: booking,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+  deleteBooking = async (req, res, next) => {
+    try {
+      const booking = await this.bookingService.deleteBooking(
+        req.params.bookingId,
+        req.user._id
       );
 
       res.status(StatusCodes.OK).json({

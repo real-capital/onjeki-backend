@@ -13,6 +13,7 @@ import PaystackService from '../payment/payment.service.js';
 import RefundService from '../payment/refund.service.js';
 import EarningService from '../payment/earning.service.js';
 import EarningModel from '../../models/earning.model.js';
+import Conversation from '../../models/conversation.model.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
@@ -985,6 +986,55 @@ class BookingService {
       throw new HttpException(
         error.statusCode || StatusCodes.BAD_REQUEST,
         error.message
+      );
+    }
+  }
+
+  async deleteBooking(bookingId, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const booking = await BookingModel.findById(bookingId).session(session);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Optional: only allow deletion by guest
+      // if (booking.guest.toString() !== userId.toString()) {
+      //   throw new Error('Not authorized to delete this booking');
+      // }
+
+      // 1. Remove booked dates from the property
+      const property = await PropertyModel.findById(booking.property).session(
+        session
+      );
+
+      if (property) {
+        await property.removeBookedDates(bookingId);
+      }
+
+      // 2. Delete associated conversation if exists
+      if (booking.conversation) {
+        await Conversation.deleteOne(
+          { _id: booking.conversation },
+          { session }
+        );
+      }
+
+      // 3. Delete the booking
+      await BookingModel.deleteOne({ _id: bookingId }, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return { success: true };
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      throw new HttpException(
+        err.statusCode || StatusCodes.BAD_REQUEST,
+        err.message
       );
     }
   }

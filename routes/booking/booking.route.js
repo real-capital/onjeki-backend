@@ -13,6 +13,7 @@ class BookingRoute extends Route {
 
     try {
       const bookingService = ServiceContainer.get('bookingService');
+
       this.controller = new BookingController(bookingService);
       this.initializeRoutes();
     } catch (error) {
@@ -88,6 +89,11 @@ class BookingRoute extends Route {
       `${this.path}/:bookingId/cancel`,
       isAuthenticated,
       this.controller.cancelBooking
+    );
+    this.router.delete(
+      `${this.path}/:bookingId/delete`,
+      isAuthenticated,
+      this.controller.deleteBooking
     );
   }
 }
