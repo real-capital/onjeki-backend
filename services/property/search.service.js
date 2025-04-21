@@ -1,13 +1,12 @@
 // services/search.service.js
 import PropertyModel from '../../models/properties.model.js';
-// import { EPurpose } from '../enum/house.enum.js';
 
 class SearchService {
   async searchProperties(filters, pagination, sorting = { createdAt: -1 }) {
     const query = this.buildSearchQuery(filters);
     const { page = 1, limit = 10 } = pagination;
     const skip = (page - 1) * limit;
-
+    console.log('Built query:', JSON.stringify(query, null, 2));
     try {
       const [properties, total] = await Promise.all([
         PropertyModel.find(query)
@@ -39,8 +38,47 @@ class SearchService {
     const query = {};
 
     // Purpose filter (Layover, Rent, Sale)
-    if (filters.listStatus) {
-      query.listStatus = filters.listStatus;
+    query.listStatus = 'Approved';
+    // if (filters.listStatus) {
+    //   query.listStatus = filters.listStatus;
+    // }
+    //  ✅ Deep fuzzy search
+    if (
+      filters.search &&
+      typeof filters.search === 'string' &&
+      filters.search.trim() !== ''
+    ) {
+      const regex = new RegExp(filters.search, 'i');
+
+      query.$or = [
+        { title: regex },
+        { description: regex },
+        { slug: regex },
+        { type: regex },
+        { space: regex },
+        { size: regex },
+        { 'location.city': regex },
+        { 'location.state': regex },
+        { 'location.country': regex },
+        { 'location.address': regex },
+        { 'location.town': regex },
+        { 'rules.additionalRules': regex },
+        { 'rules.houseRules.rule': regex },
+        { 'directions.written': regex },
+        { 'directions.parking': regex },
+        { 'directions.publicTransport': regex },
+        { 'directions.landmarks': regex },
+        { 'photo.images.caption': regex },
+        { 'photo.videos.caption': regex },
+        { 'price.currency': regex },
+        { 'availability.blockedDates.reason': regex },
+        { 'availability.calendar.notes': regex },
+        { 'availability.restrictedDays.checkIn': regex },
+        { 'availability.restrictedDays.checkOut': regex },
+        { 'calendarSync.googleCalendarId': regex },
+      ];
+
+      console.log('Applied $or search conditions:', query.$or);
     }
     if (filters.type) {
       query.type = filters.type;
@@ -71,6 +109,10 @@ class SearchService {
       } else {
         if (filters.location.city)
           query['location.city'] = new RegExp(filters.location.city, 'i');
+        if (filters.location.state)
+          query['location.state'] = new RegExp(filters.location.state, 'i');
+        if (filters.location.address)
+          query['location.address'] = new RegExp(filters.location.address, 'i');
         if (filters.location.country)
           query['location.country'] = new RegExp(filters.location.country, 'i');
       }

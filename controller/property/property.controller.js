@@ -456,17 +456,17 @@ class PropertyController {
       listStatus = 'Approved',
       isBooked,
       isFurnished,
+      search, // ✅ your search query
     } = req.query;
 
     const filters = {};
 
-    // Add filters only if they exist
     if (type) filters.type = type;
     if (buildingType) filters.buildingType = buildingType;
     if (space) filters.space = space;
     if (listStatus) filters.listStatus = listStatus;
+    if (search) filters.search = search; // ✅ pass search
 
-    // Price range
     if (minPrice || maxPrice) {
       filters.priceRange = {
         min: minPrice ? Number(minPrice) : undefined,
@@ -474,7 +474,6 @@ class PropertyController {
       };
     }
 
-    // Location
     if (city || state || country) {
       filters.location = {};
       if (city) filters.location.city = city;
@@ -482,30 +481,94 @@ class PropertyController {
       if (country) filters.location.country = country;
     }
 
-    // Amenities
     if (amenities) {
       filters.amenities = amenities.split(',').map((id) => id.trim());
     }
 
-    // Numeric filters
     if (guests) filters.guests = Number(guests);
     if (bedrooms) filters.bedrooms = Number(bedrooms);
-
-    // Boolean filters
     if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
     if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
 
     return {
       filters,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-      },
-      sort: {
-        [sortBy]: sortOrder === 'asc' ? 1 : -1,
-      },
+      pagination: { page: Number(page), limit: Number(limit) },
+      sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 },
     };
   };
+
+  // parseSearchParams = (req) => {
+  //   const {
+  //     search,
+  //     page = 1,
+  //     limit = 10,
+  //     type,
+  //     buildingType,
+  //     space,
+  //     minPrice,
+  //     maxPrice,
+  //     city,
+  //     state,
+  //     country,
+  //     amenities,
+  //     guests,
+  //     bedrooms,
+  //     sortBy = 'createdAt',
+  //     sortOrder = 'asc',
+  //     listStatus = 'Approved',
+  //     isBooked,
+  //     isFurnished,
+  //   } = req.query;
+
+  //   if (search) filters.search = search;
+  //   const filters = {};
+
+  //   // Add filters only if they exist
+  //   if (type) filters.type = type;
+  //   if (buildingType) filters.buildingType = buildingType;
+  //   if (space) filters.space = space;
+  //   if (listStatus) filters.listStatus = listStatus;
+
+  //   // Price range
+  //   if (minPrice || maxPrice) {
+  //     filters.priceRange = {
+  //       min: minPrice ? Number(minPrice) : undefined,
+  //       max: maxPrice ? Number(maxPrice) : undefined,
+  //     };
+  //   }
+
+  //   // Location
+  //   if (city || state || country) {
+  //     filters.location = {};
+  //     if (city) filters.location.city = city;
+  //     if (state) filters.location.state = state;
+  //     if (country) filters.location.country = country;
+  //   }
+
+  //   // Amenities
+  //   if (amenities) {
+  //     filters.amenities = amenities.split(',').map((id) => id.trim());
+  //   }
+
+  //   // Numeric filters
+  //   if (guests) filters.guests = Number(guests);
+  //   if (bedrooms) filters.bedrooms = Number(bedrooms);
+
+  //   // Boolean filters
+  //   if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
+  //   if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
+
+  //   return {
+  //     filters,
+  //     pagination: {
+  //       page: Number(page),
+  //       limit: Number(limit),
+  //     },
+  //     sort: {
+  //       [sortBy]: sortOrder === 'asc' ? 1 : -1,
+  //     },
+  //   };
+  // };
 
   async bulkUpdateCalendar(req, res) {
     try {

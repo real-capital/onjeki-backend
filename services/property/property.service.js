@@ -563,102 +563,193 @@ class PropertyService {
   }
 
   buildSearchQuery(filters) {
-    try {
-      const query = {};
+    const query = {};
+    query.listStatus = 'Approved';
 
-      query.listStatus = 'Approved';
-      // Type filter
-      if (filters.type) {
-        query.type = filters.type;
-      }
+    // ✅ Deep fuzzy search
+    // if (
+    //   filters.search &&
+    //   typeof filters.search === 'string' &&
+    //   filters.search.trim() !== ''
+    // ) {
+    //   const regex = new RegExp(filters.search, 'i');
 
-      // Building type filter
-      if (filters.buildingType) {
-        query.buildingType = filters.buildingType;
-      }
+    //   query.$or = [
+    //     { title: regex },
+    //     { description: regex },
+    //     { slug: regex },
+    //     { type: regex },
+    //     { space: regex },
+    //     { size: regex },
+    //     { 'location.city': regex },
+    //     { 'location.state': regex },
+    //     { 'location.country': regex },
+    //     { 'location.address': regex },
+    //     { 'location.town': regex },
+    //     { 'rules.additionalRules': regex },
+    //     { 'rules.houseRules.rule': regex },
+    //     { 'directions.written': regex },
+    //     { 'directions.parking': regex },
+    //     { 'directions.publicTransport': regex },
+    //     { 'directions.landmarks': regex },
+    //     { 'photo.images.caption': regex },
+    //     { 'photo.videos.caption': regex },
+    //     { 'price.currency': regex },
+    //     { 'availability.blockedDates.reason': regex },
+    //     { 'availability.calendar.notes': regex },
+    //     { 'availability.restrictedDays.checkIn': regex },
+    //     { 'availability.restrictedDays.checkOut': regex },
+    //     { 'calendarSync.googleCalendarId': regex },
+    //   ];
 
-      // Space filter
-      if (filters.space) {
-        query.space = filters.space;
-      }
+    //   console.log('Applied $or search conditions:', query.$or);
+    // }
 
-      // Price range filter
-      if (filters.priceRange) {
-        query['price.base'] = {};
-        if (filters.priceRange.min) {
-          query['price.base'].$gte = filters.priceRange.min;
-        }
-        if (filters.priceRange.max && filters.priceRange.max !== Infinity) {
-          query['price.base'].$lte = filters.priceRange.max;
-        }
-      }
+    if (filters.type) query.type = filters.type;
+    if (filters.buildingType) query.buildingType = filters.buildingType;
+    if (filters.space) query.space = filters.space;
 
-      // Location filters
-      if (filters.location) {
-        if (filters.location.city) {
-          query['location.city'] = new RegExp(filters.location.city, 'i');
-        }
-        if (filters.location.country) {
-          query['location.country'] = new RegExp(filters.location.country, 'i');
-        }
-        if (filters.location.state) {
-          query['location.state'] = new RegExp(filters.location.state, 'i');
-        }
-      }
-
-      // Amenities filter
-      if (filters.amenities && filters.amenities.length > 0) {
-        query.amenities = { $all: filters.amenities };
-      }
-
-      // Guest filter
-      if (filters.guests) {
-        query.guests = { $gte: parseInt(filters.guests) };
-      }
-
-      // Bedroom filter
-      if (filters.bedrooms) {
-        query.bedrooms = { $gte: parseInt(filters.bedrooms) };
-      }
-
-      // Status filters
-      // if (filters.listStatus) {
-      //   query.listStatus = filters.listStatus;
-      // }
-
-      // Boolean filters
-      if (filters.isBooked !== undefined) {
-        query.isBooked = filters.isBooked;
-      }
-
-      if (filters.isFurnished !== undefined) {
-        query.isFurnished = filters.isFurnished;
-      }
-
-      // Add date-based availability filter
-      // if (req.query.checkIn && req.query.checkOut) {
-      //   const checkIn = new Date(req.query.checkIn);
-      //   const checkOut = new Date(req.query.checkOut);
-
-      //   features.query.find({
-      //     'availability.calendar': {
-      //       $not: {
-      //         $elemMatch: {
-      //           date: { $gte: checkIn, $lt: checkOut },
-      //           isBlocked: true
-      //         }
-      //       }
-      //     }
-      //   });
-      // }
-
-      console.log('Built query:', query);
-      return query;
-    } catch (error) {
-      console.error('Error building query:', error);
-      throw new Error(`Error building search query: ${error.message}`);
+    if (filters.priceRange) {
+      query['price.base'] = {};
+      if (filters.priceRange.min)
+        query['price.base'].$gte = filters.priceRange.min;
+      if (filters.priceRange.max && filters.priceRange.max !== Infinity)
+        query['price.base'].$lte = filters.priceRange.max;
     }
+
+    // if (filters.location) {
+    //   if (filters.location.city)
+    //     query['location.city'] = new RegExp(filters.location.city, 'i');
+    //   if (filters.location.state)
+    //     query['location.state'] = new RegExp(filters.location.state, 'i');
+    //   if (filters.location.country)
+    //     query['location.country'] = new RegExp(filters.location.country, 'i');
+    // }
+    if (filters.location) {
+      if (filters.location.city) {
+        query['location.city'] = new RegExp(filters.location.city, 'i');
+      }
+      if (filters.location.state) {
+        query['location.state'] = new RegExp(filters.location.state, 'i');
+      }
+      if (filters.location.country) {
+        query['location.country'] = new RegExp(filters.location.country, 'i');
+      }
+    }
+
+    if (filters.amenities?.length > 0) {
+      query.amenities = { $all: filters.amenities };
+    }
+
+    if (filters.guests) query.guests = { $gte: parseInt(filters.guests) };
+    if (filters.bedrooms) query.bedrooms = { $gte: parseInt(filters.bedrooms) };
+    if (filters.isFurnished !== undefined)
+      query.isFurnished = filters.isFurnished;
+    if (filters.isBooked !== undefined) query.isBooked = filters.isBooked;
+
+    console.log('filters:', filters);
+    console.log('built query:', JSON.stringify(query, null, 2));
+
+    return query;
   }
+
+  // buildSearchQuery(filters) {
+  //   try {
+  //     const query = {};
+
+  //     query.listStatus = 'Approved';
+  //     // Type filter
+  //     if (filters.type) {
+  //       query.type = filters.type;
+  //     }
+
+  //     // Building type filter
+  //     if (filters.buildingType) {
+  //       query.buildingType = filters.buildingType;
+  //     }
+
+  //     // Space filter
+  //     if (filters.space) {
+  //       query.space = filters.space;
+  //     }
+
+  //     // Price range filter
+  //     if (filters.priceRange) {
+  //       query['price.base'] = {};
+  //       if (filters.priceRange.min) {
+  //         query['price.base'].$gte = filters.priceRange.min;
+  //       }
+  //       if (filters.priceRange.max && filters.priceRange.max !== Infinity) {
+  //         query['price.base'].$lte = filters.priceRange.max;
+  //       }
+  //     }
+
+  //     // Location filters
+  //     if (filters.location) {
+  //       if (filters.location.city) {
+  //         query['location.city'] = new RegExp(filters.location.city, 'i');
+  //       }
+  //       if (filters.location.country) {
+  //         query['location.country'] = new RegExp(filters.location.country, 'i');
+  //       }
+  //       if (filters.location.state) {
+  //         query['location.state'] = new RegExp(filters.location.state, 'i');
+  //       }
+  //     }
+
+  //     // Amenities filter
+  //     if (filters.amenities && filters.amenities.length > 0) {
+  //       query.amenities = { $all: filters.amenities };
+  //     }
+
+  //     // Guest filter
+  //     if (filters.guests) {
+  //       query.guests = { $gte: parseInt(filters.guests) };
+  //     }
+
+  //     // Bedroom filter
+  //     if (filters.bedrooms) {
+  //       query.bedrooms = { $gte: parseInt(filters.bedrooms) };
+  //     }
+
+  //     // Status filters
+  //     // if (filters.listStatus) {
+  //     //   query.listStatus = filters.listStatus;
+  //     // }
+
+  //     // Boolean filters
+  //     if (filters.isBooked !== undefined) {
+  //       query.isBooked = filters.isBooked;
+  //     }
+
+  //     if (filters.isFurnished !== undefined) {
+  //       query.isFurnished = filters.isFurnished;
+  //     }
+
+  //     // Add date-based availability filter
+  //     // if (req.query.checkIn && req.query.checkOut) {
+  //     //   const checkIn = new Date(req.query.checkIn);
+  //     //   const checkOut = new Date(req.query.checkOut);
+
+  //     //   features.query.find({
+  //     //     'availability.calendar': {
+  //     //       $not: {
+  //     //         $elemMatch: {
+  //     //           date: { $gte: checkIn, $lt: checkOut },
+  //     //           isBlocked: true
+  //     //         }
+  //     //       }
+  //     //     }
+  //     //   });
+  //     // }
+
+  //     console.log('Built query:', query);
+  //     return query;
+  //   } catch (error) {
+  //     console.error('Error building query:', error);
+  //     throw new Error(`Error building search query: ${error.message}`);
+  //   }
+  // }
 
   async getPropertyNearBy(latitude, longitude, radius) {
     try {
