@@ -85,10 +85,14 @@ class SearchService {
     }
 
     // Price range filter
-    if (filters.minPrice || filters.maxPrice) {
-      query.price = {};
-      if (filters.minPrice) query['price.base'].$gte = filters.minPrice;
-      if (filters.maxPrice) query['price.base'].$lte = filters.maxPrice;
+    if (filters.priceRange) {
+      query['price.base'] = {};
+      if (filters.priceRange.min !== undefined) {
+        query['price.base'].$gte = filters.priceRange.min;
+      }
+      if (filters.priceRange.max !== undefined) {
+        query['price.base'].$lte = filters.priceRange.max;
+      }
     }
 
     // Location filter
