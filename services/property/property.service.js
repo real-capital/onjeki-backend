@@ -567,43 +567,45 @@ class PropertyService {
     query.listStatus = 'Approved';
 
     // ✅ Deep fuzzy search
-    // if (
-    //   filters.search &&
-    //   typeof filters.search === 'string' &&
-    //   filters.search.trim() !== ''
-    // ) {
-    //   const regex = new RegExp(filters.search, 'i');
+    if (
+      filters.search &&
+      typeof filters.search === 'string' &&
+      filters.search.trim() !== ''
+    ) {
+      const regex = new RegExp(filters.search, 'i');
 
-    //   query.$or = [
-    //     { title: regex },
-    //     { description: regex },
-    //     { slug: regex },
-    //     { type: regex },
-    //     { space: regex },
-    //     { size: regex },
-    //     { 'location.city': regex },
-    //     { 'location.state': regex },
-    //     { 'location.country': regex },
-    //     { 'location.address': regex },
-    //     { 'location.town': regex },
-    //     { 'rules.additionalRules': regex },
-    //     { 'rules.houseRules.rule': regex },
-    //     { 'directions.written': regex },
-    //     { 'directions.parking': regex },
-    //     { 'directions.publicTransport': regex },
-    //     { 'directions.landmarks': regex },
-    //     { 'photo.images.caption': regex },
-    //     { 'photo.videos.caption': regex },
-    //     { 'price.currency': regex },
-    //     { 'availability.blockedDates.reason': regex },
-    //     { 'availability.calendar.notes': regex },
-    //     { 'availability.restrictedDays.checkIn': regex },
-    //     { 'availability.restrictedDays.checkOut': regex },
-    //     { 'calendarSync.googleCalendarId': regex },
-    //   ];
+      query.$or = [
+        { title: regex },
+        { description: regex },
+        { slug: regex },
+        { type: regex },
+        { space: regex },
+        { size: regex },
+        { amenities: regex },
+        { buildingType: regex },
+        { 'location.city': regex },
+        { 'location.state': regex },
+        { 'location.country': regex },
+        { 'location.address': regex },
+        { 'location.town': regex },
+        { 'rules.additionalRules': regex },
+        { 'rules.houseRules.rule': regex },
+        { 'directions.written': regex },
+        { 'directions.parking': regex },
+        { 'directions.publicTransport': regex },
+        { 'directions.landmarks': regex },
+        { 'photo.images.caption': regex },
+        { 'photo.videos.caption': regex },
+        { 'price.currency': regex },
+        { 'availability.blockedDates.reason': regex },
+        { 'availability.calendar.notes': regex },
+        { 'availability.restrictedDays.checkIn': regex },
+        { 'availability.restrictedDays.checkOut': regex },
+        { 'calendarSync.googleCalendarId': regex },
+      ];
 
-    //   console.log('Applied $or search conditions:', query.$or);
-    // }
+      console.log('Applied $or search conditions:', query.$or);
+    }
 
     if (filters.type) query.type = filters.type;
     if (filters.buildingType) query.buildingType = filters.buildingType;
@@ -617,14 +619,6 @@ class PropertyService {
         query['price.base'].$lte = filters.priceRange.max;
     }
 
-    // if (filters.location) {
-    //   if (filters.location.city)
-    //     query['location.city'] = new RegExp(filters.location.city, 'i');
-    //   if (filters.location.state)
-    //     query['location.state'] = new RegExp(filters.location.state, 'i');
-    //   if (filters.location.country)
-    //     query['location.country'] = new RegExp(filters.location.country, 'i');
-    // }
     if (filters.location) {
       if (filters.location.city) {
         query['location.city'] = new RegExp(filters.location.city, 'i');

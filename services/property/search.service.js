@@ -10,14 +10,32 @@ class SearchService {
     try {
       const [properties, total] = await Promise.all([
         PropertyModel.find(query)
-          .populate('amenities')
-          .populate('buildingType')
+          .populate({
+            path: 'amenities',
+            select: 'amenity _id', // Make sure to select these fields
+          })
+          .populate({
+            path: 'buildingType',
+            select: 'buildingType _id', // Make sure to select these fields
+          })
           .populate('owner', 'name email')
+          .sort(sorting)
           .skip(skip)
           .limit(limit)
-          .sort(sorting),
+          .lean(),
         PropertyModel.countDocuments(query),
       ]);
+
+      // const [properties, total] = await Promise.all([
+      //   PropertyModel.find(query)
+      //     .populate('amenities')
+      //     .populate('buildingType')
+      //     .populate('owner', 'name email')
+      //     .skip(skip)
+      //     .limit(limit)
+      //     .sort(sorting),
+      //   PropertyModel.countDocuments(query),
+      // ]);
 
       return {
         properties,
@@ -77,6 +95,11 @@ class SearchService {
         { 'availability.restrictedDays.checkOut': regex },
         { 'calendarSync.googleCalendarId': regex },
       ];
+
+      // IMPORTANT: Add the additional $or conditions from parseSearchParams
+      if (filters.$or && Array.isArray(filters.$or)) {
+        query.$or = [...query.$or, ...filters.$or];
+      }
 
       console.log('Applied $or search conditions:', query.$or);
     }

@@ -468,8 +468,50 @@ class PropertyController {
     // if (buildingType) filters.buildingType = buildingType;
     if (space) filters.space = space;
     if (listStatus) filters.listStatus = listStatus;
-    if (search) filters.search = search; // ✅ pass search
+    // In your parseSearchParams method:
 
+    // In your parseSearchParams method:
+    if (search) {
+      filters.search = search; // Keep the regular search
+
+      console.log('Searching for:', search);
+
+      // Step 1: Check if search term matches any amenity names
+      const matchingAmenities = await amenityModel
+        .find({
+          amenity: new RegExp(search, 'i'),
+        })
+        .select('_id amenity');
+
+      console.log('Matching amenities:', matchingAmenities);
+
+      // Step 2: Check if search term matches any building types
+      const matchingBuildingTypes = await BuildingModel.find({
+        buildingType: new RegExp(search, 'i'),
+      }).select('_id buildingType');
+
+      console.log('Matching building types:', matchingBuildingTypes);
+
+      // If we found matches, include them in the appropriate filter conditions
+      if (matchingAmenities.length > 0 || matchingBuildingTypes.length > 0) {
+        // We'll use $or at the top level to combine with the existing search
+        filters.$or = filters.$or || [];
+
+        // Add amenities condition if needed
+        if (matchingAmenities.length > 0) {
+          const amenityIds = matchingAmenities.map((doc) => doc._id);
+          filters.$or.push({ amenities: { $in: amenityIds } });
+          console.log('Added amenity IDs to $or:', amenityIds);
+        }
+
+        // Add building type condition if needed
+        if (matchingBuildingTypes.length > 0) {
+          const buildingTypeIds = matchingBuildingTypes.map((doc) => doc._id);
+          filters.$or.push({ buildingType: { $in: buildingTypeIds } });
+          console.log('Added building type IDs to $or:', buildingTypeIds);
+        }
+      }
+    }
     if (minPrice || maxPrice) {
       filters.priceRange = {
         min: minPrice ? Number(minPrice) : undefined,
