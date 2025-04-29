@@ -6,6 +6,7 @@ import { StatusCodes } from 'http-status-codes';
 import SearchService from '../../services/property/search.service.js';
 import PropertyModel from '../../models/properties.model.js';
 import UserModel from '../../models/user.model.js';
+import amenityModel from '../../models/amenities.model.js';
 
 const propertyService = new PropertyService();
 const searchService = new SearchService();
@@ -412,7 +413,7 @@ class PropertyController {
     try {
       console.log('Search request query:', req.query);
 
-      const { filters, pagination, sort } = this.parseSearchParams(req);
+      const { filters, pagination, sort } = await this.parseSearchParams(req);
       console.log('Parsed search parameters:', { filters, pagination, sort });
 
       const result = await searchService.searchProperties(
@@ -436,7 +437,7 @@ class PropertyController {
     }
   };
 
-  parseSearchParams = (req) => {
+  parseSearchParams = async (req) => {
     const {
       page = 1,
       limit = 10,
@@ -453,13 +454,14 @@ class PropertyController {
       bedrooms,
       sortBy = 'createdAt',
       sortOrder = 'asc',
-      listStatus = 'Approved',
+      listStatus,
       isBooked,
       isFurnished,
       search, // ✅ your search query
     } = req.query;
 
     const filters = {};
+    if (listStatus) filters.listStatus = listStatus;
 
     if (type) filters.type = type;
     if (buildingType) filters.buildingType = buildingType;
@@ -481,8 +483,27 @@ class PropertyController {
       if (country) filters.location.country = country;
     }
 
+    // if (amenities) {
+    //   filters.amenities = amenities.split(',').map((id) => id.trim());
+    // }
+    // ✅ Resolve amenity names to ObjectIds
     if (amenities) {
-      filters.amenities = amenities.split(',').map((id) => id.trim());
+      const amenityNames = amenities.split(',').map((name) => name.trim());
+      const amenityDocs = await amenityModel
+        .find({
+          amenity: { $in: amenityNames },
+        })
+        .select('_id');
+
+      const amenityIds = amenityDocs.map((doc) => doc._id);
+
+      // ❗ Return no matches if no amenities found
+      if (amenityIds.length !== amenityNames.length) {
+        // Include a dummy filter that guarantees no matches
+        filters._id = { $exists: false };
+      } else {
+        filters.amenities = amenityIds;
+      }
     }
 
     if (guests) filters.guests = Number(guests);

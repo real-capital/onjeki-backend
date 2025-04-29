@@ -38,7 +38,7 @@ class SearchService {
     const query = {};
 
     // Purpose filter (Layover, Rent, Sale)
-    query.listStatus = 'Approved';
+    // query.listStatus = 'Approved';
     // if (filters.listStatus) {
     //   query.listStatus = filters.listStatus;
     // }
@@ -80,6 +80,10 @@ class SearchService {
 
       console.log('Applied $or search conditions:', query.$or);
     }
+    if (filters.listStatus) {
+      query.listStatus = filters.listStatus;
+    }
+
     if (filters.type) {
       query.type = filters.type;
     }
@@ -120,6 +124,9 @@ class SearchService {
         if (filters.location.country)
           query['location.country'] = new RegExp(filters.location.country, 'i');
       }
+    }
+    if (filters._id) {
+      query._id = filters._id;
     }
 
     // Amenities filter
