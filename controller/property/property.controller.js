@@ -7,6 +7,7 @@ import SearchService from '../../services/property/search.service.js';
 import PropertyModel from '../../models/properties.model.js';
 import UserModel from '../../models/user.model.js';
 import amenityModel from '../../models/amenities.model.js';
+import BuildingModel from '../../models/building.model.js';
 
 const propertyService = new PropertyService();
 const searchService = new SearchService();
@@ -464,7 +465,7 @@ class PropertyController {
     if (listStatus) filters.listStatus = listStatus;
 
     if (type) filters.type = type;
-    if (buildingType) filters.buildingType = buildingType;
+    // if (buildingType) filters.buildingType = buildingType;
     if (space) filters.space = space;
     if (listStatus) filters.listStatus = listStatus;
     if (search) filters.search = search; // ✅ pass search
@@ -503,6 +504,20 @@ class PropertyController {
         filters._id = { $exists: false };
       } else {
         filters.amenities = amenityIds;
+      }
+    }
+
+    // Backend code (for reference)
+    if (buildingType) {
+      const buildingTypeDoc = await BuildingModel.findOne({
+        buildingType: buildingType,
+      });
+
+      if (buildingTypeDoc) {
+        filters.buildingType = buildingTypeDoc._id;
+      } else {
+        // Optional: handle not found case
+        filters._id = { $exists: false }; // Force no results
       }
     }
 
