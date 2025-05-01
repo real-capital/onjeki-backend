@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import LastListingModel from '../../models/lastListing.model.js';
 import OnboardingModel from '../../models/onboarding.model.js';
 import RentAndSales from '../../models/rentAndSales.model.js';
+import UserModel from '../../models/user.model.js';
 
 const uploadService = new UploadService();
 
@@ -121,6 +122,26 @@ class PropertyService {
         owner: userId,
       });
       await property.save();
+
+      // Check if this is the user's first property and update hostProfile
+      const propertiesCount = await PropertyModel.countDocuments({
+        owner: userId,
+      });
+
+      if (propertiesCount === 1) {
+        // This is their first property - update the user to mark them as a host
+        await UserModel.findByIdAndUpdate(
+          userId,
+          {
+            'hostProfile.joinedAt': new Date(),
+            // Set other initial hosting metrics if needed
+            'hostProfile.responseRate': 100, // Initial perfect rate
+            'hostProfile.responseTime': 60, // Initial response time in minutes
+            'hostProfile.acceptanceRate': 100, // Initial perfect rate
+          },
+          { new: true }
+        );
+      }
 
       return property;
     } catch (error) {
