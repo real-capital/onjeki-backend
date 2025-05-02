@@ -78,7 +78,6 @@ const userSchema = new Schema(
       },
       joinedAt: {
         type: Date,
-        default: Date.now,
       },
     },
     settings: {

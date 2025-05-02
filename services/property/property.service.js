@@ -97,6 +97,13 @@ class PropertyService {
   async createProperty(propertyData, userId) {
     let uploadedImages = [];
     try {
+      // Fetch the user to check their verification status
+      const user = await UserModel.findById(userId);
+
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+
       // Handle image uploads if present
       if (propertyData.images && Array.isArray(propertyData.images)) {
         const uploadedImages = await uploadService.uploadMultipleImages(
@@ -117,10 +124,24 @@ class PropertyService {
         };
       }
 
+      // Set listStatus based on user verification
+      let initialListStatus = EListStatus.UNDER_REVIEW;
+
+      // Check if user is verified (using verification_status or other relevant fields)
+      if (
+        user.verification_status === 'verified' ||
+        (user.isEmailVerified && user.isPhoneVerified)
+        // || user.hostProfile?.superhost === true
+      ) {
+        initialListStatus = EListStatus.APPROVED;
+      }
+
       const property = new PropertyModel({
         ...propertyData,
         owner: userId,
+        listStatus: initialListStatus, // Set initial status based on verification
       });
+
       await property.save();
 
       // Check if this is the user's first property and update hostProfile
@@ -166,6 +187,79 @@ class PropertyService {
       );
     }
   }
+
+  // async createProperty(propertyData, userId) {
+  //   let uploadedImages = [];
+  //   try {
+  //     // Handle image uploads if present
+  //     if (propertyData.images && Array.isArray(propertyData.images)) {
+  //       const uploadedImages = await uploadService.uploadMultipleImages(
+  //         propertyData.images,
+  //         `properties/${userId}`
+  //       );
+
+  //       propertyData.photo = {
+  //         images: await Promise.all(
+  //           uploadedImages.map(async (image) => ({
+  //             url: image.secure_url,
+  //             caption: image.originalname || '',
+  //             isPrimary: false,
+  //             publicId: image.public_id,
+  //           }))
+  //         ),
+  //         videos: [],
+  //       };
+  //     }
+
+  //     const property = new PropertyModel({
+  //       ...propertyData,
+  //       owner: userId,
+  //     });
+  //     await property.save();
+
+  //     // Check if this is the user's first property and update hostProfile
+  //     const propertiesCount = await PropertyModel.countDocuments({
+  //       owner: userId,
+  //     });
+
+  //     if (propertiesCount === 1) {
+  //       // This is their first property - update the user to mark them as a host
+  //       await UserModel.findByIdAndUpdate(
+  //         userId,
+  //         {
+  //           'hostProfile.joinedAt': new Date(),
+  //           // Set other initial hosting metrics if needed
+  //           'hostProfile.responseRate': 100, // Initial perfect rate
+  //           'hostProfile.responseTime': 60, // Initial response time in minutes
+  //           'hostProfile.acceptanceRate': 100, // Initial perfect rate
+  //         },
+  //         { new: true }
+  //       );
+  //     }
+
+  //     return property;
+  //   } catch (error) {
+  //     // If there's an error, cleanup any uploaded images
+  //     if (uploadedImages.length > 0) {
+  //       try {
+  //         await Promise.all(
+  //           uploadedImages.map(async (img) => {
+  //             if (img.public_id) {
+  //               await uploadService.deleteImage(img.public_id);
+  //             }
+  //           })
+  //         );
+  //       } catch (cleanupError) {
+  //         console.error('Error cleaning up images:', cleanupError);
+  //       }
+  //     }
+
+  //     throw new HttpException(
+  //       StatusCodes.BAD_REQUEST,
+  //       error.message || 'Error creating property'
+  //     );
+  //   }
+  // }
 
   async updateProperty(propertyId, userId, updateData) {
     console.log('Updating property with data:', updateData);
