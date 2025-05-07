@@ -381,6 +381,10 @@ const propertySchema = new Schema(
       icalUrls: [String],
       lastSynced: Date,
     },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
