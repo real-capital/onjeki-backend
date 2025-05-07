@@ -11,6 +11,7 @@ import BookingRoute from './routes/booking/booking.route.js';
 import { logger } from './utils/logger.js';
 import ConversationRoute from './routes/conversation/conversation.route.js';
 import SubscriptionRoute from './routes/payment/subscription.route.js';
+import RentSalesChatRoute from './routes/rentSalesChat/rentSalesChat.route.js';
 // import PaymentRoute from './routes/payment/payment.route.js';
 
 try {
@@ -26,6 +27,7 @@ try {
     BookingRoute,
     ConversationRoute,
     SubscriptionRoute,
+    RentSalesChatRoute,
     // PaymentRoute,
   ];
 
