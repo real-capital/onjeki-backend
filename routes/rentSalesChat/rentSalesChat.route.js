@@ -32,7 +32,7 @@ class RentSalesChatRoute extends Route {
       isAuthenticated,
       this.controller.sendMessage
     );
-    this.router.post(
+    this.router.put(
       `${this.path}/messages/:messageId/conversations/:conversationId/read`,
       isAuthenticated,
       this.controller.markMessageAsRead
