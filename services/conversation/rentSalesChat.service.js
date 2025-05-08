@@ -368,20 +368,20 @@ class RentSalesChatService {
       }
 
       // Get property and sender for notifications
-      const property = await RentAndSales.findById(
-        conversation.property,
-        'title'
-      );
+      // const property = await RentAndSales.findById(
+      //   conversation.property,
+      //   'title'
+      // );
 
-      // Send notifications to other participants
-      for (const participantId of otherParticipants) {
-        await this.sendNotification(
-          participantId.toString(),
-          userId,
-          content,
-          property
-        );
-      }
+      // // Send notifications to other participants
+      // for (const participantId of otherParticipants) {
+      //   await this.sendNotification(
+      //     participantId.toString(),
+      //     userId,
+      //     content,
+      //     property
+      //   );
+      // }
 
       return populatedMessage;
     } catch (error) {
