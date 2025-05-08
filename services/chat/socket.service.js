@@ -261,7 +261,7 @@ export class SocketService {
       socket.emit('message_sent', {
         messageId: message._id,
         conversationId,
-        message: populatedMessage,
+        // message: populatedMessage,
       });
       
       return populatedMessage; // Return the created message
