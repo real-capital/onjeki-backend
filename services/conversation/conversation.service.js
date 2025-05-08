@@ -374,7 +374,7 @@ class ConversationService {
         .populate('participants', 'name profile.photo email')
         .populate({
           path: 'property',
-          select: 'title location price photo rules guests bedrooms owner',
+          select: 'title location price photo rules guests bedrooms',
         })
         .populate({
           path: 'booking',
