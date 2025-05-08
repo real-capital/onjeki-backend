@@ -264,7 +264,7 @@ export class SocketService {
         // message: populatedMessage,
       });
       
-      return populatedMessage; // Return the created message
+      // return populatedMessage; // Return the created message
     } catch (error) {
       console.error('❌ Error sending message:', error);
       socket.emit('message_error', { error: error.message });
@@ -272,168 +272,7 @@ export class SocketService {
     }
   }
 
-  // async handleMessageSend(socket, data) {
-  //   try {
-  //     // console.log('📩 Received message data:', data);
 
-  //     const { conversationId, content, attachments } = data;
-  //     const userId = socket.user._id.toString();
-
-  //     // ✅ Validate conversation
-  //     const conversation = await ConversationModel.findById(
-  //       conversationId
-  //     ).populate('participants');
-  //     if (!conversation) throw new Error('Conversation not found');
-
-  //     // ✅ Create new message
-  //     const message = new MessageModel({
-  //       conversation: conversationId,
-  //       sender: userId,
-  //       content,
-  //       attachments: attachments || [],
-  //       status: 'SENT',
-  //     });
-
-  //     await message.save();
-
-  //     // ✅ Update conversation with last message
-  //     conversation.lastMessage = message._id;
-  //     // ✅ Ensure unreadCounts is updated correctly
-  //     conversation.unreadCounts = this.updateUnreadCounts(conversation, userId); // Now a Map ✅
-
-  //     console.log('📌 Updated unreadCounts:', conversation.unreadCounts); // Debugging
-
-  //     await conversation.save();
-
-  //     console.log('📌 Message ID:', message._id);
-
-  //     // ✅ Populate sender details
-  //     const populatedMessage = await MessageModel.findById(message._id)
-  //       .populate({
-  //         path: 'sender',
-  //         model: 'User',
-  //         select: 'name email profileImage',
-  //       })
-  //       .exec();
-
-  //     // console.log('✅ Populated message:', populatedMessage);
-
-  //     // ✅ Broadcast to conversation participants
-  //     const otherParticipants = conversation.participants.filter(
-  //       (p) => p._id.toString() !== userId
-  //     );
-  //     // console.log('📌 Other Participants:', otherParticipants);
-
-  //     // ✅ Debug connected users
-  //     console.log('🔍 Debug connectedUsers:', this.connectedUsers);
-
-  //     otherParticipants.forEach((participant) => {
-  //       const participantSocketId = this.connectedUsers.get(
-  //         participant._id.toString()
-  //       );
-  //       console.log('participantSocketId:', participantSocketId);
-
-  //       if (participantSocketId) {
-  //         this.io
-  //           .to(participantSocketId)
-  //           .emit('new_message', { message: populatedMessage, conversationId });
-  //       }
-  //     });
-
-  //     // ✅ Acknowledge message send
-  //     socket.emit('message_sent', {
-  //       messageId: message._id,
-  //       sentAt: message.createdAt,
-  //     });
-  //   } catch (error) {
-  //     console.error('❌ Error sending message:', error);
-  //     socket.emit('message_error', { error: error.message });
-  //   }
-  // }
-
-  // async handleMessageSend(socket, data) {
-  //   try {
-  //     const { conversationId, content, attachments } = data;
-  //     const userId = socket.user._id.toString();
-
-  //     // ✅ Validate conversation
-  //     const conversation = await ConversationModel.findById(
-  //       conversationId
-  //     ).populate('participants');
-
-  //     if (!conversation) throw new Error('Conversation not found');
-
-  //     // ✅ Create new message
-  //     const message = new MessageModel({
-  //       conversation: conversationId,
-  //       sender: userId,
-  //       content,
-  //       attachments: attachments || [],
-  //       status: 'SENT',
-  //     });
-
-  //     await message.save();
-
-  //     // ✅ Update conversation with last message
-  //     conversation.lastMessage = message._id;
-
-  //     // Reset sender's unread count
-  //     conversation.unreadCounts.set(userId, 0);
-
-  //     // Increment recipient's unread count
-  //     conversation.participants.forEach((participant) => {
-  //       if (participant._id.toString() !== userId.toString()) {
-  //         const currentCount =
-  //           conversation.unreadCounts.get(participant._id.toString()) || 0;
-  //         conversation.unreadCounts.set(
-  //           participant._id.toString(),
-  //           currentCount + 1
-  //         );
-  //       }
-  //     });
-
-  //     await conversation.save();
-
-  //     // ✅ Populate sender details
-  //     const populatedMessage = await MessageModel.findById(message._id)
-  //       .populate({
-  //         path: 'sender',
-  //         select: 'name email profile.photo',
-  //       })
-  //       .exec();
-
-  //     // ✅ Broadcast to conversation participants
-  //     const otherParticipants = conversation.participants.filter(
-  //       (p) => p._id.toString() !== userId.toString()
-  //     );
-
-  //     otherParticipants.forEach((participant) => {
-  //       const participantSocketId = this.connectedUsers.get(
-  //         participant._id.toString()
-  //       );
-  //       console.log('participantSocketId:', participantSocketId);
-  //       console.log('📌 Other Participants:', otherParticipants);
-
-  //       if (participantSocketId) {
-  //         // When emitting to other participants
-  //         this.io.to(participantSocketId).emit('new_message', {
-  //           message: populatedMessage,
-  //           conversationId,
-  //         });
-
-  //         // When acknowledging to sender
-  //         socket.emit('message_sent', {
-  //           messageId: message._id,
-  //           conversationId,
-  //           message: populatedMessage,
-  //         });
-  //       }
-  //     });
-  //   } catch (error) {
-  //     console.error('❌ Error sending message:', error);
-  //     socket.emit('message_error', { error: error.message });
-  //   }
-  // }
 
   updateUnreadCounts(conversation, senderId) {
     // Ensure unreadCounts is a Mongoose Map
@@ -690,7 +529,7 @@ export class SocketService {
       socket.emit('rent_sales_message_sent', {
         messageId: message._id,
         sentAt: message.createdAt,
-        message: populatedMessage,
+        // message: populatedMessage,
         conversationId,
       });
     } catch (error) {
