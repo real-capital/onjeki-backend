@@ -328,6 +328,8 @@ export class SocketService {
       socket.emit('message_sent', {
         messageId: message._id,
         sentAt: message.createdAt,
+        message: populatedMessage,
+        conversationId,
       });
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -381,7 +383,11 @@ export class SocketService {
       }
 
       // ✅ Ensure user is a participant of the conversation
-      if (!conversation.participants.some((p) => p.toString() === userId.toString())) {
+      if (
+        !conversation.participants.some(
+          (p) => p.toString() === userId.toString()
+        )
+      ) {
         console.error('❌ User is not part of the conversation');
         return socket.emit('message_error', { error: 'Unauthorized access' });
       }
@@ -586,6 +592,8 @@ export class SocketService {
       socket.emit('rent_sales_message_sent', {
         messageId: message._id,
         sentAt: message.createdAt,
+        message: populatedMessage,
+        conversationId,
       });
     } catch (error) {
       console.error('❌ Error sending rent/sales message:', error);
