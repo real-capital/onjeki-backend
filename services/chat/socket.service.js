@@ -71,6 +71,7 @@ export class SocketService {
           Array.from(this.connectedUsers.entries())
         );
         console.log(`✅ Connected users after login:`, this.connectedUsers);
+        socket.join(user._id.toString());
 
         next();
       } catch (error) {
