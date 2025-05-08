@@ -63,8 +63,13 @@ export class SocketService {
 
         // ✅ DEBUGGING: Ensure user is added to connectedUsers
         console.log(`🔹 User authenticated: ${user._id}`);
-
-        this.connectedUsers.set(user._id.toString(), socket.id);
+        const userIdStr = user._id.toString();
+        this.connectedUsers.set(userIdStr, socket.id);
+        console.log(`User ${userIdStr} connected with socket ${socket.id}`);
+        console.log(
+          'Current connected users:',
+          Array.from(this.connectedUsers.entries())
+        );
         console.log(`✅ Connected users after login:`, this.connectedUsers);
 
         next();
@@ -176,6 +181,106 @@ export class SocketService {
     );
   }
 
+  async handleMessageSend(socket, data) {
+    try {
+      const { conversationId, content, attachments } = data;
+      const userId = socket.user._id.toString();
+
+      // ✅ Validate conversation
+      const conversation = await ConversationModel.findById(
+        conversationId
+      ).populate('participants');
+
+      if (!conversation) throw new Error('Conversation not found');
+
+      // ✅ Create new message
+      const message = new MessageModel({
+        conversation: conversationId,
+        sender: userId,
+        content,
+        attachments: attachments || [],
+        status: 'SENT',
+      });
+
+      await message.save();
+
+      // ✅ Update conversation with last message
+      conversation.lastMessage = message._id;
+
+      // Reset sender's unread count
+      conversation.unreadCounts.set(userId, 0);
+
+      // Increment recipient's unread count
+      conversation.participants.forEach((participant) => {
+        if (participant._id.toString() !== userId.toString()) {
+          const currentCount =
+            conversation.unreadCounts.get(participant._id.toString()) || 0;
+          conversation.unreadCounts.set(
+            participant._id.toString(),
+            currentCount + 1
+          );
+        }
+      });
+
+      await conversation.save();
+
+      // ✅ Populate sender details
+      const populatedMessage = await MessageModel.findById(message._id)
+        .populate({
+          path: 'sender',
+          select: 'name email profile.photo',
+        })
+        .exec();
+
+      // ✅ Broadcast to conversation participants
+      const otherParticipants = conversation.participants.filter(
+        (p) => p._id.toString() !== userId.toString()
+      );
+
+      otherParticipants.forEach((participant) => {
+        const participantId = participant._id.toString();
+        console.log('Looking for participant:', participantId);
+        const participantSocketId = this.connectedUsers.get(participantId);
+        console.log('Found socket ID:', participantSocketId);
+        // const participantSocketId = this.connectedUsers.get(
+        //   participant._id.toString()
+        // );
+        console.log('participantSocketId:', participantSocketId);
+        console.log('📌 Other Participants:', otherParticipants);
+        if (participantSocketId) {
+          console.log(
+            `Sending message to online participant: ${participantId}`
+          );
+          this.io.to(participantSocketId).emit('new_message', {
+            message: populatedMessage,
+            conversationId,
+          });
+          // When acknowledging to sender
+          socket.emit('message_sent', {
+            messageId: message._id,
+            conversationId,
+            message: populatedMessage,
+          });
+        } else {
+          console.log(
+            `Participant not online: ${participantId} - saving for later delivery`
+          );
+          // Optionally, you could queue notifications for offline users
+        }
+        // if (participantSocketId) {
+        //   // When emitting to other participants
+        //   this.io.to(participantSocketId).emit('new_message', {
+        //     message: populatedMessage,
+        //     conversationId,
+        //   });
+        // }
+      });
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      socket.emit('message_error', { error: error.message });
+    }
+  }
+
   // async handleMessageSend(socket, data) {
   //   try {
   //     // console.log('📩 Received message data:', data);
@@ -255,89 +360,89 @@ export class SocketService {
   //   }
   // }
 
-  async handleMessageSend(socket, data) {
-    try {
-      const { conversationId, content, attachments } = data;
-      const userId = socket.user._id.toString();
+  // async handleMessageSend(socket, data) {
+  //   try {
+  //     const { conversationId, content, attachments } = data;
+  //     const userId = socket.user._id.toString();
 
-      // ✅ Validate conversation
-      const conversation = await ConversationModel.findById(
-        conversationId
-      ).populate('participants');
+  //     // ✅ Validate conversation
+  //     const conversation = await ConversationModel.findById(
+  //       conversationId
+  //     ).populate('participants');
 
-      if (!conversation) throw new Error('Conversation not found');
+  //     if (!conversation) throw new Error('Conversation not found');
 
-      // ✅ Create new message
-      const message = new MessageModel({
-        conversation: conversationId,
-        sender: userId,
-        content,
-        attachments: attachments || [],
-        status: 'SENT',
-      });
+  //     // ✅ Create new message
+  //     const message = new MessageModel({
+  //       conversation: conversationId,
+  //       sender: userId,
+  //       content,
+  //       attachments: attachments || [],
+  //       status: 'SENT',
+  //     });
 
-      await message.save();
+  //     await message.save();
 
-      // ✅ Update conversation with last message
-      conversation.lastMessage = message._id;
+  //     // ✅ Update conversation with last message
+  //     conversation.lastMessage = message._id;
 
-      // Reset sender's unread count
-      conversation.unreadCounts.set(userId, 0);
+  //     // Reset sender's unread count
+  //     conversation.unreadCounts.set(userId, 0);
 
-      // Increment recipient's unread count
-      conversation.participants.forEach((participant) => {
-        if (participant._id.toString() !== userId.toString()) {
-          const currentCount =
-            conversation.unreadCounts.get(participant._id.toString()) || 0;
-          conversation.unreadCounts.set(
-            participant._id.toString(),
-            currentCount + 1
-          );
-        }
-      });
+  //     // Increment recipient's unread count
+  //     conversation.participants.forEach((participant) => {
+  //       if (participant._id.toString() !== userId.toString()) {
+  //         const currentCount =
+  //           conversation.unreadCounts.get(participant._id.toString()) || 0;
+  //         conversation.unreadCounts.set(
+  //           participant._id.toString(),
+  //           currentCount + 1
+  //         );
+  //       }
+  //     });
 
-      await conversation.save();
+  //     await conversation.save();
 
-      // ✅ Populate sender details
-      const populatedMessage = await MessageModel.findById(message._id)
-        .populate({
-          path: 'sender',
-          select: 'name email profile.photo',
-        })
-        .exec();
+  //     // ✅ Populate sender details
+  //     const populatedMessage = await MessageModel.findById(message._id)
+  //       .populate({
+  //         path: 'sender',
+  //         select: 'name email profile.photo',
+  //       })
+  //       .exec();
 
-      // ✅ Broadcast to conversation participants
-      const otherParticipants = conversation.participants.filter(
-        (p) => p._id.toString() !== userId.toString()
-      );
+  //     // ✅ Broadcast to conversation participants
+  //     const otherParticipants = conversation.participants.filter(
+  //       (p) => p._id.toString() !== userId.toString()
+  //     );
 
-      otherParticipants.forEach((participant) => {
-        const participantSocketId = this.connectedUsers.get(
-          participant._id.toString()
-        );
-        console.log('participantSocketId:', participantSocketId);
-        console.log('📌 Other Participants:', otherParticipants);
+  //     otherParticipants.forEach((participant) => {
+  //       const participantSocketId = this.connectedUsers.get(
+  //         participant._id.toString()
+  //       );
+  //       console.log('participantSocketId:', participantSocketId);
+  //       console.log('📌 Other Participants:', otherParticipants);
 
-        if (participantSocketId) {
-          // When emitting to other participants
-          this.io.to(participantSocketId).emit('new_message', {
-            message: populatedMessage,
-            conversationId,
-          });
+  //       if (participantSocketId) {
+  //         // When emitting to other participants
+  //         this.io.to(participantSocketId).emit('new_message', {
+  //           message: populatedMessage,
+  //           conversationId,
+  //         });
 
-          // When acknowledging to sender
-          socket.emit('message_sent', {
-            messageId: message._id,
-            conversationId,
-            message: populatedMessage,
-          });
-        }
-      });
-    } catch (error) {
-      console.error('❌ Error sending message:', error);
-      socket.emit('message_error', { error: error.message });
-    }
-  }
+  //         // When acknowledging to sender
+  //         socket.emit('message_sent', {
+  //           messageId: message._id,
+  //           conversationId,
+  //           message: populatedMessage,
+  //         });
+  //       }
+  //     });
+  //   } catch (error) {
+  //     console.error('❌ Error sending message:', error);
+  //     socket.emit('message_error', { error: error.message });
+  //   }
+  // }
 
   updateUnreadCounts(conversation, senderId) {
     // Ensure unreadCounts is a Mongoose Map
