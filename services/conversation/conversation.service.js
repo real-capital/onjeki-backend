@@ -275,18 +275,18 @@ class ConversationService {
       );
     }
   }
-  async sendMessage(req, res) {
+  async sendMessage(senderId, conversationId, content, attachments = []) {
     try {
-      const { conversationId } = req.params;
-      const { content, attachments, tempId } = req.body;
-      const userId = req.user._id;
+      // const { conversationId } = req.params;
+      // const { content, attachments, tempId } = req.body;
+      // const userId = req.user._id;
 
       console.log(
         `📩 HTTP API message: ${content} from ${userId} in conversation ${conversationId}`
       );
 
       // Validate conversation
-      const conversation = await ConversationModel.findById(conversationId);
+      const conversation = await Conversation.findById(conversationId);
       if (!conversation) {
         return res.status(404).json({ message: 'Conversation not found' });
       }
@@ -386,12 +386,10 @@ class ConversationService {
         }
       }
 
-      return res.status(201).json(populatedMessage);
+      return populatedMessage;
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      return res
-        .status(500)
-        .json({ message: 'Error sending message', error: error.message });
+      throw error;
     }
   }
 

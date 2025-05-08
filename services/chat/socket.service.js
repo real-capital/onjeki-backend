@@ -576,7 +576,7 @@ export class SocketService {
 
   async handleRentSalesMessageSend(socket, data) {
     try {
-      const { conversationId, content, attachments } = data;
+      const { conversationId, content, attachments, tempId } = data;
       const userId = socket.user._id.toString();
 
       // Validate conversation
@@ -587,40 +587,58 @@ export class SocketService {
       if (!conversation) throw new Error('Conversation not found');
 
       // Create new message
-      const message = new RentSalesMessage({
+      const recentMessage = new RentSalesMessage({
         conversation: conversationId,
         sender: userId,
         content,
         attachments: attachments || [],
         status: 'SENT',
+        createdAt: { $gte: new Date(Date.now() - 5000) },
       });
+      let message;
+      if (recentMessage) {
+        console.log(
+          `✅ Found duplicate message (${recentMessage._id}), reusing instead of creating new one`
+        );
+        message = recentMessage;
+      } else {
+        // Create new message if no duplicate exists
+        message = new RentSalesMessage({
+          conversation: conversationId,
+          sender: userId,
+          content,
+          attachments: attachments || [],
+          status: 'SENT',
+        });
 
-      await message.save();
+        await message.save();
+        console.log(`✅ New message created with ID: ${message._id}`);
+        // Update conversation with last message
+        conversation.lastMessage = message._id;
 
-      // Update conversation with last message
-      conversation.lastMessage = message._id;
+        conversation.unreadCounts.set(userId, 0);
 
-      // Update unread counts
-      conversation.participants.forEach((participant) => {
-        if (participant._id.toString() !== userId.toString()) {
-          const currentCount =
-            conversation.unreadCounts.get(participant._id.toString()) || 0;
-          conversation.unreadCounts.set(
-            participant._id.toString(),
-            currentCount + 1
-          );
-        }
-      });
-
-      await conversation.save();
+        // Update unread counts
+        conversation.participants.forEach((participant) => {
+          if (participant._id.toString() !== userId.toString()) {
+            const currentCount =
+              conversation.unreadCounts.get(participant._id.toString()) || 0;
+            conversation.unreadCounts.set(
+              participant._id.toString(),
+              currentCount + 1
+            );
+          }
+        });
+        await conversation.save();
+      }
 
       // Populate sender details
-      const populatedMessage = await RentSalesMessage.findById(
-        message._id
-      ).populate({
-        path: 'sender',
-        select: 'name email profile.photo',
-      });
+      const populatedMessage = await RentSalesMessage.findById(message._id)
+        .populate({
+          path: 'sender',
+          select: 'name email profile.photo',
+        })
+        .exec();
 
       // Broadcast to other participants
       const otherParticipants = conversation.participants.filter(
@@ -633,23 +651,36 @@ export class SocketService {
         );
 
         if (participantSocketId) {
+          console.log(
+            `✉️ Sending message to online participant: ${participant._id.toString()}`
+          );
           this.io.to(participantSocketId).emit('rent_sales_new_message', {
             message: populatedMessage,
             conversationId,
           });
+        } else {
+          console.log(
+            `📵 Participant not online: ${participant._id.toString()}`
+          );
+          // Queue push notification or other offline delivery
         }
       });
 
       // Acknowledge message send
       socket.emit('rent_sales_message_sent', {
         messageId: message._id,
-        sentAt: message.createdAt,
-        // message: populatedMessage,
         conversationId,
+        message: populatedMessage,
+        tempId: tempId, // Return the tempId to match with frontend
       });
+
+      return populatedMessage;
     } catch (error) {
       console.error('❌ Error sending rent/sales message:', error);
-      socket.emit('rent_sales_message_error', { error: error.message });
+      socket.emit('rent_sales_message_error', {
+        error: error.message,
+        tempId: data.tempId,
+      });
     }
   }
 
@@ -721,6 +752,7 @@ export class SocketService {
                 readAt: new Date(),
               },
             },
+            $set: { status: 'READ' },
           },
           { new: true }
         ).populate({

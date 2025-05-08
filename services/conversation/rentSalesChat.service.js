@@ -287,34 +287,48 @@ class RentSalesChatService {
           'Conversation not found or you are not a participant'
         );
       }
-
-      // Create new message
-      const message = new RentSalesMessage({
+      // IMPORTANT: Check for recent duplicate message
+      const recentMessage = await RentSalesMessage.findOne({
         conversation: conversationId,
         sender: userId,
-        content,
-        attachments,
-        status: 'SENT',
+        content: content,
+        createdAt: { $gte: new Date(Date.now() - 5000) },
       });
+      let message;
 
-      await message.save();
+      if (recentMessage) {
+        console.log(
+          `✅ Found duplicate message (${recentMessage._id}), reusing instead of creating new one`
+        );
+        message = recentMessage;
+      } else {
+        // Create new message
+        message = new RentSalesMessage({
+          conversation: conversationId,
+          sender: userId,
+          content,
+          attachments,
+          status: 'SENT',
+        });
 
-      // Update conversation's last message and unread counts
-      conversation.lastMessage = message._id;
-
-      // Update unread counts for all participants except sender
-      for (const participantId of conversation.participants) {
-        if (participantId.toString() !== userId.toString()) {
-          const currentCount =
-            conversation.unreadCounts.get(participantId.toString()) || 0;
-          conversation.unreadCounts.set(
-            participantId.toString(),
-            currentCount + 1
-          );
+        await message.save();
+        // Update conversation's last message and unread counts
+        conversation.lastMessage = message._id;
+        conversation.unreadCounts.set(userId.toString(), 0);
+        // Update unread counts for all participants except sender
+        for (const participantId of conversation.participants) {
+          if (participantId.toString() !== userId.toString()) {
+            const currentCount =
+              conversation.unreadCounts.get(participantId.toString()) || 0;
+            conversation.unreadCounts.set(
+              participantId.toString(),
+              currentCount + 1
+            );
+          }
         }
-      }
 
-      await conversation.save();
+        await conversation.save();
+      }
 
       // Populate message for response
       const populatedMessage = await RentSalesMessage.findById(
@@ -338,6 +352,20 @@ class RentSalesChatService {
           );
         }
       });
+      // Also emit message_sent to the sender if they're connected via socket
+      const senderSocketId = this.socketService.connectedUsers.get(
+        userId.toString()
+      );
+      if (senderSocketId) {
+        this.socketService.io
+          .to(senderSocketId)
+          .emit('rent_sales_message_sent', {
+            messageId: message._id,
+            conversationId,
+            message: populatedMessage,
+            tempId: tempId, // Return tempId if provided
+          });
+      }
 
       // Get property and sender for notifications
       const property = await RentAndSales.findById(
