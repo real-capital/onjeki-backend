@@ -22,7 +22,7 @@ class RentSalesChatService {
       }
 
       const ownerId = property.owner.toString();
-      
+
       // Check if user is trying to message themselves
       if (userId.toString() === ownerId) {
         throw new HttpException(
@@ -34,7 +34,7 @@ class RentSalesChatService {
       // Check if a conversation already exists
       const existingConversation = await RentSalesConversation.findOne({
         participants: { $all: [userId, ownerId] },
-        property: propertyId
+        property: propertyId,
       });
 
       if (existingConversation) {
@@ -50,25 +50,27 @@ class RentSalesChatService {
 
         // Update last message and unread counts
         existingConversation.lastMessage = message._id;
-        
+
         // Update unread counts for owner
-        const currentCount = existingConversation.unreadCounts.get(ownerId) || 0;
+        const currentCount =
+          existingConversation.unreadCounts.get(ownerId) || 0;
         existingConversation.unreadCounts.set(ownerId, currentCount + 1);
-        
+
         await existingConversation.save();
 
         // Populate message with sender details
-        const populatedMessage = await RentSalesMessage.findById(message._id)
-          .populate({
-            path: 'sender',
-            select: 'name email profile.photo',
-          });
+        const populatedMessage = await RentSalesMessage.findById(
+          message._id
+        ).populate({
+          path: 'sender',
+          select: 'name email profile.photo',
+        });
 
         // Notify the property owner via socket if they're online
         if (this.socketService) {
-          this.socketService.notifyUser(ownerId, 'rent_sales_new_message', { 
-            message: populatedMessage, 
-            conversationId: existingConversation._id 
+          this.socketService.notifyUser(ownerId, 'rent_sales_new_message', {
+            message: populatedMessage,
+            conversationId: existingConversation._id,
           });
         }
 
@@ -77,7 +79,7 @@ class RentSalesChatService {
 
         return {
           conversation: existingConversation,
-          message: populatedMessage
+          message: populatedMessage,
         };
       }
 
@@ -86,7 +88,7 @@ class RentSalesChatService {
         participants: [userId, ownerId],
         property: propertyId,
         unreadCounts: new Map([[ownerId, 1]]),
-        status: 'active'
+        status: 'active',
       });
 
       await newConversation.save();
@@ -96,7 +98,7 @@ class RentSalesChatService {
         conversation: newConversation._id,
         sender: userId,
         content: initialMessage,
-        status: 'SENT'
+        status: 'SENT',
       });
 
       await message.save();
@@ -112,17 +114,18 @@ class RentSalesChatService {
       );
 
       // Populate message with sender details
-      const populatedMessage = await RentSalesMessage.findById(message._id)
-        .populate({
-          path: 'sender',
-          select: 'name email profile.photo',
-        });
+      const populatedMessage = await RentSalesMessage.findById(
+        message._id
+      ).populate({
+        path: 'sender',
+        select: 'name email profile.photo',
+      });
 
       // Notify the property owner via socket
       if (this.socketService) {
-        this.socketService.notifyUser(ownerId, 'rent_sales_new_message', { 
-          message: populatedMessage, 
-          conversationId: newConversation._id 
+        this.socketService.notifyUser(ownerId, 'rent_sales_new_message', {
+          message: populatedMessage,
+          conversationId: newConversation._id,
         });
       }
 
@@ -131,7 +134,7 @@ class RentSalesChatService {
 
       return {
         conversation: newConversation,
-        message: populatedMessage
+        message: populatedMessage,
       };
     } catch (error) {
       console.error('Error starting rent/sales conversation:', error);
@@ -139,27 +142,37 @@ class RentSalesChatService {
     }
   }
 
-  async getUserConversations(userId, page = 1, limit = 20) {
+  async getUserConversations(userId, page = 1, limit = 20, role = 'user') {
     try {
       const skip = (page - 1) * limit;
 
-      // Find all rent/sales conversations for this user
-      const conversations = await RentSalesConversation.find({
+      let query = {
         participants: userId,
-        status: 'active'
-      })
+        status: 'active',
+      };
+
+      // If user is in "user" mode, only show conversations where they initiated (they're not the owner)
+      // If user is in "buyer" mode, only show conversations about properties they own
+      if (role === 'user') {
+        query['$expr'] = { $ne: ['$property.owner', userId] };
+      } else if (role === 'buyer') {
+        query['$expr'] = { $eq: ['$property.owner', userId] };
+      }
+
+      // Find all rent/sales conversations for this user
+      const conversations = await RentSalesConversation.find(query)
         .populate('participants', 'name email profile.photo')
         .populate({
           path: 'property',
           select: 'title photo.images price location type status',
-          model: 'RentAndSales'
+          model: 'RentAndSales',
         })
         .populate({
           path: 'lastMessage',
           populate: {
             path: 'sender',
-            select: 'name email profile.photo'
-          }
+            select: 'name email profile.photo',
+          },
         })
         .sort({ updatedAt: -1 })
         .skip(skip)
@@ -167,7 +180,7 @@ class RentSalesChatService {
 
       const total = await RentSalesConversation.countDocuments({
         participants: userId,
-        status: 'active'
+        status: 'active',
       });
 
       return {
@@ -176,8 +189,8 @@ class RentSalesChatService {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
       console.error('Error getting rent/sales conversations:', error);
@@ -192,7 +205,7 @@ class RentSalesChatService {
       // Verify conversation exists and user is a participant
       const conversation = await RentSalesConversation.findOne({
         _id: conversationId,
-        participants: userId
+        participants: userId,
       });
 
       if (!conversation) {
@@ -211,7 +224,7 @@ class RentSalesChatService {
       // Get messages with pagination
       const messages = await RentSalesMessage.find({
         conversation: conversationId,
-        deletedFor: { $ne: userId }
+        deletedFor: { $ne: userId },
       })
         .populate('sender', 'name email profile.photo')
         .sort({ createdAt: -1 })
@@ -221,7 +234,7 @@ class RentSalesChatService {
       // Get total for pagination
       const total = await RentSalesMessage.countDocuments({
         conversation: conversationId,
-        deletedFor: { $ne: userId }
+        deletedFor: { $ne: userId },
       });
 
       // Mark messages as read
@@ -229,16 +242,16 @@ class RentSalesChatService {
         {
           conversation: conversationId,
           sender: { $ne: userId },
-          'readBy.user': { $ne: userId }
+          'readBy.user': { $ne: userId },
         },
         {
           $addToSet: {
             readBy: {
               user: userId,
-              readAt: new Date()
-            }
+              readAt: new Date(),
+            },
           },
-          $set: { status: 'READ' }
+          $set: { status: 'READ' },
         }
       );
 
@@ -251,8 +264,8 @@ class RentSalesChatService {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
       console.error('Error getting conversation messages:', error);
@@ -265,7 +278,7 @@ class RentSalesChatService {
       // Verify conversation exists and user is a participant
       const conversation = await RentSalesConversation.findOne({
         _id: conversationId,
-        participants: userId
+        participants: userId,
       });
 
       if (!conversation) {
@@ -281,51 +294,63 @@ class RentSalesChatService {
         sender: userId,
         content,
         attachments,
-        status: 'SENT'
+        status: 'SENT',
       });
 
       await message.save();
 
       // Update conversation's last message and unread counts
       conversation.lastMessage = message._id;
-      
+
       // Update unread counts for all participants except sender
       for (const participantId of conversation.participants) {
         if (participantId.toString() !== userId.toString()) {
-          const currentCount = conversation.unreadCounts.get(participantId.toString()) || 0;
-          conversation.unreadCounts.set(participantId.toString(), currentCount + 1);
+          const currentCount =
+            conversation.unreadCounts.get(participantId.toString()) || 0;
+          conversation.unreadCounts.set(
+            participantId.toString(),
+            currentCount + 1
+          );
         }
       }
-      
+
       await conversation.save();
 
       // Populate message for response
-      const populatedMessage = await RentSalesMessage.findById(message._id)
-        .populate('sender', 'name email profile.photo');
+      const populatedMessage = await RentSalesMessage.findById(
+        message._id
+      ).populate('sender', 'name email profile.photo');
 
       // Notify other participants via socket
       const otherParticipants = conversation.participants.filter(
-        p => p.toString() !== userId.toString()
+        (p) => p.toString() !== userId.toString()
       );
 
-      otherParticipants.forEach(participantId => {
+      otherParticipants.forEach((participantId) => {
         if (this.socketService) {
-          this.socketService.notifyUser(participantId.toString(), 'rent_sales_new_message', {
-            message: populatedMessage,
-            conversationId: conversation._id
-          });
+          this.socketService.notifyUser(
+            participantId.toString(),
+            'rent_sales_new_message',
+            {
+              message: populatedMessage,
+              conversationId: conversation._id,
+            }
+          );
         }
       });
 
       // Get property and sender for notifications
-      const property = await RentAndSales.findById(conversation.property, 'title');
-      
+      const property = await RentAndSales.findById(
+        conversation.property,
+        'title'
+      );
+
       // Send notifications to other participants
       for (const participantId of otherParticipants) {
         await this.sendNotification(
-          participantId.toString(), 
-          userId, 
-          content, 
+          participantId.toString(),
+          userId,
+          content,
           property
         );
       }
@@ -342,7 +367,7 @@ class RentSalesChatService {
       // Verify user is participant in conversation
       const conversation = await RentSalesConversation.findOne({
         _id: conversationId,
-        participants: userId
+        participants: userId,
       });
 
       if (!conversation) {
@@ -357,16 +382,16 @@ class RentSalesChatService {
         {
           _id: messageId,
           conversation: conversationId,
-          'readBy.user': { $ne: userId }
+          'readBy.user': { $ne: userId },
         },
         {
           $addToSet: {
             readBy: {
               user: userId,
-              readAt: new Date()
-            }
+              readAt: new Date(),
+            },
           },
-          $set: { status: 'READ' }
+          $set: { status: 'READ' },
         },
         { new: true }
       );
@@ -383,11 +408,15 @@ class RentSalesChatService {
 
       // Notify sender that message was read
       if (this.socketService) {
-        this.socketService.notifyUser(message.sender.toString(), 'rent_sales_message_read', {
-          messageId,
-          readBy: userId,
-          conversationId
-        });
+        this.socketService.notifyUser(
+          message.sender.toString(),
+          'rent_sales_message_read',
+          {
+            messageId,
+            readBy: userId,
+            conversationId,
+          }
+        );
       }
 
       return { success: true, message };
@@ -415,11 +444,13 @@ class RentSalesChatService {
         await NotificationService.sendPushNotification({
           userId: recipientId,
           title: `New message about ${propertyTitle}`,
-          body: `${sender.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
+          body: `${sender.name}: ${messageContent.substring(0, 50)}${
+            messageContent.length > 50 ? '...' : ''
+          }`,
           data: {
             type: 'rent_sales_chat',
-            propertyId: property._id.toString()
-          }
+            propertyId: property._id.toString(),
+          },
         });
       } catch (error) {
         console.error('Error sending push notification:', error);
