@@ -14,6 +14,7 @@ import RefundService from '../payment/refund.service.js';
 import EarningService from '../payment/earning.service.js';
 import EarningModel from '../../models/earning.model.js';
 import Conversation from '../../models/conversation.model.js';
+import ConversationService from '../conversation/conversation.service.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
@@ -466,6 +467,48 @@ class BookingService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * Create a conversation between guest and host after booking is confirmed
+   */
+  async createBookingConversation(bookingId) {
+    try {
+      const booking = await BookingModel.findById(bookingId)
+        .populate('property')
+        .populate('guest')
+        .populate('host');
+
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Get service instances
+      const socketService = SocketService.getInstance();
+      const conversationService = new ConversationService(socketService);
+
+      // Create a conversation between guest and host
+      const conversation = await conversationService.createConversation(
+        [booking.guest._id, booking.host._id],
+        {
+          booking: booking._id,
+          property: booking.property._id,
+        }
+      );
+
+      // Add an automatic first message
+      const systemMessage = await conversationService.sendMessage(
+        booking.guest._id,
+        conversation._id,
+        `Booking confirmed! You can now chat with ${booking.host.name} about your stay.`
+      );
+
+      return conversation;
+    } catch (error) {
+      console.error('Error creating booking conversation:', error);
+      // Don't throw, as this is a non-critical operation
+      return null;
     }
   }
   // Method to confirm booking payment

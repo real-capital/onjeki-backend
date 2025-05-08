@@ -176,10 +176,87 @@ export class SocketService {
     );
   }
 
+  // async handleMessageSend(socket, data) {
+  //   try {
+  //     // console.log('📩 Received message data:', data);
+
+  //     const { conversationId, content, attachments } = data;
+  //     const userId = socket.user._id.toString();
+
+  //     // ✅ Validate conversation
+  //     const conversation = await ConversationModel.findById(
+  //       conversationId
+  //     ).populate('participants');
+  //     if (!conversation) throw new Error('Conversation not found');
+
+  //     // ✅ Create new message
+  //     const message = new MessageModel({
+  //       conversation: conversationId,
+  //       sender: userId,
+  //       content,
+  //       attachments: attachments || [],
+  //       status: 'SENT',
+  //     });
+
+  //     await message.save();
+
+  //     // ✅ Update conversation with last message
+  //     conversation.lastMessage = message._id;
+  //     // ✅ Ensure unreadCounts is updated correctly
+  //     conversation.unreadCounts = this.updateUnreadCounts(conversation, userId); // Now a Map ✅
+
+  //     console.log('📌 Updated unreadCounts:', conversation.unreadCounts); // Debugging
+
+  //     await conversation.save();
+
+  //     console.log('📌 Message ID:', message._id);
+
+  //     // ✅ Populate sender details
+  //     const populatedMessage = await MessageModel.findById(message._id)
+  //       .populate({
+  //         path: 'sender',
+  //         model: 'User',
+  //         select: 'name email profileImage',
+  //       })
+  //       .exec();
+
+  //     // console.log('✅ Populated message:', populatedMessage);
+
+  //     // ✅ Broadcast to conversation participants
+  //     const otherParticipants = conversation.participants.filter(
+  //       (p) => p._id.toString() !== userId
+  //     );
+  //     // console.log('📌 Other Participants:', otherParticipants);
+
+  //     // ✅ Debug connected users
+  //     console.log('🔍 Debug connectedUsers:', this.connectedUsers);
+
+  //     otherParticipants.forEach((participant) => {
+  //       const participantSocketId = this.connectedUsers.get(
+  //         participant._id.toString()
+  //       );
+  //       console.log('participantSocketId:', participantSocketId);
+
+  //       if (participantSocketId) {
+  //         this.io
+  //           .to(participantSocketId)
+  //           .emit('new_message', { message: populatedMessage, conversationId });
+  //       }
+  //     });
+
+  //     // ✅ Acknowledge message send
+  //     socket.emit('message_sent', {
+  //       messageId: message._id,
+  //       sentAt: message.createdAt,
+  //     });
+  //   } catch (error) {
+  //     console.error('❌ Error sending message:', error);
+  //     socket.emit('message_error', { error: error.message });
+  //   }
+  // }
+
   async handleMessageSend(socket, data) {
     try {
-      // console.log('📩 Received message data:', data);
-
       const { conversationId, content, attachments } = data;
       const userId = socket.user._id.toString();
 
@@ -187,6 +264,7 @@ export class SocketService {
       const conversation = await ConversationModel.findById(
         conversationId
       ).populate('participants');
+
       if (!conversation) throw new Error('Conversation not found');
 
       // ✅ Create new message
@@ -202,45 +280,47 @@ export class SocketService {
 
       // ✅ Update conversation with last message
       conversation.lastMessage = message._id;
-      // ✅ Ensure unreadCounts is updated correctly
-      conversation.unreadCounts = this.updateUnreadCounts(conversation, userId); // Now a Map ✅
 
-      console.log('📌 Updated unreadCounts:', conversation.unreadCounts); // Debugging
+      // Reset sender's unread count
+      conversation.unreadCounts.set(userId, 0);
+
+      // Increment recipient's unread count
+      conversation.participants.forEach((participant) => {
+        if (participant._id.toString() !== userId) {
+          const currentCount =
+            conversation.unreadCounts.get(participant._id.toString()) || 0;
+          conversation.unreadCounts.set(
+            participant._id.toString(),
+            currentCount + 1
+          );
+        }
+      });
 
       await conversation.save();
-
-      console.log('📌 Message ID:', message._id);
 
       // ✅ Populate sender details
       const populatedMessage = await MessageModel.findById(message._id)
         .populate({
           path: 'sender',
-          model: 'User',
-          select: 'name email profileImage',
+          select: 'name email profile.photo',
         })
         .exec();
-
-      // console.log('✅ Populated message:', populatedMessage);
 
       // ✅ Broadcast to conversation participants
       const otherParticipants = conversation.participants.filter(
         (p) => p._id.toString() !== userId
       );
-      // console.log('📌 Other Participants:', otherParticipants);
-
-      // ✅ Debug connected users
-      console.log('🔍 Debug connectedUsers:', this.connectedUsers);
 
       otherParticipants.forEach((participant) => {
         const participantSocketId = this.connectedUsers.get(
           participant._id.toString()
         );
-        console.log('participantSocketId:', participantSocketId);
 
         if (participantSocketId) {
-          this.io
-            .to(participantSocketId)
-            .emit('new_message', { message: populatedMessage, conversationId });
+          this.io.to(participantSocketId).emit('new_message', {
+            message: populatedMessage,
+            conversationId,
+          });
         }
       });
 
@@ -254,6 +334,7 @@ export class SocketService {
       socket.emit('message_error', { error: error.message });
     }
   }
+
   updateUnreadCounts(conversation, senderId) {
     // Ensure unreadCounts is a Mongoose Map
     if (!(conversation.unreadCounts instanceof Map)) {
@@ -279,20 +360,16 @@ export class SocketService {
       const { messageId, conversationId } = data;
       const userId = socket.user._id.toString();
 
-      console.log(`📩 Read receipt received for message: ${messageId}`);
-      console.log(
-        `✅ Marking message ${messageId} as read in conversation ${conversationId}`
-      );
-
       // ✅ Validate message existence
       const message = await MessageModel.findById(messageId);
       if (!message) {
         console.error('❌ Message not found');
         return socket.emit('message_error', { error: 'Message not found' });
       }
-      // Prevent duplicate read receipts
+
+      // Check if already read by this user
       const alreadyRead = message.readBy.some(
-        (entry) => entry.user.toString() === socket.user._id.toString()
+        (entry) => entry.user.toString() === userId
       );
       // ✅ Validate conversation existence
       const conversation = await ConversationModel.findById(conversationId);
@@ -320,11 +397,12 @@ export class SocketService {
                 readAt: new Date(),
               },
             },
+            $set: { status: 'READ' },
           },
-          { new: true } // ✅ Return updated document
+          { new: true } // Return updated document
         ).populate({
           path: 'readBy.user',
-          select: 'name email', // ✅ Populate read user details
+          select: 'name email profile.photo',
         });
 
         console.log(`✅ Message marked as read by user: ${userId}`);
@@ -338,12 +416,8 @@ export class SocketService {
         socket.to(conversationId).emit('message_read', {
           messageId,
           userId: socket.user._id,
+          conversationId,
         });
-        // socket.to(conversationId).emit('message_read', {
-        //   messageId,
-        //   userId,
-        //   conversationId,
-        // });
 
         // ✅ Send acknowledgment to the user
         socket.emit('message_read_success', {
@@ -357,6 +431,90 @@ export class SocketService {
       socket.emit('message_error', { error: 'Failed to mark message as read' });
     }
   }
+
+  // async handleMessageRead(socket, data) {
+  //   try {
+  //     const { messageId, conversationId } = data;
+  //     const userId = socket.user._id.toString();
+
+  //     console.log(`📩 Read receipt received for message: ${messageId}`);
+  //     console.log(
+  //       `✅ Marking message ${messageId} as read in conversation ${conversationId}`
+  //     );
+
+  //     // ✅ Validate message existence
+  //     const message = await MessageModel.findById(messageId);
+  //     if (!message) {
+  //       console.error('❌ Message not found');
+  //       return socket.emit('message_error', { error: 'Message not found' });
+  //     }
+  //     // Prevent duplicate read receipts
+  //     const alreadyRead = message.readBy.some(
+  //       (entry) => entry.user.toString() === socket.user._id.toString()
+  //     );
+  //     // ✅ Validate conversation existence
+  //     const conversation = await ConversationModel.findById(conversationId);
+  //     if (!conversation) {
+  //       console.error('❌ Conversation not found');
+  //       return socket.emit('message_error', {
+  //         error: 'Conversation not found',
+  //       });
+  //     }
+
+  //     // ✅ Ensure user is a participant of the conversation
+  //     if (!conversation.participants.some((p) => p.toString() === userId)) {
+  //       console.error('❌ User is not part of the conversation');
+  //       return socket.emit('message_error', { error: 'Unauthorized access' });
+  //     }
+
+  //     if (!alreadyRead) {
+  //       // ✅ Mark message as read
+  //       const updatedMessage = await MessageModel.findByIdAndUpdate(
+  //         messageId,
+  //         {
+  //           $addToSet: {
+  //             readBy: {
+  //               user: userId,
+  //               readAt: new Date(),
+  //             },
+  //           },
+  //         },
+  //         { new: true } // ✅ Return updated document
+  //       ).populate({
+  //         path: 'readBy.user',
+  //         select: 'name email', // ✅ Populate read user details
+  //       });
+
+  //       console.log(`✅ Message marked as read by user: ${userId}`);
+
+  //       // ✅ Reset unread count in conversation
+  //       conversation.unreadCounts.set(userId, 0);
+  //       await conversation.save();
+  //       console.log(`📌 Unread count reset for user: ${userId}`);
+
+  //       // ✅ Notify other participants
+  //       socket.to(conversationId).emit('message_read', {
+  //         messageId,
+  //         userId: socket.user._id,
+  //       });
+  //       // socket.to(conversationId).emit('message_read', {
+  //       //   messageId,
+  //       //   userId,
+  //       //   conversationId,
+  //       // });
+
+  //       // ✅ Send acknowledgment to the user
+  //       socket.emit('message_read_success', {
+  //         messageId,
+  //         conversationId,
+  //         readBy: updatedMessage.readBy,
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('❌ Read receipt error:', error);
+  //     socket.emit('message_error', { error: 'Failed to mark message as read' });
+  //   }
+  // }
 
   async handleRentSalesMessageSend(socket, data) {
     try {
