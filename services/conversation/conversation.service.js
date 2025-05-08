@@ -425,7 +425,10 @@ class ConversationService {
       const conversation = await Conversation.findById(conversationId)
         .populate('participants', 'name profile.photo email')
         .populate('property')
-        .populate('booking');
+        .populate({
+          path: 'booking',
+          select: 'checkIn checkOut status',
+        });
 
       console.log(conversation.participants);
       if (!conversation) {
