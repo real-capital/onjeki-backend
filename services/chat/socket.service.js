@@ -316,22 +316,22 @@ export class SocketService {
           participant._id.toString()
         );
         console.log('participantSocketId:', participantSocketId);
-       console.log('📌 Other Participants:', otherParticipants);
+        console.log('📌 Other Participants:', otherParticipants);
 
         if (participantSocketId) {
+          // When emitting to other participants
           this.io.to(participantSocketId).emit('new_message', {
-            message: populatedMessage.content,
+            message: populatedMessage,
             conversationId,
           });
-        }
-      });
 
-      // ✅ Acknowledge message send
-      socket.emit('message_sent', {
-        messageId: message._id,
-        sentAt: message.createdAt,
-        message: populatedMessage.content,
-        conversationId,
+          // When acknowledging to sender
+          socket.emit('message_sent', {
+            messageId: message._id,
+            conversationId,
+            message: populatedMessage,
+          });
+        }
       });
     } catch (error) {
       console.error('❌ Error sending message:', error);
