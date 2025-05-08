@@ -195,18 +195,18 @@ export class SocketService {
       if (!conversation) throw new Error('Conversation not found');
   
       // ✅ Create new message
-      // const message = new MessageModel({
-      //   conversation: conversationId,
-      //   sender: userId,
-      //   content,
-      //   attachments: attachments || [],
-      //   status: 'SENT',
-      // });
+      const message = new MessageModel({
+        conversation: conversationId,
+        sender: userId,
+        content,
+        attachments: attachments || [],
+        status: 'SENT',
+      });
   
-      // await message.save();
+      await message.save();
   
       // ✅ Update conversation with last message
-      // conversation.lastMessage = message._id;
+      conversation.lastMessage = message._id;
   
       // Reset sender's unread count
       conversation.unreadCounts.set(userId, 0);
@@ -264,7 +264,7 @@ export class SocketService {
         // message: populatedMessage,
       });
       
-      // return populatedMessage; // Return the created message
+      return populatedMessage; // Return the created message
     } catch (error) {
       console.error('❌ Error sending message:', error);
       socket.emit('message_error', { error: error.message });

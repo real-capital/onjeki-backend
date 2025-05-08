@@ -295,19 +295,19 @@ class ConversationService {
         throw new HttpException(403, 'Unauthorized to send message');
       }
 
-      const message = new Message({
-        conversation: conversationId,
-        sender: senderId,
-        content,
-        attachments: attachments || [],
-        status: 'SENT',
-      });
+      // const message = new Message({
+      //   conversation: conversationId,
+      //   sender: senderId,
+      //   content,
+      //   attachments: attachments || [],
+      //   status: 'SENT',
+      // });
 
-      await message.save();
-      console.log(`✅ Message saved with ID: ${message._id}`);
+      // await message.save();
+      // console.log(`✅ Message saved with ID: ${message._id}`);
 
-      // Update conversation's last message
-      conversation.lastMessage = message._id;
+      // // Update conversation's last message
+      // conversation.lastMessage = message._id;
 
       // Update unread counts - reset for sender, increment for others
       conversation.unreadCounts.set(senderId.toString(), 0);
@@ -325,36 +325,36 @@ class ConversationService {
       await conversation.save();
 
       // Get socket instance
-      const socketService =
-        this.socketService instanceof SocketService
-          ? this.socketService
-          : SocketService.getInstance();
+      // const socketService =
+      //   this.socketService instanceof SocketService
+      //     ? this.socketService
+      //     : SocketService.getInstance();
 
-      if (!socketService) {
-        throw new Error('Could not get SocketService instance');
-      }
+      // if (!socketService) {
+      //   throw new Error('Could not get SocketService instance');
+      // }
 
-      console.log(`🔔 Notifying participants...`);
+      // console.log(`🔔 Notifying participants...`);
 
-      // Populate message with sender details for real-time updates
-      const populatedMessage = await Message.findById(message._id).populate({
-        path: 'sender',
-        select: 'name profile.photo email',
-      });
+      // // Populate message with sender details for real-time updates
+      // const populatedMessage = await Message.findById(message._id).populate({
+      //   path: 'sender',
+      //   select: 'name profile.photo email',
+      // });
 
-      // Notify other participants via socket
-      const otherParticipants = conversation.participants.filter(
-        (id) => id.toString() !== senderId.toString()
-      );
+      // // Notify other participants via socket
+      // const otherParticipants = conversation.participants.filter(
+      //   (id) => id.toString() !== senderId.toString()
+      // );
 
-      otherParticipants.forEach((participantId) => {
-        socketService.notifyUser(participantId.toString(), 'new_message', {
-          conversationId,
-          message: populatedMessage,
-        });
-      });
+      // otherParticipants.forEach((participantId) => {
+      //   socketService.notifyUser(participantId.toString(), 'new_message', {
+      //     conversationId,
+      //     message: populatedMessage,
+      //   });
+      // });
 
-      return populatedMessage;
+      // return populatedMessage;
     } catch (error) {
       console.error('❌ Error sending message:', error);
       throw new HttpException(500, 'Error sending message: ' + error.message);
