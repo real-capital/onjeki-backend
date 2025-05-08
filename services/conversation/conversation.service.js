@@ -416,6 +416,8 @@ class ConversationService {
   }
 
   async getConversationMessages(conversationId, userId, options = {}) {
+    console.log('userId', userId);
+    console.log('conversationId', conversationId);
     const { page = 1, limit = 50 } = options;
     const skip = (page - 1) * limit;
 
@@ -425,12 +427,17 @@ class ConversationService {
         .populate('property')
         .populate('booking');
 
+      console.log(conversation.participants);
       if (!conversation) {
         throw new HttpException(404, 'Conversation not found');
       }
 
       // Validate user is part of conversation
-      if (!conversation.participants.some((p) => p._id.toString() === userId)) {
+      if (
+        !conversation.participants.some(
+          (p) => p._id.toString() === userId.toString()
+        )
+      ) {
         throw new HttpException(403, 'Unauthorized to view messages');
       }
 
