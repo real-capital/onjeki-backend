@@ -286,7 +286,7 @@ export class SocketService {
 
       // Increment recipient's unread count
       conversation.participants.forEach((participant) => {
-        if (participant._id.toString() !== userId) {
+        if (participant._id.toString() !== userId.toString()) {
           const currentCount =
             conversation.unreadCounts.get(participant._id.toString()) || 0;
           conversation.unreadCounts.set(
@@ -308,7 +308,7 @@ export class SocketService {
 
       // ✅ Broadcast to conversation participants
       const otherParticipants = conversation.participants.filter(
-        (p) => p._id.toString() !== userId
+        (p) => p._id.toString() !== userId.toString()
       );
 
       otherParticipants.forEach((participant) => {
@@ -369,7 +369,7 @@ export class SocketService {
 
       // Check if already read by this user
       const alreadyRead = message.readBy.some(
-        (entry) => entry.user.toString() === userId
+        (entry) => entry.user.toString() === userId.toString()
       );
       // ✅ Validate conversation existence
       const conversation = await ConversationModel.findById(conversationId);
@@ -381,7 +381,7 @@ export class SocketService {
       }
 
       // ✅ Ensure user is a participant of the conversation
-      if (!conversation.participants.some((p) => p.toString() === userId)) {
+      if (!conversation.participants.some((p) => p.toString() === userId.toString())) {
         console.error('❌ User is not part of the conversation');
         return socket.emit('message_error', { error: 'Unauthorized access' });
       }
@@ -544,7 +544,7 @@ export class SocketService {
 
       // Update unread counts
       conversation.participants.forEach((participant) => {
-        if (participant._id.toString() !== userId) {
+        if (participant._id.toString() !== userId.toString()) {
           const currentCount =
             conversation.unreadCounts.get(participant._id.toString()) || 0;
           conversation.unreadCounts.set(
@@ -566,7 +566,7 @@ export class SocketService {
 
       // Broadcast to other participants
       const otherParticipants = conversation.participants.filter(
-        (p) => p._id.toString() !== userId
+        (p) => p._id.toString() !== userId.toString()
       );
 
       otherParticipants.forEach((participant) => {
@@ -630,7 +630,7 @@ export class SocketService {
 
       // Check if already read
       const alreadyRead = message.readBy.some(
-        (entry) => entry.user.toString() === userId
+        (entry) => entry.user.toString() === userId.toString()
       );
 
       // Validate conversation
