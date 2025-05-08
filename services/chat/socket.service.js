@@ -315,10 +315,12 @@ export class SocketService {
         const participantSocketId = this.connectedUsers.get(
           participant._id.toString()
         );
+        console.log('participantSocketId:', participantSocketId);
+       console.log('📌 Other Participants:', otherParticipants);
 
         if (participantSocketId) {
           this.io.to(participantSocketId).emit('new_message', {
-            message: populatedMessage,
+            message: populatedMessage.content,
             conversationId,
           });
         }
@@ -328,7 +330,7 @@ export class SocketService {
       socket.emit('message_sent', {
         messageId: message._id,
         sentAt: message.createdAt,
-        message: populatedMessage,
+        message: populatedMessage.content,
         conversationId,
       });
     } catch (error) {
