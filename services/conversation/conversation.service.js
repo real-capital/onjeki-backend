@@ -275,91 +275,210 @@ class ConversationService {
       );
     }
   }
-
-  async sendMessage(senderId, conversationId, content, attachments = []) {
+  async sendMessage(req, res) {
     try {
-      console.log(
-        `📩 New message from ${senderId} in conversation ${conversationId}`
-      );
-      console.log(`📝 Message content: ${content}`);
+      const { conversationId } = req.params;
+      const { content, attachments, tempId } = req.body;
+      const userId = req.user._id;
 
-      const conversation = await Conversation.findById(conversationId);
+      console.log(
+        `📩 HTTP API message: ${content} from ${userId} in conversation ${conversationId}`
+      );
+
+      // Validate conversation
+      const conversation = await ConversationModel.findById(conversationId);
       if (!conversation) {
-        console.error('❌ Conversation not found');
-        throw new HttpException(404, 'Conversation not found');
+        return res.status(404).json({ message: 'Conversation not found' });
       }
 
       // Check if sender is part of the conversation
-      if (!conversation.participants.includes(senderId)) {
-        console.error('❌ Unauthorized to send message');
-        throw new HttpException(403, 'Unauthorized to send message');
+      if (
+        !conversation.participants.some(
+          (p) => p.toString() === userId.toString()
+        )
+      ) {
+        return res
+          .status(403)
+          .json({ message: 'Unauthorized to send message' });
       }
 
-      // const message = new Message({
-      //   conversation: conversationId,
-      //   sender: senderId,
-      //   content,
-      //   attachments: attachments || [],
-      //   status: 'SENT',
-      // });
-
-      // await message.save();
-      // console.log(`✅ Message saved with ID: ${message._id}`);
-
-      // // Update conversation's last message
-      // conversation.lastMessage = message._id;
-
-      // Update unread counts - reset for sender, increment for others
-      conversation.unreadCounts.set(senderId.toString(), 0);
-      conversation.participants.forEach((participantId) => {
-        if (participantId.toString() !== senderId.toString()) {
-          const currentCount =
-            conversation.unreadCounts.get(participantId.toString()) || 0;
-          conversation.unreadCounts.set(
-            participantId.toString(),
-            currentCount + 1
-          );
-        }
+      // IMPORTANT: Check for recent duplicate message
+      const recentMessage = await MessageModel.findOne({
+        conversation: conversationId,
+        sender: userId,
+        content: content,
+        createdAt: { $gte: new Date(Date.now() - 5000) },
       });
 
-      await conversation.save();
+      let message;
 
-      // Get socket instance
-      // const socketService =
-      //   this.socketService instanceof SocketService
-      //     ? this.socketService
-      //     : SocketService.getInstance();
+      if (recentMessage) {
+        console.log(
+          `✅ Found duplicate message (${recentMessage._id}), reusing instead of creating new one`
+        );
+        message = recentMessage;
+      } else {
+        // Create new message if no duplicate exists
+        message = new MessageModel({
+          conversation: conversationId,
+          sender: userId,
+          content,
+          attachments: attachments || [],
+          status: 'SENT',
+        });
 
-      // if (!socketService) {
-      //   throw new Error('Could not get SocketService instance');
-      // }
+        await message.save();
+        console.log(`✅ New message created with ID: ${message._id}`);
 
-      // console.log(`🔔 Notifying participants...`);
+        // Update conversation with last message
+        conversation.lastMessage = message._id;
 
-      // // Populate message with sender details for real-time updates
-      // const populatedMessage = await Message.findById(message._id).populate({
-      //   path: 'sender',
-      //   select: 'name profile.photo email',
-      // });
+        // Update unread counts
+        conversation.unreadCounts.set(userId.toString(), 0);
+        conversation.participants.forEach((participantId) => {
+          if (participantId.toString() !== userId.toString()) {
+            const currentCount =
+              conversation.unreadCounts.get(participantId.toString()) || 0;
+            conversation.unreadCounts.set(
+              participantId.toString(),
+              currentCount + 1
+            );
+          }
+        });
 
-      // // Notify other participants via socket
-      // const otherParticipants = conversation.participants.filter(
-      //   (id) => id.toString() !== senderId.toString()
-      // );
+        await conversation.save();
+      }
 
-      // otherParticipants.forEach((participantId) => {
-      //   socketService.notifyUser(participantId.toString(), 'new_message', {
-      //     conversationId,
-      //     message: populatedMessage,
-      //   });
-      // });
+      // Populate message with sender details
+      const populatedMessage = await MessageModel.findById(message._id)
+        .populate({
+          path: 'sender',
+          select: 'name email profile.photo',
+        })
+        .exec();
 
-      // return populatedMessage;
+      // Get socket instance to notify other participants
+      const socketService = SocketService.getInstance();
+      if (socketService) {
+        // Notify other participants via socket
+        const otherParticipants = conversation.participants.filter(
+          (p) => p.toString() !== userId.toString()
+        );
+
+        otherParticipants.forEach((participantId) => {
+          socketService.notifyUser(participantId.toString(), 'new_message', {
+            message: populatedMessage,
+            conversationId,
+          });
+        });
+
+        // Also emit message_sent to the sender if they're connected via socket
+        const senderSocketId = socketService.connectedUsers.get(
+          userId.toString()
+        );
+        if (senderSocketId) {
+          socketService.io.to(senderSocketId).emit('message_sent', {
+            messageId: message._id,
+            conversationId,
+            message: populatedMessage,
+            tempId: tempId, // Return tempId if provided
+          });
+        }
+      }
+
+      return res.status(201).json(populatedMessage);
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      throw new HttpException(500, 'Error sending message: ' + error.message);
+      return res
+        .status(500)
+        .json({ message: 'Error sending message', error: error.message });
     }
   }
+
+  // async sendMessage(senderId, conversationId, content, attachments = []) {
+  //   try {
+  //     console.log(
+  //       `📩 New message from ${senderId} in conversation ${conversationId}`
+  //     );
+  //     console.log(`📝 Message content: ${content}`);
+
+  //     const conversation = await Conversation.findById(conversationId);
+  //     if (!conversation) {
+  //       console.error('❌ Conversation not found');
+  //       throw new HttpException(404, 'Conversation not found');
+  //     }
+
+  //     // Check if sender is part of the conversation
+  //     if (!conversation.participants.includes(senderId)) {
+  //       console.error('❌ Unauthorized to send message');
+  //       throw new HttpException(403, 'Unauthorized to send message');
+  //     }
+
+  //     const message = new Message({
+  //       conversation: conversationId,
+  //       sender: senderId,
+  //       content,
+  //       attachments: attachments || [],
+  //       status: 'SENT',
+  //     });
+
+  //     await message.save();
+  //     console.log(`✅ Message saved with ID: ${message._id}`);
+
+  //     // Update conversation's last message
+  //     conversation.lastMessage = message._id;
+
+  //     // Update unread counts - reset for sender, increment for others
+  //     conversation.unreadCounts.set(senderId.toString(), 0);
+  //     conversation.participants.forEach((participantId) => {
+  //       if (participantId.toString() !== senderId.toString()) {
+  //         const currentCount =
+  //           conversation.unreadCounts.get(participantId.toString()) || 0;
+  //         conversation.unreadCounts.set(
+  //           participantId.toString(),
+  //           currentCount + 1
+  //         );
+  //       }
+  //     });
+
+  //     await conversation.save();
+
+  //     // Get socket instance
+  //     const socketService =
+  //       this.socketService instanceof SocketService
+  //         ? this.socketService
+  //         : SocketService.getInstance();
+
+  //     if (!socketService) {
+  //       throw new Error('Could not get SocketService instance');
+  //     }
+
+  //     console.log(`🔔 Notifying participants...`);
+
+  //     // Populate message with sender details for real-time updates
+  //     const populatedMessage = await Message.findById(message._id).populate({
+  //       path: 'sender',
+  //       select: 'name profile.photo email',
+  //     });
+
+  //     // Notify other participants via socket
+  //     const otherParticipants = conversation.participants.filter(
+  //       (id) => id.toString() !== senderId.toString()
+  //     );
+
+  //     otherParticipants.forEach((participantId) => {
+  //       socketService.notifyUser(participantId.toString(), 'new_message', {
+  //         conversationId,
+  //         message: populatedMessage,
+  //       });
+  //     });
+
+  //     return populatedMessage;
+  //   } catch (error) {
+  //     console.error('❌ Error sending message:', error);
+  //     throw new HttpException(500, 'Error sending message: ' + error.message);
+  //   }
+  // }
 
   async getConversations(userId, options = {}) {
     const { page = 1, limit = 20, status = 'active' } = options;

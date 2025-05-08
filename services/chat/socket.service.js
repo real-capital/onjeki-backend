@@ -184,95 +184,210 @@ export class SocketService {
 
   async handleMessageSend(socket, data) {
     try {
-      const { conversationId, content, attachments } = data;
+      const { conversationId, content, attachments, tempId } = data;
       const userId = socket.user._id.toString();
-  
-      // ✅ Validate conversation
+
+      console.log(
+        `📩 Socket message: ${content} from ${userId} in conversation ${conversationId}`
+      );
+      console.log(`With tempId: ${tempId || 'none'}`);
+
+      // Validate conversation
       const conversation = await ConversationModel.findById(
         conversationId
       ).populate('participants');
-  
+
       if (!conversation) throw new Error('Conversation not found');
-  
-      // ✅ Create new message
-      const message = new MessageModel({
+
+      // IMPORTANT: Check for recent duplicate message (within last 5 seconds)
+      const recentMessage = await MessageModel.findOne({
         conversation: conversationId,
         sender: userId,
-        content,
-        attachments: attachments || [],
-        status: 'SENT',
+        content: content,
+        createdAt: { $gte: new Date(Date.now() - 5000) },
       });
-  
-      await message.save();
-  
-      // ✅ Update conversation with last message
-      conversation.lastMessage = message._id;
-  
-      // Reset sender's unread count
-      conversation.unreadCounts.set(userId, 0);
-  
-      // Increment recipient's unread count
-      conversation.participants.forEach((participant) => {
-        if (participant._id.toString() !== userId.toString()) {
-          const currentCount =
-            conversation.unreadCounts.get(participant._id.toString()) || 0;
-          conversation.unreadCounts.set(
-            participant._id.toString(),
-            currentCount + 1
-          );
-        }
-      });
-  
-      await conversation.save();
-  
-      // ✅ Populate sender details
+
+      let message;
+
+      if (recentMessage) {
+        console.log(
+          `✅ Found duplicate message (${recentMessage._id}), reusing instead of creating new one`
+        );
+        message = recentMessage;
+      } else {
+        // Create new message if no duplicate exists
+        message = new MessageModel({
+          conversation: conversationId,
+          sender: userId,
+          content,
+          attachments: attachments || [],
+          status: 'SENT',
+        });
+
+        await message.save();
+        console.log(`✅ New message created with ID: ${message._id}`);
+
+        // Update conversation's last message
+        conversation.lastMessage = message._id;
+
+        // Reset sender's unread count
+        conversation.unreadCounts.set(userId, 0);
+
+        // Increment recipient's unread count
+        conversation.participants.forEach((participant) => {
+          if (participant._id.toString() !== userId.toString()) {
+            const currentCount =
+              conversation.unreadCounts.get(participant._id.toString()) || 0;
+            conversation.unreadCounts.set(
+              participant._id.toString(),
+              currentCount + 1
+            );
+          }
+        });
+
+        await conversation.save();
+      }
+
+      // Populate sender details
       const populatedMessage = await MessageModel.findById(message._id)
         .populate({
           path: 'sender',
           select: 'name email profile.photo',
         })
         .exec();
-  
-      // ✅ Broadcast to conversation participants
+
+      // Broadcast to conversation participants
       const otherParticipants = conversation.participants.filter(
         (p) => p._id.toString() !== userId.toString()
       );
-  
+
       // Send to other participants who are online
       otherParticipants.forEach((participant) => {
         const participantId = participant._id.toString();
-        console.log('Looking for participant:', participantId);
         const participantSocketId = this.connectedUsers.get(participantId);
-        console.log('Found socket ID:', participantSocketId);
-        
+
         if (participantSocketId) {
-          console.log(`Sending message to online participant: ${participantId}`);
+          console.log(
+            `✉️ Sending message to online participant: ${participantId}`
+          );
           this.io.to(participantSocketId).emit('new_message', {
             message: populatedMessage,
             conversationId,
           });
         } else {
-          console.log(`Participant not online: ${participantId}`);
-          // Optional: queue push notification or other offline delivery
+          console.log(`📵 Participant not online: ${participantId}`);
+          // Queue push notification or other offline delivery
         }
       });
-  
-      // Always send confirmation to sender (outside the loop)
+
+      // Send confirmation to sender with tempId to link with optimistic message
       socket.emit('message_sent', {
         messageId: message._id,
         conversationId,
-        // message: populatedMessage,
+        message: populatedMessage,
+        tempId: tempId, // Return the tempId to match with frontend
       });
-      
-      return populatedMessage; // Return the created message
+
+      return populatedMessage;
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      socket.emit('message_error', { error: error.message });
-      throw error; // Re-throw to allow handling at a higher level
+      socket.emit('message_error', {
+        error: error.message,
+        tempId: data.tempId,
+      });
+      throw error;
     }
   }
 
+  // async handleMessageSend(socket, data) {
+  //   try {
+  //     const { conversationId, content, attachments } = data;
+  //     const userId = socket.user._id.toString();
 
+  //     // ✅ Validate conversation
+  //     const conversation = await ConversationModel.findById(
+  //       conversationId
+  //     ).populate('participants');
+
+  //     if (!conversation) throw new Error('Conversation not found');
+
+  //     // ✅ Create new message
+  //     const message = new MessageModel({
+  //       conversation: conversationId,
+  //       sender: userId,
+  //       content,
+  //       attachments: attachments || [],
+  //       status: 'SENT',
+  //     });
+
+  //     await message.save();
+
+  //     // ✅ Update conversation with last message
+  //     conversation.lastMessage = message._id;
+
+  //     // Reset sender's unread count
+  //     conversation.unreadCounts.set(userId, 0);
+
+  //     // Increment recipient's unread count
+  //     conversation.participants.forEach((participant) => {
+  //       if (participant._id.toString() !== userId.toString()) {
+  //         const currentCount =
+  //           conversation.unreadCounts.get(participant._id.toString()) || 0;
+  //         conversation.unreadCounts.set(
+  //           participant._id.toString(),
+  //           currentCount + 1
+  //         );
+  //       }
+  //     });
+
+  //     await conversation.save();
+
+  //     // ✅ Populate sender details
+  //     const populatedMessage = await MessageModel.findById(message._id)
+  //       .populate({
+  //         path: 'sender',
+  //         select: 'name email profile.photo',
+  //       })
+  //       .exec();
+
+  //     // ✅ Broadcast to conversation participants
+  //     const otherParticipants = conversation.participants.filter(
+  //       (p) => p._id.toString() !== userId.toString()
+  //     );
+
+  //     // Send to other participants who are online
+  //     otherParticipants.forEach((participant) => {
+  //       const participantId = participant._id.toString();
+  //       console.log('Looking for participant:', participantId);
+  //       const participantSocketId = this.connectedUsers.get(participantId);
+  //       console.log('Found socket ID:', participantSocketId);
+
+  //       if (participantSocketId) {
+  //         console.log(`Sending message to online participant: ${participantId}`);
+  //         this.io.to(participantSocketId).emit('new_message', {
+  //           message: populatedMessage,
+  //           conversationId,
+  //         });
+  //       } else {
+  //         console.log(`Participant not online: ${participantId}`);
+  //         // Optional: queue push notification or other offline delivery
+  //       }
+  //     });
+
+  //     // Always send confirmation to sender (outside the loop)
+  //     socket.emit('message_sent', {
+  //       messageId: message._id,
+  //       conversationId,
+  //       // message: populatedMessage,
+  //     });
+
+  //     return populatedMessage; // Return the created message
+  //   } catch (error) {
+  //     console.error('❌ Error sending message:', error);
+  //     socket.emit('message_error', { error: error.message });
+  //     throw error; // Re-throw to allow handling at a higher level
+  //   }
+  // }
 
   updateUnreadCounts(conversation, senderId) {
     // Ensure unreadCounts is a Mongoose Map
