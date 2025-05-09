@@ -98,18 +98,6 @@ export class SocketService {
           `📥 ${socket.user._id} joined conversation ${conversationId}`
         );
       });
-      socket.on(
-        'rent_sales_send_message',
-        this.handleRentSalesMessageSend.bind(this, socket)
-      );
-      socket.on(
-        'rent_sales_typing',
-        this.handleRentSalesTypingEvent.bind(this, socket)
-      );
-      socket.on(
-        'rent_sales_mark_read',
-        this.handleRentSalesMessageRead.bind(this, socket)
-      );
 
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
@@ -143,6 +131,18 @@ export class SocketService {
     //   // Read receipts
     socket.on('mark_read', this.handleMessageRead.bind(this, socket));
 
+    socket.on(
+      'rent_sales_send_message',
+      this.handleRentSalesMessageSend.bind(this, socket)
+    );
+    socket.on(
+      'rent_sales_typing',
+      this.handleRentSalesTypingEvent.bind(this, socket)
+    );
+    socket.on(
+      'rent_sales_mark_read',
+      this.handleRentSalesMessageRead.bind(this, socket)
+    );
     // ✅ Listen for disconnect
     socket.on('disconnect', () => {
       this.connectedUsers.delete(userId);
