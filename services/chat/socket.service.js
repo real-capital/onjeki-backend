@@ -591,7 +591,7 @@ export class SocketService {
       if (!conversation) throw new Error('Conversation not found');
 
       // Create new message
-      const recentMessage = new RentSalesMessage({
+      const recentMessage = new RentSalesMessage.findOne({
         conversation: conversationId,
         sender: userId,
         content,
