@@ -335,53 +335,58 @@ class RentSalesChatService {
         message._id
       ).populate('sender', 'name email profile.photo');
 
-      // Notify other participants via socket
-      const otherParticipants = conversation.participants.filter(
-        (p) => p.toString() !== userId.toString()
-      );
+      const socketService = SocketService.getInstance();
+      if (socketService) { 
 
-      otherParticipants.forEach((participantId) => {
-        if (this.socketService) {
-          this.socketService.notifyUser(
-            participantId.toString(),
-            'rent_sales_new_message',
-            {
+        // Notify other participants via socket
+        const otherParticipants = conversation.participants.filter(
+          (p) => p.toString() !== userId.toString()
+        );
+  
+        otherParticipants.forEach((participantId) => {
+          if (socketService) {
+            socketService.notifyUser(
+              participantId.toString(),
+              'rent_sales_new_message',
+              {
+                message: populatedMessage,
+                conversationId: conversation._id,
+              }
+            );
+          }
+        });
+        // Also emit message_sent to the sender if they're connected via socket
+        const senderSocketId = socketService.connectedUsers.get(
+          userId.toString()
+        );
+        if (senderSocketId) {
+          socketService.io
+            .to(senderSocketId)
+            .emit('rent_sales_message_sent', {
+              messageId: message._id,
+              conversationId,
               message: populatedMessage,
-              conversationId: conversation._id,
-            }
-          );
+              tempId: tempId, // Return tempId if provided
+            });
         }
-      });
-      // Also emit message_sent to the sender if they're connected via socket
-      const senderSocketId = this.socketService.connectedUsers.get(
-        userId.toString()
-      );
-      if (senderSocketId) {
-        this.socketService.io
-          .to(senderSocketId)
-          .emit('rent_sales_message_sent', {
-            messageId: message._id,
-            conversationId,
-            message: populatedMessage,
-            tempId: tempId, // Return tempId if provided
-          });
+  
+        // Get property and sender for notifications
+        // const property = await RentAndSales.findById(
+        //   conversation.property,
+        //   'title'
+        // );
+  
+        // // Send notifications to other participants
+        // for (const participantId of otherParticipants) {
+        //   await this.sendNotification(
+        //     participantId.toString(),
+        //     userId,
+        //     content,
+        //     property
+        //   );
+        // }
       }
 
-      // Get property and sender for notifications
-      // const property = await RentAndSales.findById(
-      //   conversation.property,
-      //   'title'
-      // );
-
-      // // Send notifications to other participants
-      // for (const participantId of otherParticipants) {
-      //   await this.sendNotification(
-      //     participantId.toString(),
-      //     userId,
-      //     content,
-      //     property
-      //   );
-      // }
 
       return populatedMessage;
     } catch (error) {
