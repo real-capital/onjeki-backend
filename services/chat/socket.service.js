@@ -578,6 +578,10 @@ export class SocketService {
     try {
       const { conversationId, content, attachments, tempId } = data;
       const userId = socket.user._id.toString();
+      console.log(
+        `📩 Socket message: ${content} from ${userId} in conversation ${conversationId}`
+      );
+      console.log(`With tempId: ${tempId || 'none'}`);
 
       // Validate conversation
       const conversation = await RentSalesConversation.findById(
@@ -591,8 +595,6 @@ export class SocketService {
         conversation: conversationId,
         sender: userId,
         content,
-        attachments: attachments || [],
-        status: 'SENT',
         createdAt: { $gte: new Date(Date.now() - 5000) },
       });
       let message;
@@ -646,22 +648,19 @@ export class SocketService {
       );
 
       otherParticipants.forEach((participant) => {
-        const participantSocketId = this.connectedUsers.get(
-          participant._id.toString()
-        );
+        const participantId = participant._id.toString();
+        const participantSocketId = this.connectedUsers.get(participantId);
 
         if (participantSocketId) {
           console.log(
-            `✉️ Sending message to online participant: ${participant._id.toString()}`
+            `✉️ Sending message to online participant: ${participantId}`
           );
           this.io.to(participantSocketId).emit('rent_sales_new_message', {
             message: populatedMessage,
             conversationId,
           });
         } else {
-          console.log(
-            `📵 Participant not online: ${participant._id.toString()}`
-          );
+          console.log(`📵 Participant not online: ${participantId}`);
           // Queue push notification or other offline delivery
         }
       });
@@ -681,6 +680,7 @@ export class SocketService {
         error: error.message,
         tempId: data.tempId,
       });
+      throw error;
     }
   }
 
