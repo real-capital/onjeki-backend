@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes';
 import EarningService from '../../services/payment/earning.service.js';
 import { logger } from '../../utils/logger.js';
 
