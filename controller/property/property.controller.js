@@ -575,78 +575,6 @@ class PropertyController {
     };
   };
 
-  // parseSearchParams = (req) => {
-  //   const {
-  //     search,
-  //     page = 1,
-  //     limit = 10,
-  //     type,
-  //     buildingType,
-  //     space,
-  //     minPrice,
-  //     maxPrice,
-  //     city,
-  //     state,
-  //     country,
-  //     amenities,
-  //     guests,
-  //     bedrooms,
-  //     sortBy = 'createdAt',
-  //     sortOrder = 'asc',
-  //     listStatus = 'Approved',
-  //     isBooked,
-  //     isFurnished,
-  //   } = req.query;
-
-  //   if (search) filters.search = search;
-  //   const filters = {};
-
-  //   // Add filters only if they exist
-  //   if (type) filters.type = type;
-  //   if (buildingType) filters.buildingType = buildingType;
-  //   if (space) filters.space = space;
-  //   if (listStatus) filters.listStatus = listStatus;
-
-  //   // Price range
-  //   if (minPrice || maxPrice) {
-  //     filters.priceRange = {
-  //       min: minPrice ? Number(minPrice) : undefined,
-  //       max: maxPrice ? Number(maxPrice) : undefined,
-  //     };
-  //   }
-
-  //   // Location
-  //   if (city || state || country) {
-  //     filters.location = {};
-  //     if (city) filters.location.city = city;
-  //     if (state) filters.location.state = state;
-  //     if (country) filters.location.country = country;
-  //   }
-
-  //   // Amenities
-  //   if (amenities) {
-  //     filters.amenities = amenities.split(',').map((id) => id.trim());
-  //   }
-
-  //   // Numeric filters
-  //   if (guests) filters.guests = Number(guests);
-  //   if (bedrooms) filters.bedrooms = Number(bedrooms);
-
-  //   // Boolean filters
-  //   if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
-  //   if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
-
-  //   return {
-  //     filters,
-  //     pagination: {
-  //       page: Number(page),
-  //       limit: Number(limit),
-  //     },
-  //     sort: {
-  //       [sortBy]: sortOrder === 'asc' ? 1 : -1,
-  //     },
-  //   };
-  // };
 
   async bulkUpdateCalendar(req, res) {
     try {
@@ -683,25 +611,6 @@ class PropertyController {
     }
   }
 
-  // export const updateAvailability = catchAsync(async (req, res, next) => {
-  //   const { dates, status } = req.body;
-
-  //   const property = await Property.findOne({
-  //     _id: req.params.id,
-  //     host: req.user.id
-  //   });
-
-  //   if (!property) {
-  //     return next(new AppError('Property not found or unauthorized', 404));
-  //   }
-
-  //   await property.updateAvailability(dates.map(date => new Date(date)), status);
-
-  //   res.status(200).json({
-  //     status: 'success',
-  //     data: { property }
-  //   });
-  // });
 }
 
 export default PropertyController;

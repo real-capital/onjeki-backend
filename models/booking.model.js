@@ -201,20 +201,6 @@ bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 });
 bookingSchema.index({ guest: 1, status: 1 });
 bookingSchema.index({ host: 1, status: 1 });
 
-// Middleware
-// bookingSchema.pre('save', async function (next) {
-//   if (this.isNew) {
-//     // Create conversation for booking
-//     const conversation = await Conversation.create({
-//       booking: this._id,
-//       participants: [this.guest, this.host],
-//       property: this.property,
-//     });
-//     this.conversation = conversation._id;
-//   }
-//   next();
-// });
-
 // Methods
 bookingSchema.methods = {
   async acceptByHost() {

@@ -118,29 +118,3 @@ class BookingRoute extends Route {
 }
 
 export default BookingRoute;
-// router.post(
-//   '/properties/:propertyId/calculate',
-//   authMiddleware,
-//   validateBookingDates,
-//   catchAsync(bookingController.calculatePrice)
-// );
-
-// router.post(
-//   '/bookings',
-//   authMiddleware,
-//   validateBookingCreate,
-//   catchAsync(bookingController.createBooking)
-// );
-
-// router.get(
-//   '/bookings/:bookingId',
-//   authMiddleware,
-//   catchAsync(bookingController.getBooking)
-// );
-
-// router.post(
-//   '/bookings/:bookingId/cancel',
-//   authMiddleware,
-//   validateCancellation,
-//   catchAsync(bookingController.cancelBooking)
-// );

@@ -80,20 +80,7 @@ class EarningController {
     }
   };
 
-  // Get earnings summary
-  // async getEarningsSummary(req, res, next) {
-  //   try {
-  //     const hostId = req.user.id;
-  //     const summary = await earningService.getEarningsSummary(hostId);
 
-  //     res.status(200).json({
-  //       success: true,
-  //       data: summary,
-  //     });
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // }
 
   // Get earnings history
   async getEarningsHistory(req, res, next) {

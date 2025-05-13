@@ -107,34 +107,6 @@ class AuthController {
     }
   }
 
-  // Google Login
-  //   async googleLogin(req, res, next) {
-  //     try {
-  //       const { idToken } = req.body; // The ID token sent from Flutter
-
-  //       if (!idToken) {
-  //         return next(
-  //           new HttpException(StatusCodes.BAD_REQUEST, 'ID token is required')
-  //         );
-  //       }
-
-  //       // Verify the Google ID token
-  //       const profile = await verifyGoogleToken(idToken);
-
-  //       // Call AuthService to create or update the user
-  //       const user = await authService.createOrUpdateUser(profile);
-
-  //       // Respond with user details (you can also generate a JWT token here)
-  //       res.status(StatusCodes.OK).json({
-  //         status: 'success',
-  //         message: 'User successfully logged in or created',
-  //         user: user,
-  //       });
-  //     } catch (error) {
-  //       next(error);
-  //     }
-  //   }
-
   async startGoogleLogin(req, res) {
     const redirectUri = CALLBACK_URL; // The URL to which Google will redirect the user after login
     const googleAuthUrl =

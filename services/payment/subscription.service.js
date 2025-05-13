@@ -467,25 +467,6 @@ class SubscriptionService {
     }
   }
 
-  // Process Subscription Renewals (Cron Job)
-  //   async processSubscriptionRenewals() {
-  //     const expiringSubscriptions = await SubscriptionModel.find({
-  //       status: 'active',
-  //       currentPeriodEnd: {
-  //         $gte: new Date(),
-  //         $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  //       },
-  //     });
-
-  //     for (let subscription of expiringSubscriptions) {
-  //       try {
-  //         await this.attemptSubscriptionRenewal(subscription);
-  //       } catch (error) {
-  //         // Log failure, send notification
-  //         await this.handleRenewalFailure(subscription);
-  //       }
-  //     }
-  //   }
 
   // Automatic Renewal Method
   async automaticRenewal(subscription) {
