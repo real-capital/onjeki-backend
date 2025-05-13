@@ -7,6 +7,7 @@ import { validate } from '../../middlewares/validation.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import { validateSearchQuery } from '../../validation/validateSearch.js';
 import RentOrSalesController from '../../controller/property/rent.controller.js';
+
 const storage = multer.diskStorage({
   filename: function (req, file, callback) {
     callback(null, file.originalname);
