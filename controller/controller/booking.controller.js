@@ -12,10 +12,13 @@ import PaymentModel from '../../models/paymentModel.js';
 import WebhookMonitorService from '../../services/payment/webhook_montor.service.js';
 import SubscriptionModel from '../../models/subscription.model.js';
 import SubscriptionService from '../../services/payment/subscription.service.js';
+import PayoutService from '../../services/payment/payout.service.js';
+import EarningService from '../../services/payment/earning.service.js';
 
 const paystackService = new PaystackService();
 const webhookMonitorService = new WebhookMonitorService();
 const subscriptionService = new SubscriptionService();
+const payoutService = new PayoutService();
 
 class BookingController {
   constructor(bookingService) {
@@ -47,6 +50,13 @@ class BookingController {
     this.handleSuccessfulCharge = this.handleSuccessfulCharge.bind(this);
     this.handleSubscriptionRenewal = this.handleSubscriptionRenewal.bind(this);
     this.verifySubscriptionRenewal = this.verifySubscriptionRenewal.bind(this);
+    // Add these to your binds in the constructor
+    this.completeBooking = this.completeBooking.bind(this);
+    this.guestCheckout = this.guestCheckout.bind(this);
+    this.hostCompleteBooking = this.hostCompleteBooking.bind(this);
+    this.getHostBookingsWithEarnings =
+      this.getHostBookingsWithEarnings.bind(this);
+    this.checkPayoutEligibility = this.checkPayoutEligibility.bind(this);
     this.callback = this.callback.bind(this);
 
     this.handleSubscriptionCreation =
@@ -133,13 +143,34 @@ class BookingController {
         case 'subscription.renewal':
           await this.handleSubscriptionRenewal(event.data);
           break;
+        // Transfer (payout) related events
+        case 'transfer.success':
+        case 'transfer.failed':
+        case 'transfer.reversed':
+          await payoutService.handleTransferEvent(event);
+          logger.info(`Handled transfer event: ${event.event}`, {
+            reference: event.data.reference,
+          });
+          break;
         default:
           logger.info('Unhandled Paystack event', { event: event.event });
       }
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
-      logger.error('Webhook processing error', error);
+      if (error.message.includes('transfer')) {
+        logger.error('Error processing transfer webhook', {
+          error,
+          eventType: event.event,
+          reference: event.data?.reference,
+        });
+      } else {
+        logger.error('Error processing webhook', {
+          error,
+        });
+        // Existing error handling
+      }
+
       res
         .status(500)
         .json({ status: 'error', message: 'Webhook processing failed' });
@@ -569,32 +600,17 @@ class BookingController {
 
   confirmBooking = async (req, res, next) => {
     try {
-      await this.bookingService.confirmBookingPayment(payment.booking._id);
-      // const booking = await BookingModel.findOne({
-      //   _id: req.params.id,
-      //   host: req.user.id,
-      //   status: 'Pending',
-      // });
+      const bookingId = req.params.id;
+      await this.bookingService.confirmBookingPayment(bookingId);
 
-      // if (!booking) {
-      //   throw new HttpException(
-      //     StatusCodes.NOT_FOUND,
-      //     'Booking not found or cannot be confirmed'
-      //   );
-      // }
-
-      // booking.status = BookingStatus.CONFIRMED;
-      // await booking.save();
-
-      // res.status(StatusCodes.OK).json({
-      //   status: 'success',
-      //   data: { booking },
-      // });
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        message: 'Booking confirmed successfully',
+      });
     } catch (error) {
       next(error);
     }
   };
-
   getUserBookings = async (req, res, next) => {
     try {
       const bookings = await this.bookingService.getUserBookings(req.user._id);
@@ -696,6 +712,172 @@ class BookingController {
         data: booking,
       });
     } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Complete a booking after checkout
+   */
+  completeBooking = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const booking = await this.bookingService.completeBooking(bookingId);
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          booking,
+          message: 'Booking completed successfully',
+          completedAt: booking.checkOutDetails.checkOutTime,
+        },
+      });
+    } catch (error) {
+      logger.error('Error completing booking', {
+        error,
+        bookingId: req.params.id,
+      });
+      next(error);
+    }
+  };
+
+  // controller/booking.controller.js
+  guestCheckout = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const userId = req.user._id;
+
+      // Verify this is the guest's booking
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        guest: userId,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      if (!booking) {
+        throw new HttpException(
+          404,
+          'Booking not found or cannot be checked out'
+        );
+      }
+
+      // Complete the booking
+      const completedBooking = await this.bookingService.completeBooking(
+        bookingId
+      );
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: completedBooking,
+      });
+    } catch (error) {
+      logger.error('Error in guest checkout', {
+        error,
+        bookingId: req.params.id,
+      });
+      next(error);
+    }
+  };
+  // controller/booking.controller.js
+  hostCompleteBooking = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const hostId = req.user._id;
+
+      // Verify this is the host's booking
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        host: hostId,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      if (!booking) {
+        throw new HttpException(
+          404,
+          'Booking not found or cannot be completed'
+        );
+      }
+
+      const today = new Date();
+      if (new Date(booking.checkOut) > today) {
+        throw new HttpException(
+          400,
+          'Cannot complete booking before checkout date'
+        );
+      }
+
+      // Complete the booking
+      const completedBooking = await this.bookingService.completeBooking(
+        bookingId
+      );
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: completedBooking,
+      });
+    } catch (error) {
+      logger.error('Error in host complete booking', {
+        error,
+        bookingId: req.params.id,
+      });
+      next(error);
+    }
+  };
+
+  /**
+   * Get host's booking history with earnings data
+   */
+  /**
+   * @route GET /api/bookings/host/earnings
+   * @desc Get host's booking history with earnings data
+   * @access Private (Host only)
+   */
+  getHostBookingsWithEarnings = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+      const filters = {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        status: req.query.status,
+      };
+
+      const result = await this.bookingService.getHostBookingsWithEarnings(
+        hostId,
+        filters
+      );
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Error getting host bookings with earnings', {
+        error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+
+  /**
+   * Check host payout eligibility
+   */
+  checkPayoutEligibility = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+      const result = await this.bookingService.checkHostPayoutEligibility(
+        hostId
+      );
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Error checking payout eligibility', {
+        error,
+        userId: req.user._id,
+      });
       next(error);
     }
   };

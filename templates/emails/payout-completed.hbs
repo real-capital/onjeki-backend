@@ -1,0 +1,74 @@
+<html>
+  <head>
+    <style>
+      .email-container { max-width: 600px; margin: 0 auto; font-family: Arial,
+      sans-serif; color: #333; } .header { background-color: #f8f9fa; padding:
+      20px; text-align: center; } .content { padding: 20px; } .payout-details {
+      padding: 20px; border: 1px solid #eee; border-radius: 5px; margin: 20px 0;
+      } .detail-row { margin: 10px 0; } .detail-row strong { display:
+      inline-block; width: 140px; } .success-info { background-color: #e9f7ef;
+      border: 1px solid #d5f5e3; padding: 15px; border-radius: 5px; margin: 20px
+      0; } .button { background-color: #007bff; color: white; padding: 12px
+      25px; text-decoration: none; border-radius: 5px; display: inline-block;
+      margin: 20px 0; } .footer { text-align: center; padding: 20px; font-size:
+      12px; color: #666; }
+    </style>
+  </head>
+  <body>
+    <div class='email-container'>
+      <div class='header'>
+        <h1>Payout Successful</h1>
+      </div>
+
+      <div class='content'>
+        <p>Hello {{hostName}},</p>
+        <p>Great news! Your payout has been successfully processed.</p>
+
+        <div class='payout-details'>
+          <h3>Payout Details</h3>
+          <div class='detail-row'>
+            <strong>Payout ID:</strong>
+            {{payoutId}}
+          </div>
+          <div class='detail-row'>
+            <strong>Amount:</strong>
+            {{amount}}
+          </div>
+          <div class='detail-row'>
+            <strong>Bank Account:</strong>
+            {{bankDetails.accountName}}
+          </div>
+          <div class='detail-row'>
+            <strong>Account Number:</strong>
+            {{bankDetails.accountNumber}}
+          </div>
+          <div class='detail-row'>
+            <strong>Bank:</strong>
+            {{bankDetails.bankName}}
+          </div>
+          <div class='detail-row'>
+            <strong>Processed On:</strong>
+            {{completedDate}}
+          </div>
+        </div>
+
+        <div class='success-info'>
+          <p>The funds have been sent to your bank account. Depending on your
+            bank, it may take 1-3 business days for the funds to appear in your
+            account.</p>
+        </div>
+
+        <center>
+          <a href='{{payoutsUrl}}' class='button'>View All Payouts</a>
+        </center>
+
+        <p>Thank you for hosting with us!</p>
+      </div>
+
+      <div class='footer'>
+        <p>Need help? Contact our support team at {{supportEmail}}</p>
+        <p>© {{year}} {{companyName}}. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

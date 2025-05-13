@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <style>
+      .email-container { max-width: 600px; margin: 0 auto; font-family: Arial,
+      sans-serif; color: #333; } .header { background-color: #f8f9fa; padding:
+      20px; text-align: center; } .content { padding: 20px; } .bank-details {
+      padding: 20px; border: 1px solid #eee; border-radius: 5px; margin: 20px 0;
+      } .detail-row { margin: 10px 0; } .detail-row strong { display:
+      inline-block; width: 140px; } .success-info { background-color: #e9f7ef;
+      border: 1px solid #d5f5e3; padding: 15px; border-radius: 5px; margin: 20px
+      0; } .button { background-color: #28a745; color: white; padding: 12px
+      25px; text-decoration: none; border-radius: 5px; display: inline-block;
+      margin: 20px 0; } .footer { text-align: center; padding: 20px; font-size:
+      12px; color: #666; }
+    </style>
+  </head>
+  <body>
+    <div class='email-container'>
+      <div class='header'>
+        <h1>Bank Account Verified</h1>
+      </div>
+
+      <div class='content'>
+        <p>Hello {{userName}},</p>
+        <p>Good news! Your bank account has been successfully verified.</p>
+
+        <div class='bank-details'>
+          <h3>Bank Account Details</h3>
+          <div class='detail-row'>
+            <strong>Account Name:</strong>
+            {{bankDetails.accountName}}
+          </div>
+          <div class='detail-row'>
+            <strong>Account Number:</strong>
+            {{bankDetails.accountNumber}}
+          </div>
+          <div class='detail-row'>
+            <strong>Bank:</strong>
+            {{bankDetails.bankName}}
+          </div>
+        </div>
+
+        <div class='success-info'>
+          <p>Your account is now ready to receive payouts. You can request a
+            payout whenever you have available earnings.</p>
+        </div>
+
+        <center>
+          <a href='{{payoutsUrl}}' class='button'>View Payouts</a>
+        </center>
+
+        <p>Thank you for hosting with us!</p>
+      </div>
+
+      <div class='footer'>
+        <p>Need help? Contact our support team at {{supportEmail}}</p>
+        <p>© {{year}} {{companyName}}. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

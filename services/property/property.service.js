@@ -9,6 +9,8 @@ import LastListingModel from '../../models/lastListing.model.js';
 import OnboardingModel from '../../models/onboarding.model.js';
 import RentAndSales from '../../models/rentAndSales.model.js';
 import UserModel from '../../models/user.model.js';
+import EarningModel from '../../models/earning.model.js';
+import BookingModel from '../../models/booking.model.js';
 
 const uploadService = new UploadService();
 
@@ -95,6 +97,8 @@ class PropertyService {
   }
 
   async createProperty(propertyData, userId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     let uploadedImages = [];
     try {
       // Fetch the user to check their verification status
@@ -163,7 +167,7 @@ class PropertyService {
           { new: true }
         );
       }
-
+      await session.commitTransaction();
       return property;
     } catch (error) {
       // If there's an error, cleanup any uploaded images
@@ -180,86 +184,15 @@ class PropertyService {
           console.error('Error cleaning up images:', cleanupError);
         }
       }
-
+      await session.abortTransaction();
       throw new HttpException(
         StatusCodes.BAD_REQUEST,
         error.message || 'Error creating property'
       );
+    } finally {
+      session.endSession();
     }
   }
-
-  // async createProperty(propertyData, userId) {
-  //   let uploadedImages = [];
-  //   try {
-  //     // Handle image uploads if present
-  //     if (propertyData.images && Array.isArray(propertyData.images)) {
-  //       const uploadedImages = await uploadService.uploadMultipleImages(
-  //         propertyData.images,
-  //         `properties/${userId}`
-  //       );
-
-  //       propertyData.photo = {
-  //         images: await Promise.all(
-  //           uploadedImages.map(async (image) => ({
-  //             url: image.secure_url,
-  //             caption: image.originalname || '',
-  //             isPrimary: false,
-  //             publicId: image.public_id,
-  //           }))
-  //         ),
-  //         videos: [],
-  //       };
-  //     }
-
-  //     const property = new PropertyModel({
-  //       ...propertyData,
-  //       owner: userId,
-  //     });
-  //     await property.save();
-
-  //     // Check if this is the user's first property and update hostProfile
-  //     const propertiesCount = await PropertyModel.countDocuments({
-  //       owner: userId,
-  //     });
-
-  //     if (propertiesCount === 1) {
-  //       // This is their first property - update the user to mark them as a host
-  //       await UserModel.findByIdAndUpdate(
-  //         userId,
-  //         {
-  //           'hostProfile.joinedAt': new Date(),
-  //           // Set other initial hosting metrics if needed
-  //           'hostProfile.responseRate': 100, // Initial perfect rate
-  //           'hostProfile.responseTime': 60, // Initial response time in minutes
-  //           'hostProfile.acceptanceRate': 100, // Initial perfect rate
-  //         },
-  //         { new: true }
-  //       );
-  //     }
-
-  //     return property;
-  //   } catch (error) {
-  //     // If there's an error, cleanup any uploaded images
-  //     if (uploadedImages.length > 0) {
-  //       try {
-  //         await Promise.all(
-  //           uploadedImages.map(async (img) => {
-  //             if (img.public_id) {
-  //               await uploadService.deleteImage(img.public_id);
-  //             }
-  //           })
-  //         );
-  //       } catch (cleanupError) {
-  //         console.error('Error cleaning up images:', cleanupError);
-  //       }
-  //     }
-
-  //     throw new HttpException(
-  //       StatusCodes.BAD_REQUEST,
-  //       error.message || 'Error creating property'
-  //     );
-  //   }
-  // }
 
   async updateProperty(propertyId, userId, updateData) {
     console.log('Updating property with data:', updateData);
@@ -762,104 +695,6 @@ class PropertyService {
     return query;
   }
 
-  // buildSearchQuery(filters) {
-  //   try {
-  //     const query = {};
-
-  //     query.listStatus = 'Approved';
-  //     // Type filter
-  //     if (filters.type) {
-  //       query.type = filters.type;
-  //     }
-
-  //     // Building type filter
-  //     if (filters.buildingType) {
-  //       query.buildingType = filters.buildingType;
-  //     }
-
-  //     // Space filter
-  //     if (filters.space) {
-  //       query.space = filters.space;
-  //     }
-
-  //     // Price range filter
-  //     if (filters.priceRange) {
-  //       query['price.base'] = {};
-  //       if (filters.priceRange.min) {
-  //         query['price.base'].$gte = filters.priceRange.min;
-  //       }
-  //       if (filters.priceRange.max && filters.priceRange.max !== Infinity) {
-  //         query['price.base'].$lte = filters.priceRange.max;
-  //       }
-  //     }
-
-  //     // Location filters
-  //     if (filters.location) {
-  //       if (filters.location.city) {
-  //         query['location.city'] = new RegExp(filters.location.city, 'i');
-  //       }
-  //       if (filters.location.country) {
-  //         query['location.country'] = new RegExp(filters.location.country, 'i');
-  //       }
-  //       if (filters.location.state) {
-  //         query['location.state'] = new RegExp(filters.location.state, 'i');
-  //       }
-  //     }
-
-  //     // Amenities filter
-  //     if (filters.amenities && filters.amenities.length > 0) {
-  //       query.amenities = { $all: filters.amenities };
-  //     }
-
-  //     // Guest filter
-  //     if (filters.guests) {
-  //       query.guests = { $gte: parseInt(filters.guests) };
-  //     }
-
-  //     // Bedroom filter
-  //     if (filters.bedrooms) {
-  //       query.bedrooms = { $gte: parseInt(filters.bedrooms) };
-  //     }
-
-  //     // Status filters
-  //     // if (filters.listStatus) {
-  //     //   query.listStatus = filters.listStatus;
-  //     // }
-
-  //     // Boolean filters
-  //     if (filters.isBooked !== undefined) {
-  //       query.isBooked = filters.isBooked;
-  //     }
-
-  //     if (filters.isFurnished !== undefined) {
-  //       query.isFurnished = filters.isFurnished;
-  //     }
-
-  //     // Add date-based availability filter
-  //     // if (req.query.checkIn && req.query.checkOut) {
-  //     //   const checkIn = new Date(req.query.checkIn);
-  //     //   const checkOut = new Date(req.query.checkOut);
-
-  //     //   features.query.find({
-  //     //     'availability.calendar': {
-  //     //       $not: {
-  //     //         $elemMatch: {
-  //     //           date: { $gte: checkIn, $lt: checkOut },
-  //     //           isBlocked: true
-  //     //         }
-  //     //       }
-  //     //     }
-  //     //   });
-  //     // }
-
-  //     console.log('Built query:', query);
-  //     return query;
-  //   } catch (error) {
-  //     console.error('Error building query:', error);
-  //     throw new Error(`Error building search query: ${error.message}`);
-  //   }
-  // }
-
   async getPropertyNearBy(latitude, longitude, radius) {
     try {
       // Validate inputs
@@ -910,6 +745,7 @@ class PropertyService {
           },
         },
       })
+        .hint({ 'location.coordinates': '2dsphere' }) // Add index hint
         .populate('owner', 'name email') // Populate owner details
         .populate('buildingType') // Populate building type
         .populate('amenities') // Populate amenities
@@ -1132,6 +968,196 @@ class PropertyService {
       console.log(error);
       throw new HttpException(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
       // throw new Error(error.message);
+    }
+  }
+
+  /**
+   * Get property revenue statistics
+   */
+  async getPropertyRevenueStats(propertyId, userId) {
+    try {
+      // Verify ownership
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
+
+      if (!property) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
+        );
+      }
+
+      // Get earnings for this property
+      const earnings = await EarningModel.find({ property: propertyId });
+
+      // Calculate statistics
+      const stats = {
+        totalEarnings: 0,
+        totalBookings: 0,
+        averagePerBooking: 0,
+        pendingEarnings: 0,
+        availableEarnings: 0,
+        paidEarnings: 0,
+        occupancyRate: 0, // Requires calculation based on calendar
+      };
+
+      // Process earnings
+      if (earnings.length > 0) {
+        stats.totalBookings = earnings.length;
+
+        // Sum up amounts by status
+        earnings.forEach((earning) => {
+          stats.totalEarnings += earning.netAmount;
+
+          switch (earning.status) {
+            case 'pending':
+              stats.pendingEarnings += earning.netAmount;
+              break;
+            case 'available':
+              stats.availableEarnings += earning.netAmount;
+              break;
+            case 'paid':
+              stats.paidEarnings += earning.netAmount;
+              break;
+          }
+        });
+
+        stats.averagePerBooking = stats.totalEarnings / stats.totalBookings;
+      }
+
+      // Calculate occupancy rate
+      const bookings = await BookingModel.find({
+        property: propertyId,
+        status: { $in: ['CONFIRMED', 'COMPLETED'] },
+      });
+
+      if (bookings.length > 0) {
+        // Calculate total days booked
+        let totalDaysBooked = 0;
+        bookings.forEach((booking) => {
+          const checkIn = new Date(booking.checkIn);
+          const checkOut = new Date(booking.checkOut);
+          const days = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
+          totalDaysBooked += days;
+        });
+
+        // Assume time period is last 90 days
+        stats.occupancyRate = (totalDaysBooked / 90) * 100;
+      }
+
+      return stats;
+    } catch (error) {
+      logger.error('Error getting property revenue stats', {
+        error,
+        propertyId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update property price with market analysis
+   */
+  async suggestPriceOptimization(propertyId, userId) {
+    try {
+      const property = await PropertyModel.findOne({
+        _id: propertyId,
+        owner: userId,
+      });
+
+      if (!property) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Property not found or unauthorized'
+        );
+      }
+
+      // Get bookings for this property
+      const bookings = await BookingModel.find({
+        property: propertyId,
+        status: { $in: ['CONFIRMED', 'COMPLETED'] },
+      });
+
+      // Calculate current occupancy rate
+      let currentOccupancyRate = 0;
+      if (bookings.length > 0) {
+        // Calculate as above
+      }
+
+      // Get nearby similar properties
+      const nearbyProperties = await PropertyModel.find({
+        _id: { $ne: propertyId },
+        'location.coordinates': {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: property.location.coordinates.coordinates,
+            },
+            $maxDistance: 5000, // 5km radius
+          },
+        },
+        bedrooms: { $gte: property.bedrooms - 1, $lte: property.bedrooms + 1 },
+        bathrooms: {
+          $gte: property.bathrooms - 1,
+          $lte: property.bathrooms + 1,
+        },
+      });
+
+      // Calculate average price of similar properties
+      let totalPrice = 0;
+      let count = 0;
+      nearbyProperties.forEach((prop) => {
+        totalPrice += prop.price.base;
+        count++;
+      });
+
+      const averageMarketPrice =
+        count > 0 ? totalPrice / count : property.price.base;
+
+      // Suggest optimization
+      let suggestedPrice = property.price.base;
+      let pricingStrategy = 'maintain';
+
+      if (
+        currentOccupancyRate < 40 &&
+        property.price.base > averageMarketPrice
+      ) {
+        // Low occupancy and price above market - suggest decrease
+        suggestedPrice = Math.max(
+          averageMarketPrice * 0.95,
+          property.price.base * 0.9
+        );
+        pricingStrategy = 'decrease';
+      } else if (
+        currentOccupancyRate > 80 &&
+        property.price.base < averageMarketPrice
+      ) {
+        // High occupancy and price below market - suggest increase
+        suggestedPrice = Math.min(
+          averageMarketPrice * 1.05,
+          property.price.base * 1.1
+        );
+        pricingStrategy = 'increase';
+      }
+
+      return {
+        currentPrice: property.price.base,
+        suggestedPrice: Math.round(suggestedPrice),
+        marketAverage: Math.round(averageMarketPrice),
+        occupancyRate: currentOccupancyRate,
+        pricingStrategy,
+        potentialRevenueChange: Math.round(
+          (suggestedPrice - property.price.base) * 30
+        ), // monthly estimate
+      };
+    } catch (error) {
+      logger.error('Error suggesting price optimization', {
+        error,
+        propertyId,
+      });
+      throw error;
     }
   }
 }

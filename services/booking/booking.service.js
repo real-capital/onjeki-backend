@@ -15,6 +15,7 @@ import EarningService from '../payment/earning.service.js';
 import EarningModel from '../../models/earning.model.js';
 import Conversation from '../../models/conversation.model.js';
 import ConversationService from '../conversation/conversation.service.js';
+import BankAccountModel from '../../models/bank-account.model.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
@@ -566,8 +567,21 @@ class BookingService {
       // Save the updated property availability
       await property.save({ session });
       // Create earning record for the host
-      const earningService = new EarningService();
-      await earningService.createEarning(booking);
+      // Create earning record for the host
+      try {
+        const earningService = new EarningService();
+        await earningService.createEarning(booking);
+        logger.info('Earning record created successfully', {
+          bookingId: booking._id,
+        });
+      } catch (earningError) {
+        logger.error('Failed to create earning record', {
+          bookingId: booking._id,
+          error: earningError,
+        });
+        // Don't throw here - we still want to confirm the booking
+        // even if earning record creation fails
+      }
 
       await session.commitTransaction();
 
@@ -584,6 +598,40 @@ class BookingService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * Send notifications for checkout completion
+   */
+  async sendCheckoutNotifications(booking) {
+    try {
+      // Send email to host
+      await emailService.sendStayCompletedEmail(booking);
+
+      // Create notification for host
+      await NotificationModel.create({
+        user: booking.host,
+        type: 'STAY_COMPLETED',
+        title: 'Stay Completed',
+        message: `The stay for ${booking.property.title} is now complete`,
+        booking: booking._id,
+      });
+
+      // Send notification to guest asking for review
+      await NotificationModel.create({
+        user: booking.guest,
+        type: 'REVIEW_REQUEST',
+        title: 'How was your stay?',
+        message: `Please leave a review for ${booking.property.title}`,
+        booking: booking._id,
+      });
+    } catch (error) {
+      logger.error('Error sending checkout notifications', {
+        error,
+        bookingId: booking._id,
+      });
+      // Don't throw - non-critical operation
     }
   }
   // Method to handle payment failure
@@ -877,6 +925,7 @@ class BookingService {
       }
       await session.commitTransaction();
       // Send notifications
+      // TODO: Implement sendCancellationNotifications method
       await this.sendCancellationNotifications(booking);
 
       return booking;
@@ -889,6 +938,38 @@ class BookingService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  async sendCancellationNotifications(booking) {
+    try {
+      // Send email to host
+      // TODO: Implement sendCancellationEmail method
+      await emailService.sendBookingCancellationEmail(booking);
+
+      // Create notification for host
+      await NotificationModel.create({
+        user: booking.host,
+        type: 'BOOKING_CANCELLED',
+        title: 'Booking Cancelled',
+        message: `Booking for ${booking.property.title} has been cancelled`,
+        booking: booking._id,
+      });
+
+      // Create notification for guest
+      await NotificationModel.create({
+        user: booking.guest,
+        type: 'BOOKING_CANCELLED',
+        title: 'Booking Cancelled',
+        message: `Your booking for ${booking.property.title} has been cancelled`,
+        booking: booking._id,
+      });
+    } catch (error) {
+      logger.error('Error sending cancellation notifications', {
+        error,
+        bookingId: booking._id,
+      });
+      // Don't throw - non-critical operation
     }
   }
 
@@ -997,41 +1078,41 @@ class BookingService {
       );
     }
   }
-  async cancelBooking(bookingId, userId) {
-    try {
-      const booking = await BookingModel.findOne({
-        _id: bookingId,
-        user: userId,
-      });
+  // async cancelBooking(bookingId, userId) {
+  //   try {
+  //     const booking = await BookingModel.findOne({
+  //       _id: bookingId,
+  //       user: userId,
+  //     });
 
-      if (!booking) {
-        throw new HttpException(StatusCodes.NOT_FOUND, 'Booking not found');
-      }
+  //     if (!booking) {
+  //       throw new HttpException(StatusCodes.NOT_FOUND, 'Booking not found');
+  //     }
 
-      if (booking.status === BookingStatus.CANCELED) {
-        throw new HttpException(
-          StatusCodes.BAD_REQUEST,
-          'Booking is already cancelled'
-        );
-      }
-      await booking.cancel(req.user.id, reason);
+  //     if (booking.status === BookingStatus.CANCELED) {
+  //       throw new HttpException(
+  //         StatusCodes.BAD_REQUEST,
+  //         'Booking is already cancelled'
+  //       );
+  //     }
+  //     await booking.cancel(userId, reason);
 
-      // booking.status = BookingStatus.CANCELED;
-      // await booking.save();
+  //     // booking.status = BookingStatus.CANCELED;
+  //     // await booking.save();
 
-      // Update property status
-      await PropModel.findByIdAndUpdate(booking.property, {
-        isBooked: false,
-      });
+  //     // Update property status
+  //     await PropModel.findByIdAndUpdate(booking.property, {
+  //       isBooked: false,
+  //     });
 
-      return booking;
-    } catch (error) {
-      throw new HttpException(
-        error.statusCode || StatusCodes.BAD_REQUEST,
-        error.message
-      );
-    }
-  }
+  //     return booking;
+  //   } catch (error) {
+  //     throw new HttpException(
+  //       error.statusCode || StatusCodes.BAD_REQUEST,
+  //       error.message
+  //     );
+  //   }
+  // }
 
   async deleteBooking(bookingId, userId) {
     const session = await mongoose.startSession();
@@ -1079,6 +1160,163 @@ class BookingService {
         err.statusCode || StatusCodes.BAD_REQUEST,
         err.message
       );
+    }
+  }
+
+  /**
+   * Get host bookings with earnings data
+   */
+  async getHostBookingsWithEarnings(hostId, filters = {}) {
+    try {
+      // Base query
+      const query = { host: hostId };
+
+      // Apply date filters
+      if (filters.startDate) {
+        query.checkIn = { $gte: new Date(filters.startDate) };
+      }
+      if (filters.endDate) {
+        query.checkOut = { ...query.checkOut, $lte: new Date(filters.endDate) };
+      }
+
+      // Apply status filter
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      // Get bookings with related data
+      const bookings = await BookingModel.find(query)
+        .populate('guest', 'name email photo profile')
+        .populate('property', 'title photo location price')
+        .sort('-checkIn');
+
+      // Get earnings for these bookings
+      const earningService = new EarningService();
+      const earnings = await EarningModel.find({
+        booking: { $in: bookings.map((b) => b._id) },
+      });
+
+      // Get earnings summary
+      const summary = await earningService.getEarningsSummary(hostId);
+
+      // Combine booking and earning data
+      const bookingsWithEarnings = bookings.map((booking) => {
+        const bookingObject = booking.toObject();
+        const relatedEarning = earnings.find(
+          (e) => e.booking.toString() === booking._id.toString()
+        );
+
+        return {
+          ...bookingObject,
+          earning: relatedEarning || null,
+        };
+      });
+
+      return {
+        bookings: bookingsWithEarnings,
+        summary,
+      };
+    } catch (error) {
+      logger.error('Error getting host bookings with earnings', {
+        error,
+        hostId,
+      });
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching bookings with earnings'
+      );
+    }
+  }
+
+  /**
+   * Check if a host has valid payout methods
+   */
+  async checkHostPayoutEligibility(hostId) {
+    try {
+      // Check if host has any bank accounts set up
+      const bankAccount = await BankAccountModel.findOne({
+        user: hostId,
+        isActive: true,
+        isVerified: true,
+      });
+
+      if (!bankAccount) {
+        return {
+          canReceivePayouts: false,
+          reason: 'No verified bank account',
+          action: 'add_bank_account',
+        };
+      }
+
+      // Check for any pending earnings
+      const earningService = new EarningService();
+      const summary = await earningService.getEarningsSummary(hostId);
+
+      return {
+        canReceivePayouts: true,
+        hasDefaultBankAccount: !!bankAccount.isDefault,
+        accountName: bankAccount.accountName,
+        accountLastFour: bankAccount.accountNumber.slice(-4),
+        bankName: bankAccount.bankName,
+        pendingEarnings: summary.pending.pendingAmount,
+        availableEarnings: summary.monthly.monthlyNetAmount,
+      };
+    } catch (error) {
+      logger.error('Error checking host payout eligibility', { error, hostId });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a booking as completed after checkout
+   * This is where we process the final earning
+   */
+  async completeBooking(bookingId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking
+      const booking = await BookingModel.findById(bookingId)
+        .populate('property')
+        .populate('host')
+        .session(session);
+
+      if (!booking) {
+        throw new Error(`Booking not found: ${bookingId}`);
+      }
+
+      if (booking.status !== BookingStatus.CONFIRMED) {
+        throw new Error(`Booking is not in CONFIRMED status: ${bookingId}`);
+      }
+
+      // Update booking status to COMPLETED
+      booking.status = BookingStatus.COMPLETED;
+      booking.checkOutDetails.isCheckedOut = true;
+      booking.checkOutDetails.checkOutTime = new Date();
+      booking.timeline.push({
+        status: 'COMPLETED',
+        message: 'Stay completed, guest checked out',
+      });
+
+      await booking.save({ session });
+
+      // Update the earning status to available
+      const earningService = new EarningService();
+      await earningService.processBookingEarnings(bookingId);
+
+      await session.commitTransaction();
+
+      // Send notifications
+      await this.sendCheckoutNotifications(booking);
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Error completing booking', { error, bookingId });
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

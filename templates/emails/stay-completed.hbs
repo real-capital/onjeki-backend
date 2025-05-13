@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      font-family: Arial, sans-serif;
+      color: #333;
+    }
+    .header {
+      background-color: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+    }
+    .content {
+      padding: 20px;
+    }
+    .booking-details {
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .detail-row {
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .earnings-info {
+      background-color: #e9f7ef;
+      border: 1px solid #d5f5e3;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      display: inline-block;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Stay Completed</h1>
+    </div>
+
+    <div class="content">
+      <p>Hello {{hostName}},</p>
+      <p>Great news! The guest's stay at your property has been completed.</p>
+
+      <div class="booking-details">
+        <h3>Booking Details</h3>
+        <div class="detail-row">
+          <strong>Property:</strong>
+          <span>{{propertyTitle}}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Guest:</strong>
+          <span>{{guestName}}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Check-in:</strong>
+          <span>{{checkIn}}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Check-out:</strong>
+          <span>{{checkOut}}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Amount:</strong>
+          <span>{{amount}}</span>
+        </div>
+      </div>
+
+      <div class="earnings-info">
+        <h3>Earnings Update</h3>
+        <p>Your earnings for this booking will be available for payout in 24 hours. Once available, you can request a payout to your bank account.</p>
+        <p>Visit your Earnings Dashboard to track all your earnings.</p>
+      </div>
+
+      <center>
+        <a href="{{earningsUrl}}" class="button">View Earnings</a>
+      </center>
+
+      <p>Thank you for hosting with us!</p>
+    </div>
+
+    <div class="footer">
+      <p>Need help? Contact our support team at {{supportEmail}}</p>
+      <p>© {{year}} {{companyName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

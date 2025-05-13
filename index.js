@@ -12,6 +12,10 @@ import { logger } from './utils/logger.js';
 import ConversationRoute from './routes/conversation/conversation.route.js';
 import SubscriptionRoute from './routes/payment/subscription.route.js';
 import RentSalesChatRoute from './routes/rentSalesChat/rentSalesChat.route.js';
+import EarningsRoute from './routes/payment/earning.route.js';
+import PayoutRoute from './routes/payment/payout.route.js';
+import BankRoute from './routes/payment/bank.route.js';
+import UserBankRoute from './routes/payment/user-bank.route.js';
 // import PaymentRoute from './routes/payment/payment.route.js';
 
 try {
@@ -28,6 +32,10 @@ try {
     ConversationRoute,
     SubscriptionRoute,
     RentSalesChatRoute,
+    EarningsRoute,
+    PayoutRoute,
+    BankRoute,
+    UserBankRoute
     // PaymentRoute,
   ];
 

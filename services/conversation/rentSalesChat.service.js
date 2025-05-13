@@ -37,6 +37,7 @@ class RentSalesChatService {
         property: propertyId,
       });
 
+      const socketService = SocketService.getInstance();
       if (existingConversation) {
         // Add a new message to the existing conversation
         const message = new RentSalesMessage({
@@ -67,8 +68,8 @@ class RentSalesChatService {
         });
 
         // Notify the property owner via socket if they're online
-        if (this.socketService) {
-          this.socketService.notifyUser(ownerId, 'rent_sales_new_message', {
+        if (socketService) {
+          socketService.notifyUser(ownerId, 'rent_sales_new_message', {
             message: populatedMessage,
             conversationId: existingConversation._id,
           });
@@ -122,8 +123,8 @@ class RentSalesChatService {
       });
 
       // Notify the property owner via socket
-      if (this.socketService) {
-        this.socketService.notifyUser(ownerId, 'rent_sales_new_message', {
+      if (socketService) {
+        socketService.notifyUser(ownerId, 'rent_sales_new_message', {
           message: populatedMessage,
           conversationId: newConversation._id,
         });
@@ -336,13 +337,12 @@ class RentSalesChatService {
       ).populate('sender', 'name email profile.photo');
 
       const socketService = SocketService.getInstance();
-      if (socketService) { 
-
+      if (socketService) {
         // Notify other participants via socket
         const otherParticipants = conversation.participants.filter(
           (p) => p.toString() !== userId.toString()
         );
-  
+
         otherParticipants.forEach((participantId) => {
           if (socketService) {
             socketService.notifyUser(
@@ -360,22 +360,20 @@ class RentSalesChatService {
           userId.toString()
         );
         if (senderSocketId) {
-          socketService.io
-            .to(senderSocketId)
-            .emit('rent_sales_message_sent', {
-              messageId: message._id,
-              conversationId,
-              message: populatedMessage,
-              tempId: tempId, // Return tempId if provided
-            });
+          socketService.io.to(senderSocketId).emit('rent_sales_message_sent', {
+            messageId: message._id,
+            conversationId,
+            message: populatedMessage,
+            tempId: tempId, // Return tempId if provided
+          });
         }
-  
+
         // Get property and sender for notifications
         // const property = await RentAndSales.findById(
         //   conversation.property,
         //   'title'
         // );
-  
+
         // // Send notifications to other participants
         // for (const participantId of otherParticipants) {
         //   await this.sendNotification(
@@ -386,7 +384,6 @@ class RentSalesChatService {
         //   );
         // }
       }
-
 
       return populatedMessage;
     } catch (error) {
@@ -432,7 +429,7 @@ class RentSalesChatService {
       if (!message) {
         return { alreadyRead: true };
       }
-
+      const socketService = SocketService.getInstance();
       // Reset unread count for this user
       if (conversation.unreadCounts.get(userId) > 0) {
         conversation.unreadCounts.set(userId, 0);
@@ -440,8 +437,8 @@ class RentSalesChatService {
       }
 
       // Notify sender that message was read
-      if (this.socketService) {
-        this.socketService.notifyUser(
+      if (socketService) {
+        socketService.notifyUser(
           message.sender.toString(),
           'rent_sales_message_read',
           {

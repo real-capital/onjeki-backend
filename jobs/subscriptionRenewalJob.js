@@ -3,8 +3,9 @@ import cron from 'node-cron';
 import SubscriptionService from '../services/payment/subscription.service.js';
 
 const subscriptionService = new SubscriptionService();
-export default class SubscriptionRenewalJob {
-  start() {
+
+export function subscriptionRenewalJob() {
+  // start() {
     // Run daily at midnight
     cron.schedule('0 0 * * *', async () => {
       try {
@@ -13,5 +14,5 @@ export default class SubscriptionRenewalJob {
         console.error('Subscription renewal job failed', error);
       }
     });
-  }
+  // }
 }

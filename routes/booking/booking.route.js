@@ -95,6 +95,25 @@ class BookingRoute extends Route {
       isAuthenticated,
       this.controller.deleteBooking
     );
+    // New routes for earnings/payouts integration
+    this.router.get(
+      `${this.path}/host/earnings`,
+      isAuthenticated,
+      this.controller.getHostBookingsWithEarnings
+    );
+
+    this.router.get(
+      `${this.path}/host/payout-eligibility`,
+      isAuthenticated,
+      this.controller.checkPayoutEligibility
+    );
+
+    // Complete booking after checkout
+    this.router.post(
+      `${this.path}/:id/complete`,
+      isAuthenticated,
+      this.controller.completeBooking
+    );
   }
 }
 

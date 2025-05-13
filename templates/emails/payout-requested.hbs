@@ -1,0 +1,73 @@
+<html>
+  <head>
+    <style>
+      .email-container { max-width: 600px; margin: 0 auto; font-family: Arial,
+      sans-serif; color: #333; } .header { background-color: #f8f9fa; padding:
+      20px; text-align: center; } .content { padding: 20px; } .payout-details {
+      padding: 20px; border: 1px solid #eee; border-radius: 5px; margin: 20px 0;
+      } .detail-row { margin: 10px 0; } .detail-row strong { display:
+      inline-block; width: 140px; } .status-info { background-color: #e9f7ef;
+      border: 1px solid #d5f5e3; padding: 15px; border-radius: 5px; margin: 20px
+      0; } .button { background-color: #007bff; color: white; padding: 12px
+      25px; text-decoration: none; border-radius: 5px; display: inline-block;
+      margin: 20px 0; } .footer { text-align: center; padding: 20px; font-size:
+      12px; color: #666; }
+    </style>
+  </head>
+  <body>
+    <div class='email-container'>
+      <div class='header'>
+        <h1>Payout Request Received</h1>
+      </div>
+
+      <div class='content'>
+        <p>Hello {{hostName}},</p>
+        <p>We've received your payout request and are processing it now.</p>
+
+        <div class='payout-details'>
+          <h3>Payout Details</h3>
+          <div class='detail-row'>
+            <strong>Payout ID:</strong>
+            {{payoutId}}
+          </div>
+          <div class='detail-row'>
+            <strong>Amount:</strong>
+            {{amount}}
+          </div>
+          <div class='detail-row'>
+            <strong>Bank Account:</strong>
+            {{bankDetails.accountName}}
+          </div>
+          <div class='detail-row'>
+            <strong>Account Number:</strong>
+            {{bankDetails.accountNumber}}
+          </div>
+          <div class='detail-row'>
+            <strong>Bank:</strong>
+            {{bankDetails.bankName}}
+          </div>
+        </div>
+
+        <div class='status-info'>
+          <h3>What's Next?</h3>
+          <p>Your payout is being processed and should arrive in your bank
+            account by
+            <strong>{{estimatedArrival}}</strong>. Processing times may vary
+            depending on your bank.</p>
+          <p>You'll receive another email once the payout has been completed.</p>
+        </div>
+
+        <center>
+          <a href='{{payoutsUrl}}' class='button'>View Payout Status</a>
+        </center>
+
+        <p>Thank you for hosting with us!</p>
+      </div>
+
+      <div class='footer'>
+        <p>Need help? Contact our support team at {{supportEmail}}</p>
+        <p>© {{year}} {{companyName}}. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

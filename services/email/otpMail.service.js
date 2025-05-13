@@ -163,6 +163,266 @@ class EmailService {
       throw HttpException(500, 'Failed to send booking confirmation email');
     }
   }
+
+  /**
+   * Send email when a stay is completed
+   */
+  async sendStayCompletedEmail(booking) {
+    try {
+      const host = await UserModel.findById(booking.host);
+      const guest = await UserModel.findById(booking.guest);
+      const property = await PropertyModel.findById(booking.property);
+
+      const template = await this.getEmailTemplate('stay-completed', {
+        hostName: host.name,
+        guestName: guest.name,
+        propertyTitle: property.title,
+        checkIn: format(booking.checkIn, 'MMM d, yyyy'),
+        checkOut: format(booking.checkOut, 'MMM d, yyyy'),
+        bookingId: booking._id,
+        amount: formatCurrency(booking.pricing.total, booking.pricing.currency),
+        actionUrl: `${process.env.HOST_DASHBOARD_URL}/bookings/${booking._id}`,
+        earningsUrl: `${process.env.HOST_DASHBOARD_URL}/earnings`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: 'Stay Completed - Earnings Update',
+        html: template,
+      });
+
+      logger.info(`Stay completed email sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending stay completed email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send email when earnings become available
+   */
+  async sendEarningsAvailableEmail(hostId, earnings) {
+    try {
+      const host = await UserModel.findById(hostId);
+      const totalAmount = earnings.reduce(
+        (sum, earning) => sum + earning.netAmount,
+        0
+      );
+      const currency = earnings[0]?.currency || 'NGN';
+
+      const template = await this.getEmailTemplate('earnings-available', {
+        hostName: host.name,
+        totalAmount: formatCurrency(totalAmount, currency),
+        bookingsCount: earnings.length,
+        earningsUrl: `${process.env.HOST_DASHBOARD_URL}/earnings`,
+        payoutUrl: `${process.env.HOST_DASHBOARD_URL}/payouts/request`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: 'Your Earnings Are Now Available',
+        html: template,
+      });
+
+      logger.info(`Earnings available email sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending earnings available email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send email when a payout is requested
+   */
+  async sendPayoutRequestedEmail(payout) {
+    try {
+      const host = await UserModel.findById(payout.host);
+
+      const template = await this.getEmailTemplate('payout-requested', {
+        hostName: host.name,
+        payoutId: payout._id,
+        amount: formatCurrency(payout.amount, payout.currency),
+        bankDetails: {
+          accountName: payout.bankDetails.accountName,
+          accountNumber: maskAccountNumber(payout.bankDetails.accountNumber),
+          bankName: payout.bankDetails.bankName,
+        },
+        estimatedArrival: format(
+          new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Estimated 2 days
+          'EEEE, MMMM d, yyyy'
+        ),
+        payoutsUrl: `${process.env.HOST_DASHBOARD_URL}/payouts`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: 'Your Payout Request Has Been Received',
+        html: template,
+      });
+
+      logger.info(`Payout requested email sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending payout requested email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send email when a payout is completed
+   */
+  async sendPayoutCompletedEmail(payout) {
+    try {
+      const host = await UserModel.findById(payout.host);
+
+      const template = await this.getEmailTemplate('payout-completed', {
+        hostName: host.name,
+        payoutId: payout._id,
+        amount: formatCurrency(payout.amount, payout.currency),
+        bankDetails: {
+          accountName: payout.bankDetails.accountName,
+          accountNumber: maskAccountNumber(payout.bankDetails.accountNumber),
+          bankName: payout.bankDetails.bankName,
+        },
+        completedDate: format(payout.completedDate, 'EEEE, MMMM d, yyyy'),
+        payoutsUrl: `${process.env.HOST_DASHBOARD_URL}/payouts`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: 'Your Payout Has Been Processed',
+        html: template,
+      });
+
+      logger.info(`Payout completed email sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending payout completed email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send email when a payout fails
+   */
+  async sendPayoutFailedEmail(payout) {
+    try {
+      const host = await UserModel.findById(payout.host);
+
+      const template = await this.getEmailTemplate('payout-failed', {
+        hostName: host.name,
+        payoutId: payout._id,
+        amount: formatCurrency(payout.amount, payout.currency),
+        bankDetails: {
+          accountName: payout.bankDetails.accountName,
+          accountNumber: maskAccountNumber(payout.bankDetails.accountNumber),
+          bankName: payout.bankDetails.bankName,
+        },
+        failureReason: payout.failureReason || 'Bank transfer failed',
+        actionUrl: `${process.env.HOST_DASHBOARD_URL}/payouts/retry/${payout._id}`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: 'Payout Failed - Action Required',
+        html: template,
+      });
+
+      logger.info(`Payout failed email sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending payout failed email: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send email when a bank account is verified
+   */
+  async sendBankAccountVerifiedEmail(userId, bankAccount) {
+    try {
+      const user = await UserModel.findById(userId);
+
+      const template = await this.getEmailTemplate('bank-account-verified', {
+        userName: user.name,
+        bankDetails: {
+          accountName: bankAccount.accountName,
+          accountNumber: maskAccountNumber(bankAccount.accountNumber),
+          bankName: bankAccount.bankName,
+        },
+        payoutsUrl: `${process.env.HOST_DASHBOARD_URL}/payouts`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: user.email,
+        subject: 'Bank Account Successfully Verified',
+        html: template,
+      });
+
+      logger.info(`Bank account verified email sent to user ${user.email}`);
+    } catch (error) {
+      logger.error(
+        `Error sending bank account verified email: ${error.message}`
+      );
+    }
+  }
+
+  /**
+   * Send monthly earnings summary
+   */
+  async sendMonthlyEarningsSummary(hostId, month, year, summary) {
+    try {
+      const host = await UserModel.findById(hostId);
+      const monthName = new Date(year, month - 1, 1).toLocaleString('default', {
+        month: 'long',
+      });
+
+      const template = await this.getEmailTemplate('monthly-earnings', {
+        hostName: host.name,
+        month: monthName,
+        year: year,
+        stats: {
+          totalEarnings: formatCurrency(summary.totalEarnings, 'NGN'),
+          totalBookings: summary.totalBookings,
+          occupancyRate: `${Math.round(summary.occupancyRate)}%`,
+          pendingEarnings: formatCurrency(summary.pendingEarnings, 'NGN'),
+          availableEarnings: formatCurrency(summary.availableEarnings, 'NGN'),
+          paidOut: formatCurrency(summary.paidOut, 'NGN'),
+        },
+        earningsUrl: `${process.env.HOST_DASHBOARD_URL}/earnings?month=${month}&year=${year}`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: host.email,
+        subject: `Your Earnings Summary for ${monthName} ${year}`,
+        html: template,
+      });
+
+      logger.info(`Monthly earnings summary sent to host ${host.email}`);
+    } catch (error) {
+      logger.error(`Error sending monthly earnings summary: ${error.message}`);
+    }
+  }
   async getEmailTemplate(templateName, data) {
     const templatePath = path.resolve(
       __dirname,
@@ -183,44 +443,6 @@ class EmailService {
       throw new Error(`Email template "${templateName}" not found.`);
     }
   }
-
-  // async getEmailTemplate(templateName, data) {
-  //   const templatePath = path.join(
-  //     __dirname,
-  //     `../templates/emails/${templateName}.hbs`
-  //   );
-
-  //   const templateContent = await fs.readFile(templatePath, 'utf-8');
-  //   const compile = handlebars.compile(templateContent);
-  //   return compile(data);
-  // }
-
-  // async sendBookingConfirmation(booking) {
-  //   const template = generateEmailTemplate('bookingConfirmation', {
-  //     booking,
-  //     property: booking.property,
-  //     user: booking.user
-  //   });
-
-  //   await this.sendEmail({
-  //     to: booking.user.email,
-  //     subject: 'Booking Confirmation',
-  //     html: template
-  //   });
-  // }
-
-  // async sendPropertyApproval(property) {
-  //   const template = generateEmailTemplate('propertyApproval', {
-  //     property,
-  //     owner: property.user
-  //   });
-
-  //   await this.sendEmail({
-  //     to: property.user.email,
-  //     subject: 'Property Listing Approved',
-  //     html: template
-  //   });
-  // }
 
   async sendEmail({ to, subject, html }) {
     try {
@@ -244,6 +466,13 @@ function formatCurrency(amount, currency = 'USD') {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function maskAccountNumber(accountNumber) {
+  if (!accountNumber) return '';
+  const visible = accountNumber.slice(-4);
+  const masked = accountNumber.slice(0, -4).replace(/\d/g, '*');
+  return masked + visible;
 }
 
 export default new EmailService();

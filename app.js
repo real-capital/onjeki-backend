@@ -25,6 +25,9 @@ import ChatService from './services/chat/chat.service.js';
 import BookingService from './services/booking/booking.service.js';
 import ServiceContainer from './services/ServiceContainer.js';
 import ConversationService from './services/conversation/conversation.service.js';
+import { scheduleEmailJobs } from './jobs/email-jobs.js';
+import { scheduleEarningJobs } from './jobs/earningJob.js';
+import { subscriptionRenewalJob } from './jobs/subscriptionRenewalJob.js';
 
 // Load environment variables
 dotenv.config();
@@ -180,6 +183,9 @@ class app {
     await connectDB();
   }
 }
+scheduleEmailJobs();
+scheduleEarningJobs();
+subscriptionRenewalJob();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {

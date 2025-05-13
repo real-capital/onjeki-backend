@@ -1,7 +1,7 @@
 import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
-import RentSalesChatController from '../../controller/conversation/rentSalesChat.controller.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
+import RentSalesChatController from '../../controller/conversation/rentSalesChat.Controller.js';
 
 class RentSalesChatRoute extends Route {
   constructor() {

@@ -1,4 +1,5 @@
 import EarningService from '../../services/payment/earning.service.js';
+import { logger } from '../../utils/logger.js';
 
 // controllers/earningController.js
 const earningService = new EarningService();
@@ -7,20 +8,92 @@ class EarningController {
   //     earningService = earningService;
   //   }
 
-  // Get earnings summary
-  async getEarningsSummary(req, res, next) {
+  /**
+   * Get host earnings
+   */
+  getHostEarnings = async (req, res, next) => {
     try {
-      const hostId = req.user.id;
+      const hostId = req.user._id;
+      const filters = {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        status: req.query.status,
+      };
+
+      const result = await earningService.getHostEarnings(hostId, filters);
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Error getting host earnings', {
+        error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+
+  /**
+   * Get earning summary
+   */
+  getEarningsSummary = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
       const summary = await earningService.getEarningsSummary(hostId);
 
-      res.status(200).json({
-        success: true,
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
         data: summary,
       });
     } catch (error) {
+      logger.error('Error getting earnings summary', {
+        error,
+        userId: req.user._id,
+      });
       next(error);
     }
-  }
+  };
+
+  /**
+   * Get single earning details
+   */
+  getEarningDetails = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+      const earningId = req.params.earningId;
+
+      const earning = await earningService.getEarningById(earningId, hostId);
+
+      return res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: earning,
+      });
+    } catch (error) {
+      logger.error('Error getting earning details', {
+        error,
+        userId: req.user._id,
+        earningId: req.params.earningId,
+      });
+      next(error);
+    }
+  };
+
+  // Get earnings summary
+  // async getEarningsSummary(req, res, next) {
+  //   try {
+  //     const hostId = req.user.id;
+  //     const summary = await earningService.getEarningsSummary(hostId);
+
+  //     res.status(200).json({
+  //       success: true,
+  //       data: summary,
+  //     });
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // }
 
   // Get earnings history
   async getEarningsHistory(req, res, next) {
