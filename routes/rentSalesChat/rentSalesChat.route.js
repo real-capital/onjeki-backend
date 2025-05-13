@@ -1,13 +1,13 @@
 import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
-import RentSalesChatController from '../../controller/conversation/RentSalesChat.controller.js';
+import RentOrSalesChatController from '../../controller/conversation/rent-or-sales-chat.controller.js';
 
 class RentSalesChatRoute extends Route {
   constructor() {
     super(express.Router());
     this.path = '/rent-sales-chat';
-    this.controller = new RentSalesChatController();
+    this.controller = new RentOrSalesChatController();
     this.initializeRoute();
   }
 
