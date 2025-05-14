@@ -12,18 +12,23 @@ class EarningController {
   /**
    * Get host earnings
    */
+
+  // In your earnings controller file
   getHostEarnings = async (req, res, next) => {
     try {
-      const hostId = req.user._id;
+      const hostId = req.user.id;
+      const { period, status, startDate, endDate } = req.query;
+
       const filters = {
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
-        status: req.query.status,
+        period,
+        status,
+        startDate,
+        endDate,
       };
 
       const result = await earningService.getHostEarnings(hostId, filters);
 
-      return res.status(StatusCodes.OK).json({
+      return res.status(200).json({
         status: 'success',
         data: result,
       });
@@ -32,7 +37,10 @@ class EarningController {
         error,
         userId: req.user._id,
       });
-      next(error);
+      return res.status(500).json({
+        status: 'error',
+        message: error.message || 'Failed to get earnings',
+      });
     }
   };
 
@@ -80,8 +88,6 @@ class EarningController {
       next(error);
     }
   };
-
-
 
   // Get earnings history
   async getEarningsHistory(req, res, next) {

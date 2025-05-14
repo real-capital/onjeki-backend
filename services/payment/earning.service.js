@@ -188,16 +188,68 @@ class EarningService {
    */
   /**
    * Get host earnings with filtering options
+   */ /**
+   * Get host earnings with filtering options
    */
   async getHostEarnings(hostId, filters = {}) {
     const query = { host: hostId };
 
-    // Apply date filters
-    if (filters.startDate) {
-      query.createdAt = { $gte: new Date(filters.startDate) };
-    }
-    if (filters.endDate) {
-      query.createdAt = { ...query.createdAt, $lte: new Date(filters.endDate) };
+    // Handle period parameter and convert to date range
+    if (filters.period) {
+      const now = new Date();
+      let startDate;
+
+      switch (filters.period) {
+        case 'daily':
+          // Just today
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case 'weekly':
+          // Current week (starting from Monday)
+          const dayOfWeek = now.getDay() || 7; // Convert Sunday (0) to 7
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - dayOfWeek + 1); // Get Monday
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'monthly':
+          // Current month
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'yearly':
+          // Current year
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case 'all':
+          // No date filtering
+          break;
+        default:
+          // Default to monthly if unrecognized
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      // Apply the date range filter if we have a start date
+      if (startDate) {
+        query.createdAt = { $gte: startDate };
+
+        // If endDate was provided explicitly, we'll use it
+        if (filters.endDate) {
+          query.createdAt.$lte = new Date(filters.endDate);
+        } else {
+          // Otherwise use current time as end date
+          query.createdAt.$lte = now;
+        }
+      }
+    } else {
+      // Original code for explicit date filters
+      if (filters.startDate) {
+        query.createdAt = { $gte: new Date(filters.startDate) };
+      }
+      if (filters.endDate) {
+        query.createdAt = {
+          ...query.createdAt,
+          $lte: new Date(filters.endDate),
+        };
+      }
     }
 
     // Apply status filter
@@ -206,27 +258,184 @@ class EarningService {
     }
 
     const earnings = await EarningModel.find(query)
-      .populate('property', 'title photo.images location')
+      .populate('property', 'title')
       .populate('booking', 'checkIn checkOut guests')
       .sort({ createdAt: -1 });
 
     // Calculate summary statistics
-    const summary = await this.getEarningsSummary(hostId);
+    // For consistency, pass the same period to get a relevant summary
+    const summary = await this.getEarningsSummary(hostId, filters.period);
 
     return {
       earnings,
       summary,
     };
-  }
+  } // async getHostEarnings(hostId, filters = {}) {
+  //   const query = { host: hostId };
+
+  //   // Apply date filters
+  //   if (filters.startDate) {
+  //     query.createdAt = { $gte: new Date(filters.startDate) };
+  //   }
+  //   if (filters.endDate) {
+  //     query.createdAt = { ...query.createdAt, $lte: new Date(filters.endDate) };
+  //   }
+
+  //   // Apply status filter
+  //   if (filters.status) {
+  //     query.status = filters.status;
+  //   }
+
+  //   const earnings = await EarningModel.find(query)
+  //     .populate('property', 'title')
+  //     .populate('booking', 'checkIn checkOut guests')
+  //     .sort({ createdAt: -1 });
+
+  //   // Calculate summary statistics
+  //   const summary = await this.getEarningsSummary(hostId);
+
+  //   return {
+  //     earnings,
+  //     summary,
+  //   };
+  // }
 
   /**
    * Get a summary of host earnings
    */
-  async getEarningsSummary(hostId) {
+  // async getEarningsSummary(hostId) {
+  //   const [totalStats, monthlyStats, pendingStats] = await Promise.all([
+  //     // Total earnings
+  //     EarningModel.aggregate([
+  //       { $match: { host: new mongoose.Types.ObjectId(hostId) } },
+  //       {
+  //         $group: {
+  //           _id: null,
+  //           totalEarnings: { $sum: '$amount' },
+  //           totalServiceFees: { $sum: '$serviceFee' },
+  //           totalNetAmount: { $sum: '$netAmount' },
+  //           count: { $sum: 1 },
+  //         },
+  //       },
+  //     ]),
+
+  //     // Current month earnings
+  //     EarningModel.aggregate([
+  //       {
+  //         $match: {
+  //           host: new mongoose.Types.ObjectId(hostId),
+  //           createdAt: {
+  //             $gte: new Date(new Date().setDate(1)), // First day of current month
+  //           },
+  //         },
+  //       },
+  //       {
+  //         $group: {
+  //           _id: null,
+  //           monthlyEarnings: { $sum: '$amount' },
+  //           monthlyServiceFees: { $sum: '$serviceFee' },
+  //           monthlyNetAmount: { $sum: '$netAmount' },
+  //           count: { $sum: 1 },
+  //         },
+  //       },
+  //     ]),
+
+  //     // Pending earnings
+  //     EarningModel.aggregate([
+  //       {
+  //         $match: {
+  //           host: new mongoose.Types.ObjectId(hostId),
+  //           status: 'pending',
+  //         },
+  //       },
+  //       {
+  //         $group: {
+  //           _id: null,
+  //           pendingAmount: { $sum: '$netAmount' },
+  //           count: { $sum: 1 },
+  //         },
+  //       },
+  //     ]),
+  //   ]);
+
+  //   return {
+  //     total: totalStats[0] || {
+  //       totalEarnings: 0,
+  //       totalServiceFees: 0,
+  //       totalNetAmount: 0,
+  //       count: 0,
+  //     },
+  //     monthly: monthlyStats[0] || {
+  //       monthlyEarnings: 0,
+  //       monthlyServiceFees: 0,
+  //       monthlyNetAmount: 0,
+  //       count: 0,
+  //     },
+  //     pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
+  //   };
+  // }
+  /**
+   * Get a summary of host earnings
+   */
+  async getEarningsSummary(hostId, period = null) {
+    // Base query for all aggregations
+    const baseQuery = { host: new mongoose.Types.ObjectId(hostId) };
+
+    // Apply period filtering if provided
+    if (period) {
+      const now = new Date();
+      let startDate;
+
+      switch (period) {
+        case 'daily':
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case 'weekly':
+          const dayOfWeek = now.getDay() || 7;
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - dayOfWeek + 1);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'monthly':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'yearly':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case 'all':
+          // No date filtering for 'all'
+          break;
+        default:
+          // Use default behavior (all time) if period is invalid
+          break;
+      }
+
+      if (startDate) {
+        baseQuery.createdAt = { $gte: startDate, $lte: now };
+      }
+    }
+
+    // Create a separate query for total stats that doesn't filter by date
+    const totalQuery = { host: new mongoose.Types.ObjectId(hostId) };
+
+    // Create a query for monthly stats (always get current month stats)
+    const monthlyQuery = {
+      host: new mongoose.Types.ObjectId(hostId),
+      createdAt: {
+        $gte: new Date(new Date().setDate(1)), // First day of current month
+      },
+    };
+
+    // Create a query for pending stats that should include period filter
+    const pendingQuery = {
+      ...baseQuery,
+      status: 'pending',
+    };
+
     const [totalStats, monthlyStats, pendingStats] = await Promise.all([
-      // Total earnings
+      // Total earnings (all time or filtered by period)
       EarningModel.aggregate([
-        { $match: { host: new mongoose.Types.ObjectId(hostId) } },
+        { $match: period === 'all' ? totalQuery : baseQuery },
         {
           $group: {
             _id: null,
@@ -238,16 +447,9 @@ class EarningService {
         },
       ]),
 
-      // Current month earnings
+      // Current month earnings (always show current month regardless of period)
       EarningModel.aggregate([
-        {
-          $match: {
-            host: new mongoose.Types.ObjectId(hostId),
-            createdAt: {
-              $gte: new Date(new Date().setDate(1)), // First day of current month
-            },
-          },
-        },
+        { $match: monthlyQuery },
         {
           $group: {
             _id: null,
@@ -259,14 +461,9 @@ class EarningService {
         },
       ]),
 
-      // Pending earnings
+      // Pending earnings (filtered by period if specified)
       EarningModel.aggregate([
-        {
-          $match: {
-            host: new mongoose.Types.ObjectId(hostId),
-            status: 'pending',
-          },
-        },
+        { $match: pendingQuery },
         {
           $group: {
             _id: null,
@@ -291,6 +488,8 @@ class EarningService {
         count: 0,
       },
       pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
+      // Add the period used for filtering to the response
+      periodUsed: period || 'all',
     };
   }
 
