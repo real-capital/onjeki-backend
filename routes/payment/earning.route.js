@@ -26,6 +26,11 @@ class EarningsRoute extends Route {
       isAuthenticated,
       this.controller.getEarningsSummary
     );
+     this.router.get(
+      `${this.path}/analytics`,
+      isAuthenticated,
+      this.controller.getEarningsAnalytics
+    );
 
     // Get single earning details
     this.router.get(
