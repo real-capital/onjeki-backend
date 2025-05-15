@@ -623,7 +623,7 @@ class EarningService {
         {
           $match: {
             host: new mongoose.Types.ObjectId(hostId),
-            status: { $in: ['available', 'paid'] },
+            status: { $in: ['available', 'paid',''] },
           },
         },
         {

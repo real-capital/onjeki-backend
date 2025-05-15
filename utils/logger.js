@@ -7,8 +7,22 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Use the writable `/tmp/logs` directory for Vercel or fallback if needed
-const LOG_DIR = '/tmp/logs';
-const dir = join(LOG_DIR);
+// const LOG_DIR = '/tmp/logs';
+// const dir = join(LOG_DIR);
+
+// // Create the directory if it doesn't exist
+// if (!existsSync(dir)) {
+//   mkdirSync(dir, { recursive: true });
+// }
+// Determine log directory based on environment
+const LOG_DIR =
+  process.env.NODE_ENV === 'production'
+    ? '/tmp/logs' // Use /tmp for Vercel production
+    : path.join(__dirname, '../logs'); // Use local directory for development
+
+console.log(`Using log directory: ${LOG_DIR}`);
+
+const dir = LOG_DIR;
 
 // Create the directory if it doesn't exist
 if (!existsSync(dir)) {
