@@ -674,7 +674,7 @@ class BookingService {
         await bookingQueue.add(
           'notify-day-before',
           { bookingId: booking._id.toString() },
-          { delay: msDayBefore, attempts: 3, backoff: 60000 }
+          {  delay: 200000, attempts: 3, backoff: 60000 }
         );
       }
 
