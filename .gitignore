@@ -4,3 +4,4 @@ node_modules
 ./logs
 ../logs
 logs
+..all.logs

@@ -628,14 +628,20 @@ class BookingService {
       // Send confirmation notifications
       // await this.sendBookingNotifications(booking);
       // Schedule non-critical operations to happen after transaction
-      setImmediate(() => {
-        this.scheduleBookingNotifications(booking._id).catch((err) => {
-          logger.error('Failed to schedule booking notifications', {
-            bookingId: booking._id,
-            error: err,
-          });
+      this.scheduleBookingNotifications(booking._id).catch((err) => {
+        logger.error('Failed to schedule booking notifications', {
+          bookingId: booking._id,
+          error: err,
         });
       });
+      // setImmediate(() => {
+      //   this.scheduleBookingNotifications(booking._id).catch((err) => {
+      //     logger.error('Failed to schedule booking notifications', {
+      //       bookingId: booking._id,
+      //       error: err,
+      //     });
+      //   });
+      // });
 
       return booking;
     } catch (error) {
