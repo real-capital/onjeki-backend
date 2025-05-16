@@ -41,7 +41,7 @@ const propertySchema = new Schema(
     bed: { type: Number },
     size: { type: String, required: false },
     hasMortgage: { type: Boolean },
-    isNew: { type: Boolean },
+    newlyCreated: { type: Boolean },
     isFurnished: { type: Boolean },
     isBooked: { type: Boolean, required: false },
 

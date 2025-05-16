@@ -5,21 +5,36 @@ import emailService from './services/email/otpMail.service.js';
 import BookingModel from './models/booking.model.js';
 import bookingQueue from './queue/bookingQueue.js';
 import { logger } from './utils/logger.js';
-// import bookingQueue from './queue/bookingQueue.js';
-// import { BookingModel } from './models/Booking.js';
-// import BookingService from './services/booking/booking.service.js';
-// import NotificationService from './services/notification.service.js';
+
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(err);
+  process.exit(1);
+});
+
 
 const bookingService = new BookingService();
 const notificationService = new NotificationService();
 
-bookingQueue.process('notify-day-before', async (job) => {
+bookingQueue.process('notify-day-before-test', async (job) => {
   const { bookingId } = job.data;
-  const booking = await BookingModel.findById(bookingId);
+  console.log(
+    `📩 [notify-day-before-test] Processing job for booking ${bookingId}`
+  );
+  logger.info(
+    `📩 [notify-day-before-test] Processing job for booking ${bookingId}`
+  );
 
+  const booking = await BookingModel.findById(bookingId);
   if (!booking) throw new Error(`Booking ${bookingId} not found`);
 
-      try {
+  try {
     await emailService.sendCheckInReminderEmail(booking);
     logger.info(`Check-in Reminder email sent for booking ${booking._id}`);
   } catch (emailError) {
@@ -28,10 +43,24 @@ bookingQueue.process('notify-day-before', async (job) => {
       emailError
     );
   }
-//   await notificationService.notifyUser(
-//     booking.guest,
-//     `Reminder: Your booking at property ${booking.property} starts tomorrow.`
-//   );
+});
+
+bookingQueue.process('notify-day-before', async (job) => {
+  const { bookingId } = job.data;
+  console.log(`📩 [notify-day-before] Processing job for booking ${bookingId}`);
+
+  const booking = await BookingModel.findById(bookingId);
+  if (!booking) throw new Error(`Booking ${bookingId} not found`);
+
+  try {
+    await emailService.sendCheckInReminderEmail(booking);
+    logger.info(`Check-in Reminder email sent for booking ${booking._id}`);
+  } catch (emailError) {
+    logger.error(
+      `Failed to send check-in Reminder email for booking ${booking._id}:`,
+      emailError
+    );
+  }
 });
 
 bookingQueue.process('notify-15min-before', async (job) => {
@@ -88,3 +117,7 @@ bookingQueue.on('failed', (job, err) => {
 });
 
 console.log('Worker started and listening for booking queue jobs...');
+
+setInterval(() => {
+  console.log('⏳ Worker is alive...');
+}, 30000);

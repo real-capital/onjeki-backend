@@ -669,10 +669,11 @@ class BookingService {
       console.log('🚀 Adding job to queue...');
       // // Send confirmation notifications
       await bookingQueue.add(
-        'notify-day-before',
+        'notify-day-before-test',
         { bookingId: booking._id.toString() },
         { delay: 20000, attempts: 3, backoff: 60000 }
       );
+
       // Schedule notifications
       const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
       if (msDayBefore > 0) {

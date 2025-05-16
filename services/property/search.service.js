@@ -176,7 +176,8 @@ class SearchService {
     if (filters.instantBooking) query.instantBooking = filters.instantBooking;
     if (filters.isFurnished !== undefined)
       query.isFurnished = filters.isFurnished;
-    if (filters.isNew !== undefined) query.isNew = filters.isNew;
+    if (filters.newlyCreated !== undefined)
+      query.newlyCreated = filters.newlyCreated;
 
     return query;
   }
