@@ -368,7 +368,7 @@ class BookingService {
         amount: payment.amount,
         email: booking.guest.email, // Assume you have guest email
         reference: `BOOKING_${bookingId}_${Date.now()}`,
-        channels: [paymentMethod],
+        // channels: [paymentMethod],
         metadata: {
           bookingId: booking._id,
           type: 'booking',

@@ -18,7 +18,7 @@ class PaystackService {
           email: transactionData.email,
           callback_url: process.env.FRONTEND_CALLBACK_URL,
 
-          channels: transactionData.channels,
+          // channels: transactionData.channels,
           metadata: transactionData.metadata,
         },
         {
