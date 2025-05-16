@@ -626,7 +626,7 @@ class BookingService {
       await session.commitTransaction();
 
       // Send confirmation notifications
-      await this.sendBookingNotifications(booking);
+      // await this.sendBookingNotifications(booking);
       // Schedule non-critical operations to happen after transaction
       setImmediate(() => {
         this.scheduleBookingNotifications(booking._id).catch((err) => {
@@ -697,7 +697,7 @@ class BookingService {
       // await this.createBookingConversation(bookingId);
 
       // // Send confirmation notifications
-      // await this.sendBookingNotifications(booking);
+      await this.sendBookingNotifications(booking);
 
       logger.info('All booking notifications scheduled successfully', {
         bookingId: booking._id.toString(),
