@@ -471,6 +471,144 @@ class BookingService {
       session.endSession();
     }
   }
+  async confirmBookingPayment(bookingId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Use Promise.all to fetch booking and payment in parallel
+      const [booking, payment] = await Promise.all([
+        BookingModel.findById(bookingId).session(session),
+        PaymentModel.findOne({ booking: bookingId }).session(session),
+      ]);
+
+      if (!booking) throw new Error('Booking not found');
+      if (!payment) throw new Error('Payment not found');
+
+      // Update payment status
+      payment.status = 'PAID';
+      payment.paidAt = new Date();
+
+      // Update booking status
+      booking.status = BookingStatus.CONFIRMED;
+      booking.payment.status = 'PAID';
+      booking.timeline.push({
+        status: 'PAYMENT_CONFIRMED',
+        message: 'Payment successfully completed',
+      });
+
+      // Find the availability for the property - more specific query to improve performance
+      const property = await PropertyModel.findOne(
+        {
+          'availability.bookedDates.bookingId': bookingId,
+        },
+        { 'availability.bookedDates.$': 1 } // Projection to limit returned data
+      ).session(session);
+
+      if (!property) throw new Error('Property or booked date not found');
+
+      // Find and update booked date
+      const bookedDate = property.availability.bookedDates.find(
+        (date) => date.bookingId.toString() === bookingId.toString()
+      );
+      if (!bookedDate) throw new Error('Booked date not found');
+
+      bookedDate.status = BookingStatus.CONFIRMED;
+
+      // Save all changes in parallel
+      await Promise.all([
+        payment.save({ session }),
+        booking.save({ session }),
+        property.save({ session }),
+      ]);
+
+      // Calculate notification times
+      const now = Date.now();
+      const checkInTime = booking.checkIn.getTime();
+      const checkOutTime = booking.checkOut.getTime();
+
+      // Schedule notifications without awaiting
+      const schedulePromises = [];
+
+      const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
+      if (msDayBefore > 0) {
+        schedulePromises.push(
+          bookingQueue.add(
+            'notify-day-before',
+            { bookingId: booking._id.toString() },
+            { delay: msDayBefore, attempts: 3, backoff: 60000 }
+          )
+        );
+      }
+
+      const msCheckIn = checkInTime - now;
+      if (msCheckIn > 0) {
+        schedulePromises.push(
+          bookingQueue.add(
+            'auto-check-in',
+            { bookingId: booking._id.toString() },
+            { delay: msCheckIn, attempts: 3, backoff: 60000 }
+          )
+        );
+      }
+
+      const msCheckOut = checkOutTime - now;
+      if (msCheckOut > 0) {
+        schedulePromises.push(
+          bookingQueue.add(
+            'auto-check-out',
+            { bookingId: booking._id.toString() },
+            { delay: msCheckOut, attempts: 3, backoff: 60000 }
+          )
+        );
+      }
+
+      // Wait for scheduling promises
+      await Promise.all(schedulePromises);
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      // After transaction is committed, handle non-critical operations
+      // These don't need to be part of the transaction
+
+      // Create earning record without waiting
+      const earningService = new EarningService();
+      earningService.createEarning(booking).catch((earningError) => {
+        logger.error('Failed to create earning record', {
+          bookingId: booking._id,
+          error: earningError,
+        });
+      });
+
+      // Create conversation without waiting
+      this.createBookingConversation(bookingId).catch((convError) => {
+        logger.error('Failed to create booking conversation', {
+          bookingId: booking._id,
+          error: convError,
+        });
+      });
+
+      // Send notifications without waiting
+      this.sendBookingNotifications(booking).catch((notifError) => {
+        logger.error('Failed to send booking notifications', {
+          bookingId: booking._id,
+          error: notifError,
+        });
+      });
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Booking payment confirmation failed', {
+        bookingId,
+        error,
+      });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
 
   /**
    * Create a conversation between guest and host after booking is confirmed
@@ -514,132 +652,123 @@ class BookingService {
     }
   }
   // Method to confirm booking payment
-  async confirmBookingPayment(bookingId) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  // async confirmBookingPayment(bookingId) {
+  //   const session = await mongoose.startSession();
+  //   session.startTransaction();
 
-    try {
-      // Find the booking
-      const booking = await BookingModel.findById(bookingId);
-      if (!booking) {
-        throw new Error('Booking not found');
-      }
+  //   try {
+  //     // Find the booking
+  //     const booking = await BookingModel.findById(bookingId);
+  //     if (!booking) {
+  //       throw new Error('Booking not found');
+  //     }
 
-      // Find the associated payment
-      const payment = await PaymentModel.findOne({ booking: bookingId });
-      if (!payment) {
-        throw new Error('Payment not found');
-      }
+  //     // Find the associated payment
+  //     const payment = await PaymentModel.findOne({ booking: bookingId });
+  //     if (!payment) {
+  //       throw new Error('Payment not found');
+  //     }
 
-      // Update payment status
-      payment.status = 'PAID';
-      payment.paidAt = new Date();
-      await payment.save({ session });
+  //     // Update payment status
+  //     payment.status = 'PAID';
+  //     payment.paidAt = new Date();
+  //     await payment.save({ session });
 
-      // Update booking status
-      booking.status = BookingStatus.CONFIRMED;
-      booking.payment.status = 'PAID';
-      booking.timeline.push({
-        status: 'PAYMENT_CONFIRMED',
-        message: 'Payment successfully completed',
-      });
-      await booking.save({ session });
+  //     // Update booking status
+  //     booking.status = BookingStatus.CONFIRMED;
+  //     booking.payment.status = 'PAID';
+  //     booking.timeline.push({
+  //       status: 'PAYMENT_CONFIRMED',
+  //       message: 'Payment successfully completed',
+  //     });
+  //     await booking.save({ session });
 
-      // Find the availability for the property
-      const property = await PropertyModel.findOne({
-        'availability.bookedDates.bookingId': bookingId,
-      }).session(session);
+  //     // Find the availability for the property
+  //     const property = await PropertyModel.findOne({
+  //       'availability.bookedDates.bookingId': bookingId,
+  //     }).session(session);
 
-      if (!property) {
-        throw new Error('Property or booked date not found');
-      }
+  //     if (!property) {
+  //       throw new Error('Property or booked date not found');
+  //     }
 
-      // Find the booked date and update its status to 'CONFIRMED'
-      const bookedDate = property.availability.bookedDates.find(
-        (date) => date.bookingId.toString() === bookingId.toString()
-      );
+  //     // Find the booked date and update its status to 'CONFIRMED'
+  //     const bookedDate = property.availability.bookedDates.find(
+  //       (date) => date.bookingId.toString() === bookingId.toString()
+  //     );
 
-      if (!bookedDate) {
-        throw new Error('Booked date not found');
-      }
+  //     if (!bookedDate) {
+  //       throw new Error('Booked date not found');
+  //     }
 
-      bookedDate.status = BookingStatus.CONFIRMED;
+  //     bookedDate.status = BookingStatus.CONFIRMED;
 
-      // Save the updated property availability
-      await property.save({ session });
-      const now = Date.now();
+  //     // Save the updated property availability
+  //     await property.save({ session });
+  //     const now = Date.now();
 
-      const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
-      if (msDayBefore > 0) {
-        await bookingQueue.add(
-          'notify-day-before',
-          { bookingId: booking._id.toString() },
-          { delay: msDayBefore, attempts: 3, backoff: 60000 }
-        );
-      }
+  //     const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
+  //     if (msDayBefore > 0) {
+  //       await bookingQueue.add(
+  //         'notify-day-before',
+  //         { bookingId: booking._id.toString() },
+  //         { delay: msDayBefore, attempts: 3, backoff: 60000 }
+  //       );
+  //     }
 
-      // const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
-      // if (ms15MinBefore > 0) {
-      //   await bookingQueue.add(
-      //     'notify-15min-before',
-      //     { bookingId: booking._id.toString() },
-      //     { delay: ms15MinBefore, attempts: 3, backoff: 60000 }
-      //   );
-      // }
+  //     const msCheckIn = booking.checkIn.getTime() - now;
+  //     if (msCheckIn > 0) {
+  //       await bookingQueue.add(
+  //         'auto-check-in',
+  //         { bookingId: booking._id.toString() },
+  //         { delay: msCheckIn, attempts: 3, backoff: 60000 }
+  //       );
+  //     }
 
-      const msCheckIn = booking.checkIn.getTime() - now;
-      if (msCheckIn > 0) {
-        await bookingQueue.add(
-          'auto-check-in',
-          { bookingId: booking._id.toString() },
-          { delay: msCheckIn, attempts: 3, backoff: 60000 }
-        );
-      }
+  //     const msCheckOut = booking.checkOut.getTime() - now;
+  //     if (msCheckOut > 0) {
+  //       await bookingQueue.add(
+  //         'auto-check-out',
+  //         { bookingId: booking._id.toString() },
+  //         { delay: msCheckOut, attempts: 3, backoff: 60000 }
+  //       );
+  //     }
 
-      const msCheckOut = booking.checkOut.getTime() - now;
-      if (msCheckOut > 0) {
-        await bookingQueue.add(
-          'auto-check-out',
-          { bookingId: booking._id.toString() },
-          { delay: msCheckOut, attempts: 3, backoff: 60000 }
-        );
-      }
+  //     // Create earning record for the host
+  //     // Create earning record for the host
+  //     try {
+  //       const earningService = new EarningService();
+  //       await earningService.createEarning(booking);
+  //       logger.info('Earning record created successfully', {
+  //         bookingId: booking._id,
+  //       });
+  //     } catch (earningError) {
+  //       logger.error('Failed to create earning record', {
+  //         bookingId: booking._id,
+  //         error: earningError,
+  //       });
+  //       // Don't throw here - we still want to confirm the booking
+  //       // even if earning record creation fails
+  //     }
+  //     await this.createBookingConversation(bookingId);
 
-      // Create earning record for the host
-      // Create earning record for the host
-      try {
-        const earningService = new EarningService();
-        await earningService.createEarning(booking);
-        logger.info('Earning record created successfully', {
-          bookingId: booking._id,
-        });
-      } catch (earningError) {
-        logger.error('Failed to create earning record', {
-          bookingId: booking._id,
-          error: earningError,
-        });
-        // Don't throw here - we still want to confirm the booking
-        // even if earning record creation fails
-      }
-      await this.createBookingConversation(bookingId);
+  //     await session.commitTransaction();
 
-      await session.commitTransaction();
+  //     // Send confirmation notifications
+  //     await this.sendBookingNotifications(booking);
 
-      // Send confirmation notifications
-      await this.sendBookingNotifications(booking);
-
-      return booking;
-    } catch (error) {
-      await session.abortTransaction();
-      logger.error('Booking payment confirmation failed', {
-        bookingId,
-        error,
-      });
-      throw error;
-    } finally {
-      session.endSession();
-    }
-  }
+  //     return booking;
+  //   } catch (error) {
+  //     await session.abortTransaction();
+  //     logger.error('Booking payment confirmation failed', {
+  //       bookingId,
+  //       error,
+  //     });
+  //     throw error;
+  //   } finally {
+  //     session.endSession();
+  //   }
+  // }
 
   /**
    * Send notifications for checkout completion
