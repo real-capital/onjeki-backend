@@ -569,43 +569,6 @@ class BookingService {
       await property.save({ session });
       const now = Date.now();
 
-      // const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
-      // if (msDayBefore > 0) {
-      //   await bookingQueue.add(
-      //     'notify-day-before',
-      //     { bookingId: booking._id.toString() },
-      //     { delay: msDayBefore, attempts: 3, backoff: 60000 }
-      //   );
-      // }
-
-      // const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
-      // if (ms15MinBefore > 0) {
-      //   await bookingQueue.add(
-      //     'notify-15min-before',
-      //     { bookingId: booking._id.toString() },
-      //     { delay: ms15MinBefore, attempts: 3, backoff: 60000 }
-      //   );
-      // }
-
-      // const msCheckIn = booking.checkIn.getTime() - now;
-      // if (msCheckIn > 0) {
-      //   await bookingQueue.add(
-      //     'auto-check-in',
-      //     { bookingId: booking._id.toString() },
-      //     { delay: msCheckIn, attempts: 3, backoff: 60000 }
-      //   );
-      // }
-
-      // const msCheckOut = booking.checkOut.getTime() - now;
-      // if (msCheckOut > 0) {
-      //   await bookingQueue.add(
-      //     'auto-check-out',
-      //     { bookingId: booking._id.toString() },
-      //     { delay: msCheckOut, attempts: 3, backoff: 60000 }
-      //   );
-      // }
-
-      // Create earning record for the host
       // Create earning record for the host
       try {
         const earningService = new EarningService();
@@ -634,14 +597,6 @@ class BookingService {
           error: err,
         });
       });
-      // setImmediate(() => {
-      //   this.scheduleBookingNotifications(booking._id).catch((err) => {
-      //     logger.error('Failed to schedule booking notifications', {
-      //       bookingId: booking._id,
-      //       error: err,
-      //     });
-      //   });
-      // });
 
       return booking;
     } catch (error) {
@@ -671,7 +626,11 @@ class BookingService {
       await bookingQueue.add(
         'notify-day-before-test',
         { bookingId: booking._id.toString() },
-        { delay: 20000, attempts: 3, backoff: 60000 }
+        {
+          delay: 20000,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 60000 },
+        }
       );
 
       // Schedule notifications
@@ -680,7 +639,11 @@ class BookingService {
         await bookingQueue.add(
           'notify-day-before',
           { bookingId: booking._id.toString() },
-          { delay: msDayBefore, attempts: 3, backoff: 60000 }
+          {
+            delay: msDayBefore,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60000 },
+          }
         );
       }
 
@@ -689,7 +652,11 @@ class BookingService {
         await bookingQueue.add(
           'auto-check-in',
           { bookingId: booking._id.toString() },
-          { delay: msCheckIn, attempts: 3, backoff: 60000 }
+          {
+            delay: msCheckIn,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60000 },
+          }
         );
       }
 
@@ -698,7 +665,11 @@ class BookingService {
         await bookingQueue.add(
           'auto-check-out',
           { bookingId: booking._id.toString() },
-          { delay: msCheckOut, attempts: 3, backoff: 60000 }
+          {
+            delay: msCheckOut,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60000 },
+          }
         );
       }
       console.log('✅ Job added to queue');
