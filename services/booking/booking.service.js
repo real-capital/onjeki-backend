@@ -569,14 +569,14 @@ class BookingService {
       await property.save({ session });
       const now = Date.now();
 
-      const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
-      if (msDayBefore > 0) {
-        await bookingQueue.add(
-          'notify-day-before',
-          { bookingId: booking._id.toString() },
-          { delay: msDayBefore, attempts: 3, backoff: 60000 }
-        );
-      }
+      // const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
+      // if (msDayBefore > 0) {
+      //   await bookingQueue.add(
+      //     'notify-day-before',
+      //     { bookingId: booking._id.toString() },
+      //     { delay: msDayBefore, attempts: 3, backoff: 60000 }
+      //   );
+      // }
 
       // const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
       // if (ms15MinBefore > 0) {
@@ -587,23 +587,23 @@ class BookingService {
       //   );
       // }
 
-      const msCheckIn = booking.checkIn.getTime() - now;
-      if (msCheckIn > 0) {
-        await bookingQueue.add(
-          'auto-check-in',
-          { bookingId: booking._id.toString() },
-          { delay: msCheckIn, attempts: 3, backoff: 60000 }
-        );
-      }
+      // const msCheckIn = booking.checkIn.getTime() - now;
+      // if (msCheckIn > 0) {
+      //   await bookingQueue.add(
+      //     'auto-check-in',
+      //     { bookingId: booking._id.toString() },
+      //     { delay: msCheckIn, attempts: 3, backoff: 60000 }
+      //   );
+      // }
 
-      const msCheckOut = booking.checkOut.getTime() - now;
-      if (msCheckOut > 0) {
-        await bookingQueue.add(
-          'auto-check-out',
-          { bookingId: booking._id.toString() },
-          { delay: msCheckOut, attempts: 3, backoff: 60000 }
-        );
-      }
+      // const msCheckOut = booking.checkOut.getTime() - now;
+      // if (msCheckOut > 0) {
+      //   await bookingQueue.add(
+      //     'auto-check-out',
+      //     { bookingId: booking._id.toString() },
+      //     { delay: msCheckOut, attempts: 3, backoff: 60000 }
+      //   );
+      // }
 
       // Create earning record for the host
       // Create earning record for the host
