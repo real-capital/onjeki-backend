@@ -180,16 +180,54 @@ class BookingController {
   }
 
   // New method to handle subscription-related events
-  async handleSubscriptionCreation(data) {
-    try {
-      // Check if this is a subscription-related transaction
-      if (data.metadata && data.metadata.type === 'subscription_renewal') {
-        await this.verifySubscriptionRenewal(data.reference);
-      }
-    } catch (error) {
-      logger.error('Subscription creation webhook error', error);
+  // async handleSubscriptionCreation(data) {
+  //   try {
+  //     // Check if this is a subscription-related transaction
+  //     if (data.metadata && data.metadata.type === 'subscription_renewal') {
+  //       await this.verifySubscriptionRenewal(data.reference);
+  //     }
+  //   } catch (error) {
+  //     logger.error('Subscription creation webhook error', error);
+  //   }
+  // }
+
+  async handleChargeSuccess(chargeData) {
+  try {
+    const metadata = chargeData.metadata || {};
+
+    if (metadata.type === 'subscription') {
+      await subscriptionService.verifyPayment(chargeData.reference);
+      return;
     }
+
+    const bookingId = metadata.bookingId;
+
+    if (!bookingId) {
+      logger.warn('No bookingId found in metadata', { chargeData });
+      return;
+    }
+
+    // Optionally, verify booking exists before updating
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) {
+      logger.warn('Booking not found for successful payment', { bookingId });
+      return;
+    }
+
+    await this.bookingService.confirmBookingPayment(bookingId);
+
+    await webhookMonitorService.logWebhookEvent(
+      'PAYSTACK',
+      'charge.success',
+      chargeData,
+      { success: true }
+    );
+  } catch (error) {
+    logger.error('Error in handleChargeSuccess', error);
+    throw error;
   }
+}
+
 
   // New method to handle subscription renewal
   async handleSubscriptionRenewal(data) {
@@ -386,7 +424,7 @@ class BookingController {
         if (!payment) {
           logger.warn('Payment not found for successful charge', {
             reference: chargeData.reference,
-          });
+          }); 
           return;
         }
 
