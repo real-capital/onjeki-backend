@@ -118,6 +118,6 @@ bookingQueue.on('failed', (job, err) => {
 
 console.log('Worker started and listening for booking queue jobs...');
 
-setInterval(() => {
-  console.log('⏳ Worker is alive...');
-}, 30000);
+// setInterval(() => {
+//   console.log('⏳ Worker is alive...');
+// }, 30000);
