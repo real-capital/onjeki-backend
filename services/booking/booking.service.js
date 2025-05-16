@@ -660,6 +660,8 @@ class BookingService {
       const now = Date.now();
       const checkInTime = booking.checkIn.getTime();
       const checkOutTime = booking.checkOut.getTime();
+      // // Send confirmation notifications
+      await this.sendBookingNotifications(booking);
 
       // Schedule notifications
       const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
@@ -695,9 +697,6 @@ class BookingService {
 
       // // Create conversation
       // await this.createBookingConversation(bookingId);
-
-      // // Send confirmation notifications
-      await this.sendBookingNotifications(booking);
 
       logger.info('All booking notifications scheduled successfully', {
         bookingId: booking._id.toString(),
