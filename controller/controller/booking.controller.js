@@ -125,6 +125,8 @@ class BookingController {
       }
 
       const event = req.body;
+      console.log(event.data);
+      logger.info(event.data);
 
       // Enhanced event handling
       switch (event.event) {

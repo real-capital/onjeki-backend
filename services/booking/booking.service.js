@@ -621,6 +621,7 @@ class BookingService {
         // Don't throw here - we still want to confirm the booking
         // even if earning record creation fails
       }
+      await this.createBookingConversation(bookingId);
 
       await session.commitTransaction();
 
