@@ -666,19 +666,20 @@ class BookingService {
       const now = Date.now();
       const checkInTime = booking.checkIn.getTime();
       const checkOutTime = booking.checkOut.getTime();
+      console.log('🚀 Adding job to queue...');
       // // Send confirmation notifications
-     await bookingQueue.add(
-          'notify-day-before',
-          { bookingId: booking._id.toString() },
-          {  delay: 20000, attempts: 3, backoff: 60000 }
-        );
+      await bookingQueue.add(
+        'notify-day-before',
+        { bookingId: booking._id.toString() },
+        { delay: 20000, attempts: 3, backoff: 60000 }
+      );
       // Schedule notifications
       const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
       if (msDayBefore > 0) {
         await bookingQueue.add(
           'notify-day-before',
           { bookingId: booking._id.toString() },
-          {  delay: msDayBefore, attempts: 3, backoff: 60000 }
+          { delay: msDayBefore, attempts: 3, backoff: 60000 }
         );
       }
 
@@ -699,6 +700,7 @@ class BookingService {
           { delay: msCheckOut, attempts: 3, backoff: 60000 }
         );
       }
+      console.log('✅ Job added to queue');
 
       // // Create earning record for the host
       // const earningService = new EarningService();
