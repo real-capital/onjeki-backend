@@ -19,6 +19,7 @@ const paystackService = new PaystackService();
 const webhookMonitorService = new WebhookMonitorService();
 const subscriptionService = new SubscriptionService();
 const payoutService = new PayoutService();
+const processingLocks = new Map();
 
 class BookingController {
   constructor(bookingService) {
@@ -32,7 +33,7 @@ class BookingController {
     this.getBooking = this.getBooking.bind(this);
     this.cancelBooking = this.cancelBooking.bind(this);
     this.createBooking = this.createBooking.bind(this);
-    this.confirmBooking = this.confirmBooking.bind(this);
+    // this.confirmBooking = this.confirmBooking.bind(this);
     // this.confirmBookingPayment = this.confirmBookingPayment.bind(this);
     this.getUserBookings = this.getUserBookings.bind(this);
     this.getHostBookings = this.getHostBookings.bind(this);
@@ -120,6 +121,24 @@ class BookingController {
       }
 
       const event = req.body;
+      const eventReference = event.data.reference;
+
+      // Check if this webhook was recently processed
+      const recentEvent = await webhookMonitorService.findRecentEvent(
+        'PAYSTACK',
+        event.event,
+        eventReference,
+        5 * 60 * 1000 // Look back 5 minutes
+      );
+      if (recentEvent && recentEvent.processedSuccessfully) {
+        logger.info('Ignoring duplicate webhook event', {
+          reference: eventReference,
+          eventId: recentEvent._id,
+        });
+        return res
+          .status(200)
+          .json({ status: 'success', message: 'Event already processed' });
+      }
 
       // Log receipt of webhook without waiting for processing
       webhookMonitorService
@@ -151,10 +170,23 @@ class BookingController {
 
   // New method to handle async processing after response is sent
   async processWebhookEventAsync(event) {
+    const reference = event.data.reference;
+    const bookingId = event.data.metadata?.bookingId;
+
+    // Skip if already processing this reference
+    if (processingLocks.has(reference)) {
+      logger.info('Skipping duplicate processing', { reference });
+      return;
+    }
+
+    // Set lock
+    processingLocks.set(reference, Date.now());
     try {
       switch (event.event) {
         case 'charge.success':
-          await this.handleChargeSuccess(event.data);
+          if (event.data.metadata?.bookingId) {
+            await this.handleChargeSuccess(event.data);
+          }
           break;
         case 'charge.failed':
           await this.handleChargeFailed(event.data);
@@ -188,6 +220,7 @@ class BookingController {
         { status: 'processed', success: true }
       );
     } catch (error) {
+      logger.error('Error processing webhook event', { error, reference });
       await webhookMonitorService.logWebhookEvent(
         'PAYSTACK',
         event.event,
@@ -195,6 +228,8 @@ class BookingController {
         { status: 'failed', error: error.message }
       );
       throw error;
+    } finally {
+      processingLocks.delete(reference);
     }
   }
   // async webhook(req, res) {
@@ -399,7 +434,7 @@ class BookingController {
         { success: true }
       );
     } catch (error) {
-      this.logger.error('Error in handleChargeFailed', error);
+      logger.error('Error in handleChargeFailed', error);
       throw error;
     }
   }
@@ -729,19 +764,19 @@ class BookingController {
     }
   }
 
-  confirmBooking = async (req, res, next) => {
-    try {
-      const bookingId = req.params.id;
-      await this.bookingService.confirmBookingPayment(bookingId);
+  // confirmBooking = async (req, res, next) => {
+  //   try {
+  //     const bookingId = req.params.id;
+  //     await this.bookingService.confirmBookingPayment(bookingId);
 
-      res.status(StatusCodes.OK).json({
-        status: 'success',
-        message: 'Booking confirmed successfully',
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
+  //     res.status(StatusCodes.OK).json({
+  //       status: 'success',
+  //       message: 'Booking confirmed successfully',
+  //     });
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // };
   getUserBookings = async (req, res, next) => {
     try {
       const bookings = await this.bookingService.getUserBookings(req.user._id);

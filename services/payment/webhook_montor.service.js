@@ -1,6 +1,15 @@
 import WebhookEvent from '../../models/webhook.model.js';
 
 class WebhookMonitorService {
+  async findRecentEvent(service, eventType, reference, lookbackMs = 300000) {
+    return await WebhookEvent.findOne({
+      service,
+      eventType,
+      'rawPayload.reference': reference,
+      createdAt: { $gte: new Date(Date.now() - lookbackMs) },
+    }).sort({ createdAt: -1 });
+  }
+
   async logWebhookEvent(service, eventType, payload, processingResult = {}) {
     try {
       const webhookEvent = new WebhookEvent({
@@ -39,4 +48,4 @@ class WebhookMonitorService {
   }
 }
 
-export default  WebhookMonitorService;
+export default WebhookMonitorService;

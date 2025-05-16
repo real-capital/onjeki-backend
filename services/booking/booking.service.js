@@ -471,143 +471,179 @@ class BookingService {
       session.endSession();
     }
   }
-  async confirmBookingPayment(bookingId) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  async confirmBookingPayment(bookingId, transactionReference) {
+    let retryCount = 0;
+    const maxRetries = 3;
+    // Check if payment already processed
+    const existingPayment = await PaymentModel.findOne({
+      booking: bookingId,
+      status: 'PAID',
+    });
 
-    try {
-      // Use Promise.all to fetch booking and payment in parallel
-      const [booking, payment] = await Promise.all([
-        BookingModel.findById(bookingId).session(session),
-        PaymentModel.findOne({ booking: bookingId }).session(session),
-      ]);
-
-      if (!booking) throw new Error('Booking not found');
-      if (!payment) throw new Error('Payment not found');
-
-      // Update payment status
-      payment.status = 'PAID';
-      payment.paidAt = new Date();
-
-      // Update booking status
-      booking.status = BookingStatus.CONFIRMED;
-      booking.payment.status = 'PAID';
-      booking.timeline.push({
-        status: 'PAYMENT_CONFIRMED',
-        message: 'Payment successfully completed',
-      });
-
-      // Find the availability for the property - more specific query to improve performance
-      const property = await PropertyModel.findOne(
-        {
-          'availability.bookedDates.bookingId': bookingId,
-        },
-        { 'availability.bookedDates.$': 1 } // Projection to limit returned data
-      ).session(session);
-
-      if (!property) throw new Error('Property or booked date not found');
-
-      // Find and update booked date
-      const bookedDate = property.availability.bookedDates.find(
-        (date) => date.bookingId.toString() === bookingId.toString()
-      );
-      if (!bookedDate) throw new Error('Booked date not found');
-
-      bookedDate.status = BookingStatus.CONFIRMED;
-
-      // Save all changes in parallel
-      await Promise.all([
-        payment.save({ session }),
-        booking.save({ session }),
-        property.save({ session }),
-      ]);
-
-      // Calculate notification times
-      const now = Date.now();
-      const checkInTime = booking.checkIn.getTime();
-      const checkOutTime = booking.checkOut.getTime();
-
-      // Schedule notifications without awaiting
-      const schedulePromises = [];
-
-      const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
-      if (msDayBefore > 0) {
-        schedulePromises.push(
-          bookingQueue.add(
-            'notify-day-before',
-            { bookingId: booking._id.toString() },
-            { delay: msDayBefore, attempts: 3, backoff: 60000 }
-          )
-        );
-      }
-
-      const msCheckIn = checkInTime - now;
-      if (msCheckIn > 0) {
-        schedulePromises.push(
-          bookingQueue.add(
-            'auto-check-in',
-            { bookingId: booking._id.toString() },
-            { delay: msCheckIn, attempts: 3, backoff: 60000 }
-          )
-        );
-      }
-
-      const msCheckOut = checkOutTime - now;
-      if (msCheckOut > 0) {
-        schedulePromises.push(
-          bookingQueue.add(
-            'auto-check-out',
-            { bookingId: booking._id.toString() },
-            { delay: msCheckOut, attempts: 3, backoff: 60000 }
-          )
-        );
-      }
-
-      // Wait for scheduling promises
-      await Promise.all(schedulePromises);
-
-      // Commit the transaction
-      await session.commitTransaction();
-
-      // After transaction is committed, handle non-critical operations
-      // These don't need to be part of the transaction
-
-      // Create earning record without waiting
-      const earningService = new EarningService();
-      earningService.createEarning(booking).catch((earningError) => {
-        logger.error('Failed to create earning record', {
-          bookingId: booking._id,
-          error: earningError,
-        });
-      });
-
-      // Create conversation without waiting
-      this.createBookingConversation(bookingId).catch((convError) => {
-        logger.error('Failed to create booking conversation', {
-          bookingId: booking._id,
-          error: convError,
-        });
-      });
-
-      // Send notifications without waiting
-      this.sendBookingNotifications(booking).catch((notifError) => {
-        logger.error('Failed to send booking notifications', {
-          bookingId: booking._id,
-          error: notifError,
-        });
-      });
-
-      return booking;
-    } catch (error) {
-      await session.abortTransaction();
-      logger.error('Booking payment confirmation failed', {
+    if (existingPayment) {
+      logger.info('Payment already processed, skipping', {
         bookingId,
-        error,
+        reference: transactionReference,
       });
-      throw error;
-    } finally {
-      session.endSession();
+      // Return the associated booking
+      return BookingModel.findById(bookingId);
     }
+    while (retryCount < maxRetries) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        // Use Promise.all to fetch booking and payment in parallel
+        const [booking, payment] = await Promise.all([
+          BookingModel.findById(bookingId).session(session),
+          PaymentModel.findOne({ booking: bookingId }).session(session),
+        ]);
+
+        if (!booking) throw new Error('Booking not found');
+        if (!payment) throw new Error('Payment not found');
+
+        // Update payment status
+        payment.status = 'PAID';
+        payment.paidAt = new Date();
+
+        // Update booking status
+        booking.status = BookingStatus.CONFIRMED;
+        booking.payment.status = 'PAID';
+        booking.timeline.push({
+          status: 'PAYMENT_CONFIRMED',
+          message: 'Payment successfully completed',
+        });
+
+        // Find the availability for the property - more specific query to improve performance
+        const property = await PropertyModel.findOne(
+          {
+            'availability.bookedDates.bookingId': bookingId,
+          },
+          { 'availability.bookedDates.$': 1 } // Projection to limit returned data
+        ).session(session);
+
+        if (!property) throw new Error('Property or booked date not found');
+
+        // Find and update booked date
+        const bookedDate = property.availability.bookedDates.find(
+          (date) => date.bookingId.toString() === bookingId.toString()
+        );
+        if (!bookedDate) throw new Error('Booked date not found');
+
+        bookedDate.status = BookingStatus.CONFIRMED;
+
+        // Save all changes in parallel
+        await Promise.all([
+          payment.save({ session }),
+          booking.save({ session }),
+          property.save({ session }),
+        ]);
+
+        // Calculate notification times
+        const now = Date.now();
+        const checkInTime = booking.checkIn.getTime();
+        const checkOutTime = booking.checkOut.getTime();
+
+        // Schedule notifications without awaiting
+        const schedulePromises = [];
+
+        const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
+        if (msDayBefore > 0) {
+          schedulePromises.push(
+            bookingQueue.add(
+              'notify-day-before',
+              { bookingId: booking._id.toString() },
+              { delay: msDayBefore, attempts: 3, backoff: 60000 }
+            )
+          );
+        }
+
+        const msCheckIn = checkInTime - now;
+        if (msCheckIn > 0) {
+          schedulePromises.push(
+            bookingQueue.add(
+              'auto-check-in',
+              { bookingId: booking._id.toString() },
+              { delay: msCheckIn, attempts: 3, backoff: 60000 }
+            )
+          );
+        }
+
+        const msCheckOut = checkOutTime - now;
+        if (msCheckOut > 0) {
+          schedulePromises.push(
+            bookingQueue.add(
+              'auto-check-out',
+              { bookingId: booking._id.toString() },
+              { delay: msCheckOut, attempts: 3, backoff: 60000 }
+            )
+          );
+        }
+
+        // Wait for scheduling promises
+        await Promise.all(schedulePromises);
+
+        // Commit the transaction
+        await session.commitTransaction();
+
+        // After transaction is committed, handle non-critical operations
+        // These don't need to be part of the transaction
+
+        // Create earning record without waiting
+        const earningService = new EarningService();
+        earningService.createEarning(booking).catch((earningError) => {
+          logger.error('Failed to create earning record', {
+            bookingId: booking._id,
+            error: earningError,
+          });
+        });
+
+        // Create conversation without waiting
+        this.createBookingConversation(bookingId).catch((convError) => {
+          logger.error('Failed to create booking conversation', {
+            bookingId: booking._id,
+            error: convError,
+          });
+        });
+
+        // Send notifications without waiting
+        this.sendBookingNotifications(booking).catch((notifError) => {
+          logger.error('Failed to send booking notifications', {
+            bookingId: booking._id,
+            error: notifError,
+          });
+        });
+
+        return booking;
+      } catch (error) {
+        await session.abortTransaction();
+
+        // Check if this is a transaction conflict error
+        if (
+          error.message.includes('transaction') &&
+          retryCount < maxRetries - 1
+        ) {
+          logger.warn('Transaction conflict, retrying', {
+            bookingId,
+            retryCount: retryCount + 1,
+          });
+          retryCount++;
+          // Wait a bit before retrying (with exponential backoff)
+          await new Promise((resolve) =>
+            setTimeout(resolve, 100 * Math.pow(2, retryCount))
+          );
+        } else {
+          logger.error('Booking payment confirmation failed', {
+            bookingId,
+            error,
+          });
+          throw error;
+        }
+      } finally {
+        session.endSession();
+      }
+    }
+    throw new Error('Max retries exceeded for booking payment confirmation');
   }
 
   /**
