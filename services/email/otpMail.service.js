@@ -382,7 +382,113 @@ class EmailService {
       );
     }
   }
+  async sendCheckInReminderEmail(booking) {
+    try {
+      const guest = await UserModel.findById(booking.guest);
+      const property = await PropertyModel.findById(booking.property);
 
+      // Format check-in date and time separately for email
+      const checkInDate = format(booking.checkIn, 'EEEE, MMMM d, yyyy');
+      const checkInTime = format(booking.checkIn, 'h:mm a');
+
+      // Prepare template data matching your Handlebars placeholders
+      const template = await this.getEmailTemplate('check-in-reminder', {
+        guestName: guest.name,
+        propertyTitle: property.title,
+        propertyAddress: property.location.address,
+        checkInDate,
+        checkInTime,
+        bookingUrl: `${process.env.APP_URL}/bookings/${booking._id}`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: guest.email,
+        subject: `Reminder: Your Check-in is Tomorrow - ${property.title}`,
+        html: template,
+      });
+
+      logger.info(`Check-in reminder email sent to ${guest.email}`);
+      return true;
+    } catch (error) {
+      logger.error(`Error sending check-in reminder email: ${error.message}`);
+      return false;
+    }
+  }
+
+  async sendCheckInConfirmationEmail(booking) {
+    try {
+      const guest = await UserModel.findById(booking.guest);
+      const property = await PropertyModel.findById(booking.property);
+
+      const template = await this.getEmailTemplate('check-in-confirmation', {
+        guestName: guest.name,
+        propertyTitle: property.title,
+        propertyAddress: property.location.address,
+        checkInTime: format(
+          booking.checkInDetails.actualCheckInTime,
+          'h:mm a, MMMM d, yyyy'
+        ),
+        checkOutDate: format(booking.checkOut, 'EEEE, MMMM d, yyyy'),
+        bookingUrl: `${process.env.APP_URL}/bookings/${booking._id}`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: guest.email,
+        subject: `Check-in Confirmed - ${property.title}`,
+        html: template,
+      });
+
+      logger.info(`Check-in confirmation email sent to ${guest.email}`);
+      return true;
+    } catch (error) {
+      logger.error(
+        `Error sending check-in confirmation email: ${error.message}`
+      );
+      return false;
+    }
+  }
+
+  async sendCheckOutConfirmationEmail(booking) {
+    try {
+      const guest = await UserModel.findById(booking.guest);
+      const property = await PropertyModel.findById(booking.property);
+
+      const template = await this.getEmailTemplate('check-out-confirmation', {
+        guestName: guest.name,
+        propertyTitle: property.title,
+        checkInDate: format(booking.checkIn, 'MMM d, yyyy'),
+        checkOutDate: format(booking.checkOut, 'MMM d, yyyy'),
+        bookingUrl: `${process.env.APP_URL}/bookings/${booking._id}`,
+        reviewUrl: `${process.env.APP_URL}/bookings/${booking._id}/review`,
+        supportEmail: process.env.MAIL_USER,
+        companyName: 'Onjeki',
+        year: new Date().getFullYear(),
+      });
+
+      await this.transporter.sendMail({
+        from: `"Onjeki" <${process.env.MAIL_USER}>`,
+        to: guest.email,
+        subject: `Check-out Confirmed - ${property.title}`,
+        html: template,
+      });
+
+      logger.info(`Check-out confirmation email sent to ${guest.email}`);
+      return true;
+    } catch (error) {
+      logger.error(
+        `Error sending check-out confirmation email: ${error.message}`
+      );
+      return false;
+    }
+  }
   /**
    * Send monthly earnings summary
    */

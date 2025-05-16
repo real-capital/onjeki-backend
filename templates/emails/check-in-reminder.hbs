@@ -1,0 +1,43 @@
+{{!-- templates/emails/check-in-reminder.hbs --}}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Check-in Reminder</title>
+  <style>
+    /* Your email styles */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Your Check-in is Tomorrow!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Hello {{guestName}},</p>
+      <p>This is a friendly reminder that your check-in at <strong>{{propertyTitle}}</strong> is tomorrow.</p>
+      
+      <div class="booking-details">
+        <h3>Booking Details</h3>
+        <p><strong>Check-in:</strong> {{checkInDate}} at {{checkInTime}}</p>
+        <p><strong>Property Address:</strong> {{propertyAddress}}</p>
+      </div>
+      
+      <div class="cta">
+        <a href="{{bookingUrl}}" class="button">View Booking Details</a>
+      </div>
+      
+      <p>If you have any questions, please don't hesitate to contact us.</p>
+      <p>We look forward to hosting you!</p>
+      
+      <p>Best regards,<br>The Onjeki Team</p>
+    </div>
+    
+    <div class="footer">
+      <p>© {{year}} {{companyName}}. All rights reserved.</p>
+      <p>If you need assistance, please contact <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+    </div>
+  </div>
+</body>
+</html>

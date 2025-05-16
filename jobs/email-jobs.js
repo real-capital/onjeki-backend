@@ -121,7 +121,7 @@ export async function sendMonthlyEarningsSummaries() {
 // Schedule cron jobs
 export function scheduleEmailJobs() {
   // Send available earnings notifications every hour
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule('0 0 * * *', async () => {
     logger.info('Running job: sendAvailableEarningsNotifications');
     await sendAvailableEarningsNotifications();
   });

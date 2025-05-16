@@ -21,12 +21,12 @@ import BankAccountModel from '../../models/bank-account.model.js';
 const paystackService = new PaystackService();
 const refundService = new RefundService();
 class BookingService {
-  constructor(socketService) {
-    if (!socketService) {
-      throw new Error('SocketService is required for BookingService');
-    }
-    this.socketService = socketService;
-  }
+  // constructor(socketService) {
+  //   if (!socketService) {
+  //     throw new Error('SocketService is required for BookingService');
+  //   }
+  //   this.socketService = socketService;
+  // }
   async calculateBookingPrice(propertyId, checkIn, checkOut, guests) {
     const property = await PropertyModel.findById(propertyId);
     if (!property) {
@@ -566,6 +566,44 @@ class BookingService {
 
       // Save the updated property availability
       await property.save({ session });
+      const now = Date.now();
+
+      const msDayBefore = booking.checkIn.getTime() - 24 * 60 * 60 * 1000 - now;
+      if (msDayBefore > 0) {
+        await bookingQueue.add(
+          'notify-day-before',
+          { bookingId: booking._id.toString() },
+          { delay: msDayBefore, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
+      if (ms15MinBefore > 0) {
+        await bookingQueue.add(
+          'notify-15min-before',
+          { bookingId: booking._id.toString() },
+          { delay: ms15MinBefore, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      const msCheckIn = booking.checkIn.getTime() - now;
+      if (msCheckIn > 0) {
+        await bookingQueue.add(
+          'auto-check-in',
+          { bookingId: booking._id.toString() },
+          { delay: msCheckIn, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      const msCheckOut = booking.checkOut.getTime() - now;
+      if (msCheckOut > 0) {
+        await bookingQueue.add(
+          'auto-check-out',
+          { bookingId: booking._id.toString() },
+          { delay: msCheckOut, attempts: 3, backoff: 60000 }
+        );
+      }
+
       // Create earning record for the host
       // Create earning record for the host
       try {
@@ -608,6 +646,14 @@ class BookingService {
     try {
       // Send email to host
       await emailService.sendStayCompletedEmail(booking);
+      await emailService.sendCheckOutConfirmationEmail(booking);
+      logger.info(
+        `Check-out confirmation email sent for booking ${booking._id}`
+      );
+
+      // Also send a review request
+      await emailService.sendReviewRequestEmail(booking);
+      logger.info(`Review request email sent for booking ${booking._id}`);
 
       // Create notification for host
       await NotificationModel.create({
@@ -1286,8 +1332,14 @@ class BookingService {
         throw new Error(`Booking not found: ${bookingId}`);
       }
 
-      if (booking.status !== BookingStatus.CONFIRMED) {
-        throw new Error(`Booking is not in CONFIRMED status: ${bookingId}`);
+      // if (booking.status !== BookingStatus.CONFIRMED) {
+      //   throw new Error(`Booking is not in CONFIRMED status: ${bookingId}`);
+      // }
+      if (
+        booking.status !== BookingStatus.CONFIRMED &&
+        booking.status !== BookingStatus.CHECKED_IN
+      ) {
+        throw new Error('Booking is not in a valid state for completion');
       }
 
       // Update booking status to COMPLETED
@@ -1295,7 +1347,7 @@ class BookingService {
       booking.checkOutDetails.isCheckedOut = true;
       booking.checkOutDetails.checkOutTime = new Date();
       booking.timeline.push({
-        status: 'COMPLETED',
+        status: 'CHECKED_OUT',
         message: 'Stay completed, guest checked out',
       });
 
