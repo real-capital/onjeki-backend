@@ -16,6 +16,7 @@ import EarningModel from '../../models/earning.model.js';
 import Conversation from '../../models/conversation.model.js';
 import ConversationService from '../conversation/conversation.service.js';
 import BankAccountModel from '../../models/bank-account.model.js';
+import bookingQueue from '../../queue/bookingQueue.js';
 // import PushNotificationService from '../notification/push_notification_service.js';
 
 const paystackService = new PaystackService();
@@ -577,14 +578,14 @@ class BookingService {
         );
       }
 
-      const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
-      if (ms15MinBefore > 0) {
-        await bookingQueue.add(
-          'notify-15min-before',
-          { bookingId: booking._id.toString() },
-          { delay: ms15MinBefore, attempts: 3, backoff: 60000 }
-        );
-      }
+      // const ms15MinBefore = booking.checkIn.getTime() - 15 * 60 * 1000 - now;
+      // if (ms15MinBefore > 0) {
+      //   await bookingQueue.add(
+      //     'notify-15min-before',
+      //     { bookingId: booking._id.toString() },
+      //     { delay: ms15MinBefore, attempts: 3, backoff: 60000 }
+      //   );
+      // }
 
       const msCheckIn = booking.checkIn.getTime() - now;
       if (msCheckIn > 0) {
@@ -1297,7 +1298,8 @@ class BookingService {
       // Check for any pending earnings
       const earningService = new EarningService();
       const summary = await earningService.getEarningsSummary(hostId);
-
+      // 67ae6bc8a9c1f69bb534f89d
+      // 682219d19dde34c8f5949e89
       return {
         canReceivePayouts: true,
         hasDefaultBankAccount: !!bankAccount.isDefault,
