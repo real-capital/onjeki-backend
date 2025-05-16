@@ -4,7 +4,7 @@ import { logger } from '../../utils/logger.js';
 
 class BankService {
   constructor() {
-    this.paystackSecretKey = process.env.WEBHOOK_SECRET_KEY;
+    this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     this.baseUrl = 'https://api.paystack.co';
     this.cache = {
       banks: null,
