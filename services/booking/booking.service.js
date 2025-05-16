@@ -627,6 +627,15 @@ class BookingService {
 
       // Send confirmation notifications
       await this.sendBookingNotifications(booking);
+      // Schedule non-critical operations to happen after transaction
+      setImmediate(() => {
+        this.scheduleBookingNotifications(booking._id).catch((err) => {
+          logger.error('Failed to schedule booking notifications', {
+            bookingId: booking._id,
+            error: err,
+          });
+        });
+      });
 
       return booking;
     } catch (error) {
@@ -638,6 +647,67 @@ class BookingService {
       throw error;
     } finally {
       session.endSession();
+    }
+  }
+
+  async scheduleBookingNotifications(bookingId) {
+    try {
+      const booking = await BookingModel.findById(bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      const now = Date.now();
+      const checkInTime = booking.checkIn.getTime();
+      const checkOutTime = booking.checkOut.getTime();
+
+      // Schedule notifications
+      const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
+      if (msDayBefore > 0) {
+        await bookingQueue.add(
+          'notify-day-before',
+          { bookingId: booking._id.toString() },
+          { delay: msDayBefore, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      const msCheckIn = checkInTime - now;
+      if (msCheckIn > 0) {
+        await bookingQueue.add(
+          'auto-check-in',
+          { bookingId: booking._id.toString() },
+          { delay: msCheckIn, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      const msCheckOut = checkOutTime - now;
+      if (msCheckOut > 0) {
+        await bookingQueue.add(
+          'auto-check-out',
+          { bookingId: booking._id.toString() },
+          { delay: msCheckOut, attempts: 3, backoff: 60000 }
+        );
+      }
+
+      // // Create earning record for the host
+      // const earningService = new EarningService();
+      // await earningService.createEarning(booking);
+
+      // // Create conversation
+      // await this.createBookingConversation(bookingId);
+
+      // // Send confirmation notifications
+      // await this.sendBookingNotifications(booking);
+
+      logger.info('All booking notifications scheduled successfully', {
+        bookingId: booking._id.toString(),
+      });
+    } catch (error) {
+      logger.error('Error scheduling booking notifications', {
+        bookingId,
+        error,
+      });
+      // Don't throw - this is a non-critical operation
     }
   }
 
