@@ -4,9 +4,7 @@ import crypto from 'crypto';
 
 class PaystackService {
   constructor() {
-    this.paystackSecretKey =
-      process.env.PAYSTACK_SECRET_KEY ||
-      'sk_test_61869c49111e0e75212e33e8bb481d94180f2d24';
+    this.paystackSecretKey = process.env.WEBHOOK_SECRET_KEY;
     this.baseUrl = 'https://api.paystack.co';
   }
 
@@ -25,7 +23,7 @@ class PaystackService {
         },
         {
           headers: {
-            Authorization: `Bearer sk_test_61869c49111e0e75212e33e8bb481d94180f2d24`,
+            Authorization: `Bearer ${process.env.WEBHOOK_SECRET_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -53,7 +51,7 @@ class PaystackService {
         `${this.baseUrl}/transaction/verify/${reference}`,
         {
           headers: {
-            Authorization: `Bearer sk_test_61869c49111e0e75212e33e8bb481d94180f2d24`,
+            Authorization: `Bearer ${process.env.WEBHOOK_SECRET_KEY}`,
           },
         }
       );
@@ -87,7 +85,7 @@ class PaystackService {
 
   verifyWebhookSignature(body, signature) {
     const hash = crypto
-      .createHmac('sha512', 'sk_test_61869c49111e0e75212e33e8bb481d94180f2d24')
+      .createHmac('sha512', process.env.WEBHOOK_SECRET_KEY)
       .update(JSON.stringify(body))
       .digest('hex');
 

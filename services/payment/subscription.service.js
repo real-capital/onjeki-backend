@@ -9,10 +9,7 @@ const paystackService = new PaystackService();
 
 class SubscriptionService {
   constructor() {
-    this.paystackClient = paystack(
-      process.env.PAYSTACK_SECRET_KEY ||
-        'sk_test_61869c49111e0e75212e33e8bb481d94180f2d24'
-    );
+    this.paystackClient = paystack(process.env.WEBHOOK_SECRET_KEY);
   }
 
   // Plan Pricing and Limits
