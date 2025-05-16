@@ -626,7 +626,7 @@ class BookingService {
       await session.commitTransaction();
 
       // Send confirmation notifications
-      // await this.sendBookingNotifications(booking);
+      await this.sendBookingNotifications(booking);
       // Schedule non-critical operations to happen after transaction
       this.scheduleBookingNotifications(booking._id).catch((err) => {
         logger.error('Failed to schedule booking notifications', {
@@ -667,7 +667,6 @@ class BookingService {
       const checkInTime = booking.checkIn.getTime();
       const checkOutTime = booking.checkOut.getTime();
       // // Send confirmation notifications
-      await this.sendBookingNotifications(booking);
 
       // Schedule notifications
       const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;

@@ -34,4 +34,5 @@ export const generateSitemap = async () => {
     console.error('Sitemap generation error:', error);
     throw error;
   }
+  
 };

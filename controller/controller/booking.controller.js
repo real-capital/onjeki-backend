@@ -157,7 +157,6 @@ class BookingController {
       }
 
       res.status(200).json({ status: 'success' });
-      
     } catch (error) {
       if (error.message.includes('transfer')) {
         logger.error('Error processing transfer webhook', {
