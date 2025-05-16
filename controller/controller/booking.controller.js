@@ -120,8 +120,12 @@ class BookingController {
           .json({ status: 'error', message: 'Invalid webhook' });
       }
 
+      //     const event = req.body;
+
       const event = req.body;
       const eventReference = event.data.reference;
+      console.log(event.data);
+      logger.info(event.data);
 
       // Check if this webhook was recently processed
       const recentEvent = await webhookMonitorService.findRecentEvent(
