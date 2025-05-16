@@ -83,7 +83,7 @@ class ConversationService {
       }
 
       // IMPORTANT: Check for recent duplicate message
-      const recentMessage = await MessageModel.findOne({
+      const recentMessage = await Message.findOne({
         conversation: conversationId,
         sender: senderId,
         content: content,
@@ -99,7 +99,7 @@ class ConversationService {
         message = recentMessage;
       } else {
         // Create new message if no duplicate exists
-        message = new MessageModel({
+        message = new Message({
           conversation: conversationId,
           sender: senderId,
           content,
@@ -130,7 +130,7 @@ class ConversationService {
       }
 
       // Populate message with sender details
-      const populatedMessage = await MessageModel.findById(message._id)
+      const populatedMessage = await Message.findById(message._id)
         .populate({
           path: 'sender',
           select: 'name email profile.photo',
