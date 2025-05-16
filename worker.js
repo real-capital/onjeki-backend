@@ -19,10 +19,19 @@ bookingQueue.process('notify-day-before', async (job) => {
 
   if (!booking) throw new Error(`Booking ${bookingId} not found`);
 
-  await notificationService.notifyUser(
-    booking.guest,
-    `Reminder: Your booking at property ${booking.property} starts tomorrow.`
-  );
+      try {
+    await emailService.sendCheckInReminderEmail(booking);
+    logger.info(`Check-in Reminder email sent for booking ${booking._id}`);
+  } catch (emailError) {
+    logger.error(
+      `Failed to send check-in Reminder email for booking ${booking._id}:`,
+      emailError
+    );
+  }
+//   await notificationService.notifyUser(
+//     booking.guest,
+//     `Reminder: Your booking at property ${booking.property} starts tomorrow.`
+//   );
 });
 
 bookingQueue.process('notify-15min-before', async (job) => {

@@ -667,14 +667,18 @@ class BookingService {
       const checkInTime = booking.checkIn.getTime();
       const checkOutTime = booking.checkOut.getTime();
       // // Send confirmation notifications
-
+     await bookingQueue.add(
+          'notify-day-before',
+          { bookingId: booking._id.toString() },
+          {  delay: 20000, attempts: 3, backoff: 60000 }
+        );
       // Schedule notifications
       const msDayBefore = checkInTime - 24 * 60 * 60 * 1000 - now;
       if (msDayBefore > 0) {
         await bookingQueue.add(
           'notify-day-before',
           { bookingId: booking._id.toString() },
-          {  delay: 200000, attempts: 3, backoff: 60000 }
+          {  delay: msDayBefore, attempts: 3, backoff: 60000 }
         );
       }
 
@@ -893,15 +897,12 @@ class BookingService {
   }
   notifyHost(booking) {
     try {
-      if (!this.socketService) {
-        throw new Error('SocketService not initialized');
-      }
+      // if (!this.socketService) {
+      //   throw new Error('SocketService not initialized');
+      // }
 
       // Get socket instance if using singleton pattern
-      const socketService =
-        this.socketService instanceof SocketService
-          ? this.socketService
-          : SocketService.getInstance();
+      const socketService = SocketService.getInstance();
 
       if (!socketService) {
         throw new Error('Could not get SocketService instance');
