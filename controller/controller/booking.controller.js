@@ -186,6 +186,8 @@ class BookingController {
         case 'charge.success':
           if (event.data.metadata?.bookingId) {
             await this.handleChargeSuccess(event.data);
+          } else {
+            logger.info('Charge success without bookingId', { reference });
           }
           break;
         case 'charge.failed':
@@ -220,12 +222,19 @@ class BookingController {
         { status: 'processed', success: true }
       );
     } catch (error) {
-      logger.error('Error processing webhook event', { error, reference });
+      logger.error('Error processing webhook event', {
+        error: error.message,
+        stack: error.stack,
+        reference,
+        eventType: event.event,
+        bookingId,
+      });
+
       await webhookMonitorService.logWebhookEvent(
         'PAYSTACK',
         event.event,
         event.data,
-        { status: 'failed', error: error.message }
+        { status: 'failed', error: error.message, processedSuccessfully: false }
       );
       throw error;
     } finally {
@@ -498,6 +507,7 @@ class BookingController {
   async handleChargeSuccess(chargeData) {
     try {
       const metadata = chargeData.metadata || {};
+      const reference = chargeData.reference;
 
       if (metadata.type === 'subscription') {
         await subscriptionService.verifyPayment(chargeData.reference);
@@ -516,17 +526,20 @@ class BookingController {
         logger.warn('Booking not found for successful payment', { bookingId });
         return;
       }
+      logger.info('Confirming booking payment', { bookingId, reference });
 
       // Call confirmBookingPayment with your existing implementation
       await this.bookingService.confirmBookingPayment(bookingId);
 
       logger.info('Successfully processed payment for booking', {
         bookingId,
-        reference: chargeData.reference,
+        reference,
       });
+      return true;
     } catch (error) {
       logger.error('Error in handleChargeSuccess', {
-        error,
+        error: error.message,
+        stack: error.stack,
         reference: chargeData.reference,
         bookingId: chargeData.metadata?.bookingId,
       });

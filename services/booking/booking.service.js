@@ -472,6 +472,10 @@ class BookingService {
     }
   }
   async confirmBookingPayment(bookingId, transactionReference) {
+    logger.info('Starting confirmBookingPayment', {
+      bookingId,
+      transactionReference,
+    });
     let retryCount = 0;
     const maxRetries = 3;
     // Check if payment already processed
@@ -488,11 +492,17 @@ class BookingService {
       // Return the associated booking
       return BookingModel.findById(bookingId);
     }
+    logger.info('Payment not yet processed, proceeding with transaction', {
+      bookingId,
+    });
     while (retryCount < maxRetries) {
       const session = await mongoose.startSession();
       session.startTransaction();
 
       try {
+        logger.info(`Attempt ${retryCount + 1} to confirm payment`, {
+          bookingId,
+        });
         // Use Promise.all to fetch booking and payment in parallel
         const [booking, payment] = await Promise.all([
           BookingModel.findById(bookingId).session(session),
@@ -614,35 +624,37 @@ class BookingService {
           });
         });
 
+        logger.info('Transaction committed successfully', { bookingId });
         return booking;
       } catch (error) {
         await session.abortTransaction();
 
-        // Check if this is a transaction conflict error
+        logger.error('Error in confirmBookingPayment attempt', {
+          bookingId,
+          error: error.message,
+          stack: error.stack,
+          attempt: retryCount + 1,
+        });
+
+        // If this is a transaction conflict and we haven't exceeded retries
         if (
           error.message.includes('transaction') &&
           retryCount < maxRetries - 1
         ) {
-          logger.warn('Transaction conflict, retrying', {
-            bookingId,
-            retryCount: retryCount + 1,
-          });
           retryCount++;
-          // Wait a bit before retrying (with exponential backoff)
-          await new Promise((resolve) =>
-            setTimeout(resolve, 100 * Math.pow(2, retryCount))
-          );
+          const delay = 100 * Math.pow(2, retryCount);
+          logger.info(`Retrying after ${delay}ms`, { bookingId, retryCount });
+          await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
-          logger.error('Booking payment confirmation failed', {
-            bookingId,
-            error,
-          });
           throw error;
         }
       } finally {
         session.endSession();
       }
     }
+    logger.error('Max retries exceeded for booking payment confirmation', {
+      bookingId,
+    });
     throw new Error('Max retries exceeded for booking payment confirmation');
   }
 
@@ -984,15 +996,10 @@ class BookingService {
   }
   notifyHost(booking) {
     try {
-      if (!this.socketService) {
-        throw new Error('SocketService not initialized');
-      }
+
 
       // Get socket instance if using singleton pattern
-      const socketService =
-        this.socketService instanceof SocketService
-          ? this.socketService
-          : SocketService.getInstance();
+      const socketService = SocketService.getInstance();
 
       if (!socketService) {
         throw new Error('Could not get SocketService instance');

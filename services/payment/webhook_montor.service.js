@@ -29,6 +29,35 @@ class WebhookMonitorService {
       logger.error('Failed to log webhook event', error);
     }
   }
+  // async logWebhookEvent(service, eventType, rawPayload, options = {}) {
+  //   const event = new WebhookEventModel({
+  //     service,
+  //     eventType,
+  //     rawPayload,
+  //     processedSuccessfully: options.processedSuccessfully || false,
+  //     processingAttempts: 0,
+  //     processedAt: options.status === 'processed' ? new Date() : null,
+  //     status: options.status || 'received',
+  //     errorDetails: options.error || null,
+  //   });
+
+  //   return await event.save();
+  // }
+
+  async updateWebhookEvent(eventId, options = {}) {
+    const update = {};
+
+    if (options.status) update.status = options.status;
+    if (options.error) update.errorDetails = options.error;
+    if (options.hasOwnProperty('processedSuccessfully'))
+      update.processedSuccessfully = options.processedSuccessfully;
+
+    return await WebhookEvent.findByIdAndUpdate(
+      eventId,
+      { ...update, processedAt: new Date() },
+      { new: true }
+    );
+  }
 
   async getRecentWebhookEvents(service, days = 7) {
     const sevenDaysAgo = new Date();
