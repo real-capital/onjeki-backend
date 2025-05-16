@@ -19,7 +19,6 @@ const paystackService = new PaystackService();
 const webhookMonitorService = new WebhookMonitorService();
 const subscriptionService = new SubscriptionService();
 const payoutService = new PayoutService();
-const processingLocks = new Map();
 
 class BookingController {
   constructor(bookingService) {
@@ -33,7 +32,7 @@ class BookingController {
     this.getBooking = this.getBooking.bind(this);
     this.cancelBooking = this.cancelBooking.bind(this);
     this.createBooking = this.createBooking.bind(this);
-    // this.confirmBooking = this.confirmBooking.bind(this);
+    this.confirmBooking = this.confirmBooking.bind(this);
     // this.confirmBookingPayment = this.confirmBookingPayment.bind(this);
     this.getUserBookings = this.getUserBookings.bind(this);
     this.getHostBookings = this.getHostBookings.bind(this);
@@ -105,94 +104,32 @@ class BookingController {
       res.status(500).json({ status: 'error', message: error.message });
     }
   }
-
   async webhook(req, res) {
     try {
-      // Verify webhook signature quickly
+      const paystackService = new PaystackService();
+
+      // Verify webhook signature
       const isValidWebhook = paystackService.verifyWebhookSignature(
         req.body,
         req.headers['x-paystack-signature']
       );
 
       if (!isValidWebhook) {
+        logger.warn('Invalid Paystack webhook', {
+          body: req.body,
+          headers: req.headers,
+        });
         return res
           .status(401)
           .json({ status: 'error', message: 'Invalid webhook' });
       }
 
-      //     const event = req.body;
-
       const event = req.body;
-      const eventReference = event.data.reference;
-      console.log(event.data);
-      logger.info(event.data);
 
-      // Check if this webhook was recently processed
-      const recentEvent = await webhookMonitorService.findRecentEvent(
-        'PAYSTACK',
-        event.event,
-        eventReference,
-        5 * 60 * 1000 // Look back 5 minutes
-      );
-      if (recentEvent && recentEvent.processedSuccessfully) {
-        logger.info('Ignoring duplicate webhook event', {
-          reference: eventReference,
-          eventId: recentEvent._id,
-        });
-        return res
-          .status(200)
-          .json({ status: 'success', message: 'Event already processed' });
-      }
-
-      // Log receipt of webhook without waiting for processing
-      webhookMonitorService
-        .logWebhookEvent('PAYSTACK', event.event, event.data, {
-          status: 'received',
-        })
-        .catch((err) => logger.error('Failed to log webhook', { error: err }));
-
-      // Respond to Paystack immediately
-      res.status(200).json({ status: 'success' });
-
-      // Process the webhook event asynchronously after responding
-      setImmediate(() => {
-        this.processWebhookEventAsync(event).catch((error) => {
-          logger.error('Error processing webhook event', {
-            error,
-            eventType: event.event,
-            data: event.data,
-          });
-        });
-      });
-    } catch (error) {
-      logger.error('Error in webhook handler', { error });
-      res
-        .status(500)
-        .json({ status: 'error', message: 'Webhook processing failed' });
-    }
-  }
-
-  // New method to handle async processing after response is sent
-  async processWebhookEventAsync(event) {
-    const reference = event.data.reference;
-    const bookingId = event.data.metadata?.bookingId;
-
-    // Skip if already processing this reference
-    if (processingLocks.has(reference)) {
-      logger.info('Skipping duplicate processing', { reference });
-      return;
-    }
-
-    // Set lock
-    processingLocks.set(reference, Date.now());
-    try {
+      // Enhanced event handling
       switch (event.event) {
         case 'charge.success':
-          if (event.data.metadata?.bookingId) {
-            await this.handleChargeSuccess(event.data);
-          } else {
-            logger.info('Charge success without bookingId', { reference });
-          }
+          await this.handleChargeSuccess(event.data);
           break;
         case 'charge.failed':
           await this.handleChargeFailed(event.data);
@@ -219,106 +156,26 @@ class BookingController {
           logger.info('Unhandled Paystack event', { event: event.event });
       }
 
-      await webhookMonitorService.logWebhookEvent(
-        'PAYSTACK',
-        event.event,
-        event.data,
-        { status: 'processed', success: true }
-      );
+      res.status(200).json({ status: 'success' });
     } catch (error) {
-      logger.error('Error processing webhook event', {
-        error: error.message,
-        stack: error.stack,
-        reference,
-        eventType: event.event,
-        bookingId,
-      });
+      if (error.message.includes('transfer')) {
+        logger.error('Error processing transfer webhook', {
+          error,
+          eventType: event.event,
+          reference: event.data?.reference,
+        });
+      } else {
+        logger.error('Error processing webhook', {
+          error,
+        });
+        // Existing error handling
+      }
 
-      await webhookMonitorService.logWebhookEvent(
-        'PAYSTACK',
-        event.event,
-        event.data,
-        { status: 'failed', error: error.message, processedSuccessfully: false }
-      );
-      throw error;
-    } finally {
-      processingLocks.delete(reference);
+      res
+        .status(500)
+        .json({ status: 'error', message: 'Webhook processing failed' });
     }
   }
-  // async webhook(req, res) {
-  //   try {
-  //     const paystackService = new PaystackService();
-
-  //     // Verify webhook signature
-  //     const isValidWebhook = paystackService.verifyWebhookSignature(
-  //       req.body,
-  //       req.headers['x-paystack-signature']
-  //     );
-
-  //     if (!isValidWebhook) {
-  //       logger.warn('Invalid Paystack webhook', {
-  //         body: req.body,
-  //         headers: req.headers,
-  //       });
-  //       return res
-  //         .status(401)
-  //         .json({ status: 'error', message: 'Invalid webhook' });
-  //     }
-
-  //     const event = req.body;
-  //     console.log(event.data);
-  //     logger.info(event.data);
-
-  //     // Enhanced event handling
-  //     switch (event.event) {
-  //       case 'charge.success':
-  //         await this.handleChargeSuccess(event.data);
-  //         break;
-  //       case 'charge.failed':
-  //         await this.handleChargeFailed(event.data);
-  //         break;
-  //       case 'refund.processed':
-  //         await this.handleRefundProcessed(event.data);
-  //         break;
-  //       case 'subscription.create':
-  //         await this.handleSubscriptionCreation(event.data);
-  //         break;
-  //       case 'subscription.renewal':
-  //         await this.handleSubscriptionRenewal(event.data);
-  //         break;
-  //       // Transfer (payout) related events
-  //       case 'transfer.success':
-  //       case 'transfer.failed':
-  //       case 'transfer.reversed':
-  //         await payoutService.handleTransferEvent(event);
-  //         logger.info(`Handled transfer event: ${event.event}`, {
-  //           reference: event.data.reference,
-  //         });
-  //         break;
-  //       default:
-  //         logger.info('Unhandled Paystack event', { event: event.event });
-  //     }
-
-  //     res.status(200).json({ status: 'success' });
-  //   } catch (error) {
-  //     if (error.message.includes('transfer')) {
-  //       logger.error('Error processing transfer webhook', {
-  //         error,
-  //         eventType: event.event,
-  //         reference: event.data?.reference,
-  //       });
-  //     } else {
-  //       logger.error('Error processing webhook', {
-  //         error,
-  //       });
-  //       // Existing error handling
-  //     }
-
-  //     res
-  //       .status(500)
-  //       .json({ status: 'error', message: 'Webhook processing failed' });
-  //   }
-  // }
 
   // New method to handle subscription-related events
   async handleSubscriptionCreation(data) {
@@ -447,7 +304,7 @@ class BookingController {
         { success: true }
       );
     } catch (error) {
-      logger.error('Error in handleChargeFailed', error);
+      this.logger.error('Error in handleChargeFailed', error);
       throw error;
     }
   }
@@ -508,85 +365,45 @@ class BookingController {
       { success: true }
     );
   }
+
+  // Helper functions for webhook event handling
   async handleChargeSuccess(chargeData) {
     try {
+      // Check if this is a subscription or booking payment
       const metadata = chargeData.metadata || {};
-      const reference = chargeData.reference;
 
       if (metadata.type === 'subscription') {
+        // Handle subscription payment
         await subscriptionService.verifyPayment(chargeData.reference);
-        return;
+      } else {
+        // Handle booking payment
+        const payment = await PaymentModel.findOne({
+          transactionReference: chargeData.reference,
+        }).populate('booking');
+
+        if (!payment) {
+          logger.warn('Payment not found for successful charge', {
+            reference: chargeData.reference,
+          });
+          return;
+        }
+
+        // Confirm booking payment
+        await this.bookingService.confirmBookingPayment(payment.booking._id);
       }
 
-      const bookingId = metadata.bookingId;
-      if (!bookingId) {
-        logger.warn('No bookingId found in metadata', { chargeData });
-        return;
-      }
-
-      // Optionally verify booking exists
-      const booking = await BookingModel.findById(bookingId);
-      if (!booking) {
-        logger.warn('Booking not found for successful payment', { bookingId });
-        return;
-      }
-      logger.info('Confirming booking payment', { bookingId, reference });
-
-      // Call confirmBookingPayment with your existing implementation
-      await this.bookingService.confirmBookingPayment(bookingId);
-
-      logger.info('Successfully processed payment for booking', {
-        bookingId,
-        reference,
-      });
-      return true;
+      // Log successful charge
+      await webhookMonitorService.logWebhookEvent(
+        'PAYSTACK',
+        'charge.success',
+        chargeData,
+        { success: true }
+      );
     } catch (error) {
-      logger.error('Error in handleChargeSuccess', {
-        error: error.message,
-        stack: error.stack,
-        reference: chargeData.reference,
-        bookingId: chargeData.metadata?.bookingId,
-      });
+      logger.error('Error in handleChargeSuccess', error);
       throw error;
     }
   }
-
-  // async handleChargeSuccess(chargeData) {
-  //   try {
-  //     const metadata = chargeData.metadata || {};
-
-  //     if (metadata.type === 'subscription') {
-  //       await subscriptionService.verifyPayment(chargeData.reference);
-  //       return;
-  //     }
-
-  //     const bookingId = metadata.bookingId;
-
-  //     if (!bookingId) {
-  //       logger.warn('No bookingId found in metadata', { chargeData });
-  //       return;
-  //     }
-
-  //     // Optionally, verify booking exists before updating
-  //     const booking = await BookingModel.findById(bookingId);
-  //     if (!booking) {
-  //       logger.warn('Booking not found for successful payment', { bookingId });
-  //       return;
-  //     }
-
-  //     await this.bookingService.confirmBookingPayment(bookingId);
-
-  //     await webhookMonitorService.logWebhookEvent(
-  //       'PAYSTACK',
-  //       'charge.success',
-  //       chargeData,
-  //       { success: true }
-  //     );
-  //   } catch (error) {
-  //     logger.error('Error in handleChargeSuccess', error);
-  //     throw error;
-  //   }
-  // }
 
   async handleRefundProcessed(refundData) {
     const payment = await PaymentModel.findOne({
@@ -781,19 +598,19 @@ class BookingController {
     }
   }
 
-  // confirmBooking = async (req, res, next) => {
-  //   try {
-  //     const bookingId = req.params.id;
-  //     await this.bookingService.confirmBookingPayment(bookingId);
+  confirmBooking = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      await this.bookingService.confirmBookingPayment(bookingId);
 
-  //     res.status(StatusCodes.OK).json({
-  //       status: 'success',
-  //       message: 'Booking confirmed successfully',
-  //     });
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // };
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        message: 'Booking confirmed successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
   getUserBookings = async (req, res, next) => {
     try {
       const bookings = await this.bookingService.getUserBookings(req.user._id);

@@ -1,2 +1,3 @@
 2025-05-16 17:33:20:3320 [error]: Error in notifyHost: SocketService not initialized
 2025-05-16 17:48:21:4821 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, You already have a pending booking.
+2025-05-16 18:05:30:530 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, You already have a pending booking.
