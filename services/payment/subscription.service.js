@@ -11,7 +11,7 @@ class SubscriptionService {
   constructor() {
     this.paystackClient = paystack(
       process.env.PAYSTACK_SECRET_KEY ||
-        'sk_test_0878d8880fb3c31445795a4b632941c3f2cba4ec'
+        'sk_test_61869c49111e0e75212e33e8bb481d94180f2d24'
     );
   }
 
@@ -466,7 +466,6 @@ class SubscriptionService {
       }
     }
   }
-
 
   // Automatic Renewal Method
   async automaticRenewal(subscription) {
