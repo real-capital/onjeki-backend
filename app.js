@@ -10,6 +10,10 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
 import hpp from 'hpp';
+import { Queue } from 'bullmq';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import { Route } from './interfaces/route.interface.js';
 
 import connectDB from './config/db.js';
@@ -28,6 +32,8 @@ import ConversationService from './services/conversation/conversation.service.js
 import { scheduleEmailJobs } from './jobs/email-jobs.js';
 import { scheduleEarningJobs } from './jobs/earningJob.js';
 import { subscriptionRenewalJob } from './jobs/subscriptionRenewalJob.js';
+import bookingQueue from './queue/bookingQueue.js';
+import { connectToAllQueues } from './queue/queueManager.js';
 
 // Load environment variables
 dotenv.config();
@@ -45,10 +51,13 @@ class app {
     this.initializeMiddlewares();
     // this.initializeSocket();
     this.initializeServices();
+    this.initializeBullMQ();
     this.initializeRoutes(routes);
     this.initializeErrorHandling();
     this.listRoutes();
     this.DBconnection();
+    this.connectToQueues();
+    // this.startQueues();
   }
 
   listen() {
@@ -112,6 +121,52 @@ class app {
       }
     });
   }
+  initializeBullMQ() {
+    try {
+      // Setup Bull Board UI
+      const serverAdapter = new ExpressAdapter();
+      serverAdapter.setBasePath('/api/v1/queue');
+
+      createBullBoard({
+        queues: [
+          new BullMQAdapter(bookingQueue, {
+            readOnlyMode: true,
+          }),
+          // new BullMQAdapter(trxQueue, { readOnlyMode: true }),
+          // new BullMQAdapter(bvnVerificationQueue, { readOnlyMode: true }),
+          // new BullMQAdapter(spaceRentQueue, { readOnlyMode: true }),
+          // new BullMQAdapter(spaceRentFirstDepositQueue, { readOnlyMode: true }),
+          // new BullMQAdapter(emailQueue, { readOnlyMode: true }),
+        ],
+        serverAdapter,
+      });
+
+      // Mount the Bull Board UI
+      this.app.use('/api/v1/queue', serverAdapter.getRouter());
+
+      logger.info('BullMQ dashboard initialized successfully');
+    } catch (error) {
+      logger.error('Error initializing BullMQ dashboard:', error);
+      throw error;
+    }
+  }
+  async connectToQueues() {
+    try {
+      // Connect to queues but don't start workers (for Vercel API)
+      await connectToAllQueues();
+    } catch (error) {
+      logger.error('Failed to connect to queues:', error);
+    }
+  }
+
+  // async startQueues() {
+  //   try {
+  //     await startAllQueuesAndWorkers();
+  //     logger.info('Redis Queue started successfully');
+  //   } catch (error) {
+  //     logger.error('Failed to start Redis Queue:', error);
+  //   }
+  // }
 
   // Initialize Error Handling
   initializeErrorHandling() {

@@ -1,10 +1,25 @@
-import Redis from 'ioredis';
+// jobs/redis-connection.js
+import IORedis from 'ioredis';
+import dotenv from 'dotenv';
+import { logger } from '../utils/logger.js';
 
-const redisConfig = {
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
+dotenv.config();
+
+export const redisConnection = new IORedis({
   password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: null, // Add this line!
-};
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  maxRetriesPerRequest: null,
+  enableOfflineQueue: false,
+  offlineQueue: false,
+});
 
-export const redisConnection = new Redis(redisConfig);
+redisConnection.on('connect', () => {
+  logger.info('Connected to Redis cluster');
+});
+
+redisConnection.on('error', (error) => {
+  logger.error('Redis connection error:', error);
+});
+
+export default redisConnection;

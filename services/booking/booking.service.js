@@ -591,12 +591,13 @@ class BookingService {
       // Send confirmation notifications
       await this.sendBookingNotifications(booking);
       // Schedule non-critical operations to happen after transaction
-      this.scheduleBookingNotifications(booking._id).catch((err) => {
-        logger.error('Failed to schedule booking notifications', {
-          bookingId: booking._id,
-          error: err,
-        });
-      });
+      await bookingQueue.scheduleAllReminders(booking);
+      // this.scheduleBookingNotifications(booking._id).catch((err) => {
+      //   logger.error('Failed to schedule booking notifications', {
+      //     bookingId: booking._id,
+      //     error: err,
+      //   });
+      // });
 
       return booking;
     } catch (error) {
@@ -1025,6 +1026,9 @@ class BookingService {
       // TODO: Implement sendCancellationNotifications method
       await this.sendCancellationNotifications(booking);
 
+      // Cancel all reminders
+      await bookingQueue.cancelAllReminders(id);
+
       return booking;
     } catch (error) {
       await session.abortTransaction();
@@ -1426,3 +1430,9 @@ class BookingService {
 }
 
 export default BookingService;
+
+// Cancel existing reminders first
+// await bookingQueue.cancelAllReminders(id);
+
+// Reschedule reminders with new times
+// await bookingQueue.scheduleAllReminders(updatedBooking);

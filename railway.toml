@@ -1,0 +1,10 @@
+# railway.toml
+[build]
+builder = "nixpacks"
+buildCommand = "npm install"
+
+[deploy]
+startCommand = "npm run start:worker"
+healthcheckPath = "/health"
+healthcheckTimeout = 10
+restartPolicyType = "on-failure"
