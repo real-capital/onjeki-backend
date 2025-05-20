@@ -156,7 +156,12 @@ class MockRedisClient {
 // Determine which Redis client to use
 let redisConnection;
 
-if (!redisEnabled || !redisHost) {
+if (
+  !redisEnabled ||
+  !redisHost ||
+  redisHost === '127.0.0.1' ||
+  redisHost === 'localhost'
+) {
   logger.info('Redis disabled or missing configuration, using mock client');
   redisConnection = new MockRedisClient();
 } else {
