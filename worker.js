@@ -28,17 +28,24 @@ mongoose
 })();
 
 // Handle graceful shutdown
-process.on('SIGTERM', async () => {
+process.on('SIGTERM', async (err) => {
   logger.info('SIGTERM received. Shutting down worker service...');
-  await stopAllQueuesAndWorkers();
-  process.exit(0);
+  console.log(`SIGTERM received. Shutting down worker service... ${err}`);
+  // await stopAllQueuesAndWorkers();
+  // process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down worker service...');
-  await stopAllQueuesAndWorkers();
-  process.exit(0);
+  console.log('SIGINT received. Shutting down worker service...');
+  // await stopAllQueuesAndWorkers();
+  // process.exit(0);
 });
+process.on('exit', (code) => {
+  logger.info(`Process exiting with code ${code}`);
+  console.log(`Process exiting with code ${code}`);
+});
+
 
 const app = express();
 // const PORT = 3000;
