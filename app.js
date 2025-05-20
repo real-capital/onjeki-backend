@@ -56,6 +56,7 @@ class app {
     // Initialize in correct order
     this.initializeMiddlewares();
     // this.initializeSocket();
+    
     this.initializeServices();
     this.initializeBullMQ();
     this.initializeRoutes(routes);
