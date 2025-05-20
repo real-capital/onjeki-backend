@@ -1,25 +1,9 @@
-// // import Queue from 'bull';
-
-// // const bookingQueue = new Queue('bookingQueue', process.env.REDIS_URL);
-
-// // export default bookingQueue;
-
-// import { Queue } from 'bullmq';
-// import { redisConnection } from '../jobs/redis-connection.js';
-
-// const bookingQueue = new Queue('bookingQueue', {
-//   connection: redisConnection, // same Redis connection config everywhere
-// });
-
-// export default bookingQueue;
-
 // queue/bookingQueue.js
 import { Queue, QueueEvents } from 'bullmq';
 import { redisConnection } from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
 
-// Create the booking queue
-const bookingQueue = new Queue('bookingQueue', {
+export const bookingQueue = new Queue('bookingQueue', {
   connection: redisConnection,
   defaultJobOptions: {
     attempts: 3,
@@ -36,6 +20,25 @@ const bookingQueue = new Queue('bookingQueue', {
     },
   },
 });
+
+// Create the booking queue
+// const bookingQueue = new Queue('bookingQueue', {
+//   connection: redisConnection,
+//   defaultJobOptions: {
+//     attempts: 3,
+//     backoff: {
+//       type: 'exponential',
+//       delay: 1000,
+//     },
+//     removeOnComplete: {
+//       age: 3600,
+//       count: 1000,
+//     },
+//     removeOnFail: {
+//       age: 24 * 3600,
+//     },
+//   },
+// });
 
 // Create queue events listener
 const bookingQueueEvents = new QueueEvents('bookingQueue', {

@@ -38,7 +38,7 @@ import ConversationService from './services/conversation/conversation.service.js
 import { scheduleEmailJobs } from './jobs/email-jobs.js';
 import { scheduleEarningJobs } from './jobs/earningJob.js';
 import { subscriptionRenewalJob } from './jobs/subscriptionRenewalJob.js';
-import bookingQueue from './queue/bookingQueue.js';
+import { bookingQueue } from './queue/bookingQueue.js';
 import { connectToAllQueues } from './queue/queueManager.js';
 
 // Load environment variables
@@ -129,33 +129,43 @@ class app {
   }
   initializeBullMQ() {
     try {
+      // Validate the queue object
+      if (
+        !bookingQueue ||
+        !bookingQueue.name ||
+        typeof bookingQueue.add !== 'function'
+      ) {
+        logger.error('Invalid booking queue object:', {
+          exists: !!bookingQueue,
+          type: typeof bookingQueue,
+          name: bookingQueue?.name,
+          isQueue: bookingQueue instanceof Queue,
+        });
+        throw new Error(
+          'Invalid booking queue: not a proper BullMQ Queue instance'
+        );
+      }
+
+      logger.info(`Valid BullMQ Queue found: ${bookingQueue.name}`);
       // Setup Bull Board UI
       const serverAdapter = new ExpressAdapter();
       serverAdapter.setBasePath('/api/v1/queue');
 
+      // For Method 1 (named import)
       createBullBoard({
-        queues: [
-          new BullMQAdapter(bookingQueue, {
-            readOnlyMode: true,
-          }),
-          // new BullMQAdapter(trxQueue, { readOnlyMode: true }),
-          // new BullMQAdapter(bvnVerificationQueue, { readOnlyMode: true }),
-          // new BullMQAdapter(spaceRentQueue, { readOnlyMode: true }),
-          // new BullMQAdapter(spaceRentFirstDepositQueue, { readOnlyMode: true }),
-          // new BullMQAdapter(emailQueue, { readOnlyMode: true }),
-        ],
+        queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
         serverAdapter,
       });
 
       // Mount the Bull Board UI
       this.app.use('/api/v1/queue', serverAdapter.getRouter());
-
       logger.info('BullMQ dashboard initialized successfully');
     } catch (error) {
       logger.error('Error initializing BullMQ dashboard:', error);
       throw error;
     }
   }
+
   async connectToQueues() {
     try {
       // Connect to queues but don't start workers (for Vercel API)
