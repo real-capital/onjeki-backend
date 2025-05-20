@@ -30285,3 +30285,6 @@
 2025-05-20 12:46:28:4628 [http]: GET /api/v1/queue/static/js/async/64117.ac228625.js 200 6936 - 1.234 ms
 2025-05-20 12:46:31:4631 [http]: GET /api/v1/queue/api/queues?activeQueue=bookingQueue&status=paused&page=1&jobsPerPage=10 304 - - 312.117 ms
 2025-05-20 12:46:36:4636 [http]: GET /api/v1/queue/api/queues?activeQueue=bookingQueue&status=paused&page=1&jobsPerPage=10 304 - - 307.222 ms
+2025-05-20 12:46:42:4642 [http]: GET /api/v1/queue/api/queues?activeQueue=bookingQueue&status=paused&page=1&jobsPerPage=10 304 - - 301.535 ms
+2025-05-20 12:46:47:4647 [http]: GET /api/v1/queue/api/queues?activeQueue=bookingQueue&status=paused&page=1&jobsPerPage=10 304 - - 312.398 ms
+2025-05-20 12:46:52:4652 [http]: GET /api/v1/queue/api/queues?activeQueue=bookingQueue&status=paused&page=1&jobsPerPage=10 304 - - 310.166 ms
