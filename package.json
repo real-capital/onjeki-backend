@@ -26,6 +26,7 @@
   "dependencies": {
     "@bull-board/api": "^6.9.6",
     "@bull-board/express": "^6.9.6",
+    "@bull-board/ui": "^6.9.6",
     "@sentry/node": "^8.50.0",
     "@sentry/tracing": "^7.120.3",
     "@vonage/server-sdk": "^3.19.4",
