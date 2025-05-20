@@ -11,12 +11,6 @@ import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
 import hpp from 'hpp';
 import { Queue } from 'bullmq';
-// import { createBullBoard } from '@bull-board/api';
-// import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-// import { ExpressAdapter } from '@bull-board/express';
-// import { createBullBoard } from '@bull-board/api';
-// import { BullMQAdapter } from '@bull-board/api/dist/bullMQAdapter.js';
-// import { ExpressAdapter } from '@bull-board/express';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'; // Note the .js extension
 import { ExpressAdapter } from '@bull-board/express';
@@ -128,12 +122,12 @@ class app {
       }
     });
   }
-  // Modify your app.js initializeBullMQ method
   initializeBullMQ() {
-    // Only initialize in production if explicitly enabled
+    // Only initialize in production if explicitly enabled AND not using mock Redis
     if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.ENABLE_BULL_BOARD === 'true'
+      (process.env.NODE_ENV === 'development' ||
+        process.env.ENABLE_BULL_BOARD === 'true') &&
+      bookingQueue instanceof Queue
     ) {
       try {
         // Setup Bull Board UI
@@ -153,48 +147,40 @@ class app {
           'Failed to initialize BullMQ dashboard, continuing without it:',
           error
         );
-        // Just log the error but don't throw - this will allow the app to start
       }
     } else {
-      logger.info('BullMQ dashboard disabled in production');
+      logger.info('BullMQ dashboard disabled');
     }
   }
+
   // initializeBullMQ() {
-  //   try {
-  //     // Validate the queue object
-  //     if (
-  //       !bookingQueue ||
-  //       !bookingQueue.name ||
-  //       typeof bookingQueue.add !== 'function'
-  //     ) {
-  //       logger.error('Invalid booking queue object:', {
-  //         exists: !!bookingQueue,
-  //         type: typeof bookingQueue,
-  //         name: bookingQueue?.name,
-  //         isQueue: bookingQueue instanceof Queue,
+  //   // Only initialize in production if explicitly enabled
+  //   if (
+  //     process.env.NODE_ENV === 'development' ||
+  //     process.env.ENABLE_BULL_BOARD === 'true'
+  //   ) {
+  //     try {
+  //       // Setup Bull Board UI
+  //       const serverAdapter = new ExpressAdapter();
+  //       serverAdapter.setBasePath('/api/v1/queue');
+
+  //       createBullBoard({
+  //         queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
+  //         serverAdapter,
   //       });
-  //       throw new Error(
-  //         'Invalid booking queue: not a proper BullMQ Queue instance'
+
+  //       // Mount the Bull Board UI
+  //       this.app.use('/api/v1/queue', serverAdapter.getRouter());
+  //       logger.info('BullMQ dashboard initialized successfully');
+  //     } catch (error) {
+  //       logger.warn(
+  //         'Failed to initialize BullMQ dashboard, continuing without it:',
+  //         error
   //       );
+  //       // Just log the error but don't throw - this will allow the app to start
   //     }
-
-  //     logger.info(`Valid BullMQ Queue found: ${bookingQueue.name}`);
-  //     // Setup Bull Board UI
-  //     const serverAdapter = new ExpressAdapter();
-  //     serverAdapter.setBasePath('/api/v1/queue');
-
-  //     // For Method 1 (named import)
-  //     createBullBoard({
-  //       queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
-  //       serverAdapter,
-  //     });
-
-  //     // Mount the Bull Board UI
-  //     this.app.use('/api/v1/queue', serverAdapter.getRouter());
-  //     logger.info('BullMQ dashboard initialized successfully');
-  //   } catch (error) {
-  //     logger.error('Error initializing BullMQ dashboard:', error);
-  //     throw error;
+  //   } else {
+  //     logger.info('BullMQ dashboard disabled in production');
   //   }
   // }
 
@@ -206,15 +192,6 @@ class app {
       logger.error('Failed to connect to queues:', error);
     }
   }
-
-  // async startQueues() {
-  //   try {
-  //     await startAllQueuesAndWorkers();
-  //     logger.info('Redis Queue started successfully');
-  //   } catch (error) {
-  //     logger.error('Failed to start Redis Queue:', error);
-  //   }
-  // }
 
   // Initialize Error Handling
   initializeErrorHandling() {

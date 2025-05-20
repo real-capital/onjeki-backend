@@ -23,3 +23,6 @@
 2025-05-16 20:11:20:1120 [error]: UNHANDLED REJECTION! 💥 Shutting down...
 2025-05-16 20:11:26:1126 [error]: UNHANDLED REJECTION! 💥 Shutting down...
 2025-05-20 13:52:03:523 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 14:43:15:4315 [error]: Failed to connect to Redis queues: redisConnection is not defined
+2025-05-20 14:43:27:4327 [error]: Failed to connect to Redis queues: IORedis is not defined
+2025-05-20 14:43:37:4337 [error]: Failed to connect to Redis queues: bookingQueue.waitUntilReady is not a function

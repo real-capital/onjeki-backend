@@ -1,21 +1,38 @@
 // services/queue/queueManager.js
-
+import IORedis from 'ioredis';
+import redisConnection from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
 import bookingQueue from './bookingQueue.js';
 
 // Import other queues
 // For API-only mode (Vercel), where we only need to connect to queues, not run workers
+// export const connectToAllQueues = async () => {
+//   try {
+//     // Only initialize connections to the queues without starting workers
+//     await bookingQueue.bookingQueue.waitUntilReady();
+
+//     logger.info('Connected to all Redis queues successfully');
+//     return true;
+//   } catch (error) {
+//     logger.error('Failed to connect to Redis queues:', error);
+//     throw error;
+//   }
+// };
 export const connectToAllQueues = async () => {
   try {
-    // Only initialize connections to the queues without starting workers
+    // Check if we're using mock Redis
+    if (!(redisConnection instanceof IORedis)) {
+      logger.info('Using mock Redis client, skipping queue connection');
+      return true;
+    }
+
+    // Connect to Redis queues
     await bookingQueue.bookingQueue.waitUntilReady();
-    
-    
     logger.info('Connected to all Redis queues successfully');
     return true;
   } catch (error) {
     logger.error('Failed to connect to Redis queues:', error);
-    throw error;
+    return false; // Don't throw, just return false
   }
 };
 
@@ -23,8 +40,7 @@ export const connectToAllQueues = async () => {
 export const startAllQueuesAndWorkers = async () => {
   try {
     await bookingQueue.startBookingQueue();
-    
-    
+
     logger.info('All queues and workers started successfully');
     return true;
   } catch (error) {
@@ -37,8 +53,7 @@ export const startAllQueuesAndWorkers = async () => {
 export const stopAllQueuesAndWorkers = async () => {
   try {
     await bookingQueue.stopBookingQueue();
-    
-    
+
     logger.info('All queues and workers stopped successfully');
     return true;
   } catch (error) {
@@ -50,5 +65,5 @@ export const stopAllQueuesAndWorkers = async () => {
 export default {
   connectToAllQueues,
   startAllQueuesAndWorkers,
-  stopAllQueuesAndWorkers
+  stopAllQueuesAndWorkers,
 };
