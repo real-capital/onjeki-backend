@@ -23,7 +23,7 @@ mongoose
   } catch (error) {
     logger.error('Failed to start worker service:', error);
     console.log('Failed to start worker service:', error);
-    process.exit(1);
+    // process.exit(1);
   }
 })();
 
