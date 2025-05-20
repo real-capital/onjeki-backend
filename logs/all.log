@@ -30818,3 +30818,171 @@
 2025-05-20 12:53:46:5346 [info]: Server is running on port 8084
 2025-05-20 12:53:46:5346 [info]: Connected to Redis cluster
 2025-05-20 12:53:46:5346 [info]: Connected to all Redis queues successfully
+2025-05-20 12:54:29:5429 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 223.838 ms
+2025-05-20 12:55:29:5529 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 253.665 ms
+2025-05-20 12:56:29:5629 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 238.458 ms
+2025-05-20 12:57:29:5729 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 205.956 ms
+2025-05-20 12:57:39:5739 [info]: Email jobs scheduled successfully
+2025-05-20 12:57:39:5739 [info]: Service registered: socketService
+2025-05-20 12:57:39:5739 [info]: Service registered: bookingService
+2025-05-20 12:57:39:5739 [info]: Service registered: conversationService
+2025-05-20 12:57:39:5739 [info]: Service registered: chatService
+2025-05-20 12:57:39:5739 [info]: All services initialized successfully
+2025-05-20 12:57:39:5739 [info]: BullMQ dashboard initialized successfully
+2025-05-20 12:57:39:5739 [info]: Route initialized: AuthRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: PropertyRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: CategoryRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: AmenitiesRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: BuildingRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: WIshlistRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: ChatRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: BookingRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: ConversationRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: SubscriptionRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: RentSalesChatRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: EarningsRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: PayoutRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: BankRoute
+2025-05-20 12:57:39:5739 [info]: Route initialized: UserBankRoute
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/create
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/auth/start-google-login
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/auth/google-login
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/login
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/name
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/auth/me
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/updateNewToListing
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/verify/send-otp
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/verify/verify-otp
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/verify/self-declare
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/auth/verify/status
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/verify/publish
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/auth/update-image
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/create
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/rent/create
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/properties/:id
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/:id/images
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/properties/:id/images/:imageId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/properties/:id/images/:imageId/primary
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/lastListingPath
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/progress
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/properties/progress
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/progress
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/upload
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/properties/complete
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/lastListingPath
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/search
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/rent/search
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/getAll
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/all-progress
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/property/:id
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/property/rent/:id
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/userListing
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/rent/userListing
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/sale/userListing
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/nearby
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/properties/calendar/:propertyId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [34mPUT[39m  /api/v1/properties/calendar/:propertyId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/categories/add
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/categories
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/categories/:id
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/amenities/add
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/amenities
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/amenities/:id
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/buildings
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/buildings
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/wishlists
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/wishlists
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/wishlists/:wishlistId/properties
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/wishlists/:wishlistId/properties/:propertyId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/wishlists/:wishlistId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/chats
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/chats
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/chats/:chatId/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/chats/:chatId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/chats/:chatId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/chats/:chatId/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/chats/:chatId/messages/read
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/chats/:chatId/attachments
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/chats/:chatId/stats
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/booking
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/booking/:id/initiate-payment
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/booking/:id/verify-payment
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/paystack/callback
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/booking/paystack/webhook
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/:bookingId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/host/bookings
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/pending
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/booking/:id/accept
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/booking/:id/reject
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/booking/:bookingId/cancel
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/booking/:bookingId/delete
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/host/earnings
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/booking/host/payout-eligibility
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/booking/:id/complete
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/conversations
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/conversations/:conversationId/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/conversations
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/conversations/:conversationId/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  /api/v1/conversations/:conversationId/archive
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/subscribe/initialize
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/subscribe/eligibility
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/subscribe/payment
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/subscribe/verify
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/rent-sales-chat/start
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/rent-sales-chat/conversations
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/rent-sales-chat/conversations/:conversationId/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/rent-sales-chat/messages
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [34mPUT[39m  /api/v1/rent-sales-chat/messages/:messageId/conversations/:conversationId/read
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/earnings
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/earnings/summary
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/earnings/analytics
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/earnings/:earningId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/payouts/request
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/payouts
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/payouts/setup
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/payouts/:payoutId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/banks/list
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/banks/verify
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  /api/v1/user/bank-accounts
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  /api/v1/user/bank-accounts
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [34mPUT[39m  /api/v1/user/bank-accounts/:bankAccountId/default
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  /api/v1/user/bank-accounts/:bankAccountId
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: ACL  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: BIND  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: CHECKOUT  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: CONNECT  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: COPY  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [31mDELETE[39m  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [32mGET[39m  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: HEAD  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: LINK  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: LOCK  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: M-SEARCH  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: MERGE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: MKACTIVITY  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: MKCALENDAR  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: MKCOL  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: MOVE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: NOTIFY  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: OPTIONS  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [90mPATCH[39m  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [33mPOST[39m  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: PROPFIND  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: PROPPATCH  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: PURGE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: [34mPUT[39m  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: QUERY  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: REBIND  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: REPORT  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: SEARCH  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: SOURCE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: SUBSCRIBE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: TRACE  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: UNBIND  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: UNLINK  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: UNLOCK  *
+2025-05-20 12:57:39:5739 [info]: 🚏 [Routes]: UNSUBSCRIBE  *
+2025-05-20 12:57:39:5739 [info]: Server is running on port 8084
+2025-05-20 12:57:40:5740 [info]: Connected to Redis cluster
+2025-05-20 12:57:40:5740 [info]: Connected to all Redis queues successfully

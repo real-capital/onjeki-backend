@@ -56,7 +56,7 @@ class app {
     // Initialize in correct order
     this.initializeMiddlewares();
     // this.initializeSocket();
-    
+
     this.initializeServices();
     this.initializeBullMQ();
     this.initializeRoutes(routes);
@@ -128,44 +128,75 @@ class app {
       }
     });
   }
+  // Modify your app.js initializeBullMQ method
   initializeBullMQ() {
-    try {
-      // Validate the queue object
-      if (
-        !bookingQueue ||
-        !bookingQueue.name ||
-        typeof bookingQueue.add !== 'function'
-      ) {
-        logger.error('Invalid booking queue object:', {
-          exists: !!bookingQueue,
-          type: typeof bookingQueue,
-          name: bookingQueue?.name,
-          isQueue: bookingQueue instanceof Queue,
+    // Only initialize in production if explicitly enabled
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.ENABLE_BULL_BOARD === 'true'
+    ) {
+      try {
+        // Setup Bull Board UI
+        const serverAdapter = new ExpressAdapter();
+        serverAdapter.setBasePath('/api/v1/queue');
+
+        createBullBoard({
+          queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
+          serverAdapter,
         });
-        throw new Error(
-          'Invalid booking queue: not a proper BullMQ Queue instance'
+
+        // Mount the Bull Board UI
+        this.app.use('/api/v1/queue', serverAdapter.getRouter());
+        logger.info('BullMQ dashboard initialized successfully');
+      } catch (error) {
+        logger.warn(
+          'Failed to initialize BullMQ dashboard, continuing without it:',
+          error
         );
+        // Just log the error but don't throw - this will allow the app to start
       }
-
-      logger.info(`Valid BullMQ Queue found: ${bookingQueue.name}`);
-      // Setup Bull Board UI
-      const serverAdapter = new ExpressAdapter();
-      serverAdapter.setBasePath('/api/v1/queue');
-
-      // For Method 1 (named import)
-      createBullBoard({
-        queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
-        serverAdapter,
-      });
-
-      // Mount the Bull Board UI
-      this.app.use('/api/v1/queue', serverAdapter.getRouter());
-      logger.info('BullMQ dashboard initialized successfully');
-    } catch (error) {
-      logger.error('Error initializing BullMQ dashboard:', error);
-      throw error;
+    } else {
+      logger.info('BullMQ dashboard disabled in production');
     }
   }
+  // initializeBullMQ() {
+  //   try {
+  //     // Validate the queue object
+  //     if (
+  //       !bookingQueue ||
+  //       !bookingQueue.name ||
+  //       typeof bookingQueue.add !== 'function'
+  //     ) {
+  //       logger.error('Invalid booking queue object:', {
+  //         exists: !!bookingQueue,
+  //         type: typeof bookingQueue,
+  //         name: bookingQueue?.name,
+  //         isQueue: bookingQueue instanceof Queue,
+  //       });
+  //       throw new Error(
+  //         'Invalid booking queue: not a proper BullMQ Queue instance'
+  //       );
+  //     }
+
+  //     logger.info(`Valid BullMQ Queue found: ${bookingQueue.name}`);
+  //     // Setup Bull Board UI
+  //     const serverAdapter = new ExpressAdapter();
+  //     serverAdapter.setBasePath('/api/v1/queue');
+
+  //     // For Method 1 (named import)
+  //     createBullBoard({
+  //       queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
+  //       serverAdapter,
+  //     });
+
+  //     // Mount the Bull Board UI
+  //     this.app.use('/api/v1/queue', serverAdapter.getRouter());
+  //     logger.info('BullMQ dashboard initialized successfully');
+  //   } catch (error) {
+  //     logger.error('Error initializing BullMQ dashboard:', error);
+  //     throw error;
+  //   }
+  // }
 
   async connectToQueues() {
     try {
