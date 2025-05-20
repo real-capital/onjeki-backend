@@ -4,4 +4,3 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "npm run start:worker"
-healthcheckPath = "/health"
