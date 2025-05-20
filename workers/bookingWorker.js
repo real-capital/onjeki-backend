@@ -31,6 +31,10 @@ const worker = new Worker(
 
     switch (job.name) {
       case 'notify-day-before-test':
+        const bookingText = await BookingModel.findById(bookingId);
+        if (!bookingText) throw new Error(`Booking ${bookingId} not found`);
+        await emailService.sendCheckInReminderEmail(bookingText);
+        return { status: 'success', message: 'Check-in reminder email sent' };
       case 'notify-day-before':
         const booking = await BookingModel.findById(bookingId);
         if (!booking) throw new Error(`Booking ${bookingId} not found`);

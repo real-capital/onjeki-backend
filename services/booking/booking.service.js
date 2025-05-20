@@ -589,25 +589,39 @@ class BookingService {
 
       await session.commitTransaction();
       try {
-        if (booking && booking.checkIn && booking.checkOut) {
-          await bookingQueue.scheduleAllReminders(booking);
-          logger.info('Booking reminders scheduled successfully', {
-            bookingId,
-          });
-        } else {
-          logger.warn('Skipping reminder scheduling - missing dates', {
-            bookingId,
-            hasCheckIn: !!booking.checkIn,
-            hasCheckOut: !!booking.checkOut,
-          });
-        }
+        await bookingQueue.scheduleAllReminders(booking);
+        logger.info('Booking reminders scheduled');
       } catch (reminderError) {
-        // Don't let reminder scheduling failure break the booking flow
-        logger.error('Failed to schedule booking reminders', {
-          bookingId,
-          error: reminderError.message,
-        });
+        logger.error(
+          'Failed to schedule reminders, but booking was confirmed',
+          {
+            bookingId,
+            error: reminderError,
+          }
+        );
+        // Don't rethrow - this shouldn't fail the booking confirmation
       }
+
+      // try {
+      //   if (booking && booking.checkIn && booking.checkOut) {
+      //     await bookingQueue.scheduleAllReminders(booking);
+      //     logger.info('Booking reminders scheduled successfully', {
+      //       bookingId,
+      //     });
+      //   } else {
+      //     logger.warn('Skipping reminder scheduling - missing dates', {
+      //       bookingId,
+      //       hasCheckIn: !!booking.checkIn,
+      //       hasCheckOut: !!booking.checkOut,
+      //     });
+      //   }
+      // } catch (reminderError) {
+      //   // Don't let reminder scheduling failure break the booking flow
+      //   logger.error('Failed to schedule booking reminders', {
+      //     bookingId,
+      //     error: reminderError.message,
+      //   });
+      // }
       // Send confirmation notifications
       await this.sendBookingNotifications(booking);
 

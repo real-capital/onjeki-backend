@@ -2,26 +2,47 @@
 import { Queue, QueueEvents } from 'bullmq';
 import { redisConnection } from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
+import IORedis from 'ioredis';
 
-export const bookingQueue = new Queue('bookingQueue', {
-  connection: redisConnection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-    removeOnComplete: {
-      age: 3600,
-      count: 1000,
-    },
-    removeOnFail: {
-      age: 24 * 3600,
-    },
-  },
-});
+// Determine if we're using a real or mock Redis connection
+const isRealRedis = redisConnection instanceof IORedis;
 
-
+// Create the booking queue
+export const bookingQueue = isRealRedis
+  ? new Queue('bookingQueue', {
+      connection: redisConnection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+        removeOnComplete: {
+          age: 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 24 * 3600,
+        },
+      },
+    })
+  : {
+      // Mock implementation
+      async add(name, data, options) {
+        logger.info(`[MOCK] Added job to queue: ${name}`, { data, options });
+        return { id: `mock-job-${Date.now()}` };
+      },
+      async removeJobs(jobId) {
+        logger.info(`[MOCK] Removed job: ${jobId}`);
+        return true;
+      },
+      async waitUntilReady() {
+        return true;
+      },
+      async close() {
+        return true;
+      },
+    };
 
 // Create queue events listener
 const bookingQueueEvents = new QueueEvents('bookingQueue', {
@@ -70,40 +91,6 @@ export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
     throw error;
   }
 };
-// export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
-//   try {
-//     // Calculate delay: time until 24 hours before booking
-//     const reminderTime = new Date(scheduledTime);
-//     reminderTime.setDate(reminderTime.getDate() - 1);
-
-//     const now = new Date();
-//     let delay = reminderTime.getTime() - now.getTime();
-//     delay = Math.max(0, delay); // Ensure delay is not negative
-
-//     logger.info(
-//       `Scheduling day-before reminder for booking ${bookingId} with delay of ${delay}ms`
-//     );
-
-//     await bookingQueue.add(
-//       'notify-day-before',
-//       { bookingId },
-//       {
-//         delay,
-//         jobId: `day-before-${bookingId}`,
-//       }
-//     );
-
-//     return { status: 'success', message: 'Day before reminder scheduled' };
-//   } catch (error) {
-//     logger.error(
-//       `Error scheduling day-before reminder for booking ${bookingId}:`,
-//       error
-//     );
-//     throw error;
-//   }
-// };
-
-// Schedule reminder for 15 minutes before booking
 export const schedule15MinReminder = async (bookingId, scheduledTime) => {
   try {
     // Calculate delay: time until 15 minutes before booking
@@ -202,26 +189,42 @@ export const scheduleAutoCheckOut = async (bookingId, endTime) => {
 export const scheduleAllReminders = async (booking) => {
   try {
     const bookingId = booking._id.toString();
-    
+
     // CHANGE THIS: Use checkIn and checkOut instead of startTime and endTime
     const startTime = new Date(booking.checkIn);
     const endTime = new Date(booking.checkOut);
-    
+
     // Add validation to prevent NaN errors
     if (isNaN(startTime.getTime())) {
-      logger.error(`Invalid checkIn date for booking ${bookingId}: ${booking.checkIn}`);
+      logger.error(
+        `Invalid checkIn date for booking ${bookingId}: ${booking.checkIn}`
+      );
       throw new Error(`Invalid check-in date for booking ${bookingId}`);
     }
-    
+
     if (isNaN(endTime.getTime())) {
-      logger.error(`Invalid checkOut date for booking ${bookingId}: ${booking.checkOut}`);
+      logger.error(
+        `Invalid checkOut date for booking ${bookingId}: ${booking.checkOut}`
+      );
       throw new Error(`Invalid check-out date for booking ${bookingId}`);
     }
-    
+
     logger.info(`Scheduling reminders for booking ${bookingId}`, {
       checkIn: startTime.toISOString(),
-      checkOut: endTime.toISOString()
+      checkOut: endTime.toISOString(),
     });
+    // First, schedule a test reminder with 10 seconds delay for immediate testing
+    await bookingQueue.add(
+      'notify-day-before-test',
+      { bookingId },
+      {
+        delay: 10000, // 10 seconds delay for testing
+        jobId: `test-reminder-${bookingId}`,
+      }
+    );
+    logger.info(
+      `Test reminder scheduled for booking ${bookingId} (10 second delay)`
+    );
 
     await scheduleReminderDayBefore(bookingId, startTime);
     await schedule15MinReminder(bookingId, startTime);
