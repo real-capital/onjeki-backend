@@ -41,27 +41,105 @@
 // export default redisConnection;
 
 // jobs/redis-connection.js
+// import IORedis from 'ioredis';
+// import { logger } from '../utils/logger.js';
+
+// // Determine if we're in a serverless environment
+// const IS_SERVERLESS =
+//   process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+// const REDIS_ENABLED = process.env.ENABLE_REDIS === 'true';
+
+// // Create a mock Redis client for environments where Redis isn't needed
+// class MockRedisClient {
+//   constructor() {
+//     logger.info(
+//       'Using mock Redis client - queue operations will be logged but not executed'
+//     );
+//   }
+
+//   async waitUntilReady() {
+//     return true;
+//   }
+//   async add() {
+//     logger.info('Mock Redis: add job called', arguments[0]);
+//     return { id: 'mock-id-' + Date.now() };
+//   }
+//   async removeJobs() {
+//     return true;
+//   }
+//   async close() {
+//     return true;
+//   }
+//   on() {
+//     return this;
+//   }
+// }
+
+// // Export real or mock connection based on environment
+// export let redisConnection;
+
+// if (IS_SERVERLESS && !REDIS_ENABLED) {
+//   logger.info('Serverless environment detected, using mock Redis client');
+//   redisConnection = new MockRedisClient();
+// } else {
+//   try {
+//     logger.info('Initializing real Redis connection');
+//     redisConnection = new IORedis({
+//       host: process.env.REDIS_HOST,
+//       port: process.env.REDIS_PORT,
+//       password: process.env.REDIS_PASSWORD,
+//       maxRetriesPerRequest: null,
+//       connectTimeout: 20000,
+//       retryStrategy(times) {
+//         const delay = Math.min(times * 100, 3000);
+//         return times >= 3 ? null : delay; // Only retry 3 times
+//       },
+//     });
+
+//     redisConnection.on('error', (error) => {
+//       logger.error('Redis connection error:', error);
+//     });
+//   } catch (error) {
+//     logger.error('Failed to initialize Redis connection:', error);
+//     // Fall back to mock client on error
+//     redisConnection = new MockRedisClient();
+//   }
+// }
+
+// export default redisConnection;
+
+// jobs/redis-connection.js
 import IORedis from 'ioredis';
+import dotenv from 'dotenv';
 import { logger } from '../utils/logger.js';
 
-// Determine if we're in a serverless environment
-const IS_SERVERLESS =
-  process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-const REDIS_ENABLED = process.env.ENABLE_REDIS === 'true';
+// Ensure dotenv is loaded
+dotenv.config();
 
-// Create a mock Redis client for environments where Redis isn't needed
+// Get Redis config from environment
+const redisHost = process.env.REDIS_HOST;
+const redisPort = parseInt(process.env.REDIS_PORT || '6379');
+const redisPassword = process.env.REDIS_PASSWORD;
+const redisEnabled = process.env.ENABLE_REDIS === 'true';
+
+// Log Redis configuration (remove for production)
+logger.info('Redis configuration:', {
+  host: redisHost || 'not set',
+  port: redisPort,
+  passwordSet: !!redisPassword,
+  enabled: redisEnabled,
+});
+
+// MockRedisClient implementation
 class MockRedisClient {
   constructor() {
-    logger.info(
-      'Using mock Redis client - queue operations will be logged but not executed'
-    );
+    logger.info('Using mock Redis client');
   }
-
+  /* mock methods */
   async waitUntilReady() {
     return true;
   }
   async add() {
-    logger.info('Mock Redis: add job called', arguments[0]);
     return { id: 'mock-id-' + Date.now() };
   }
   async removeJobs() {
@@ -75,35 +153,43 @@ class MockRedisClient {
   }
 }
 
-// Export real or mock connection based on environment
-export let redisConnection;
+// Determine which Redis client to use
+let redisConnection;
 
-if (IS_SERVERLESS && !REDIS_ENABLED) {
-  logger.info('Serverless environment detected, using mock Redis client');
+if (!redisEnabled || !redisHost) {
+  logger.info('Redis disabled or missing configuration, using mock client');
   redisConnection = new MockRedisClient();
 } else {
   try {
-    logger.info('Initializing real Redis connection');
+    // Create connection with explicit config
     redisConnection = new IORedis({
-      host: process.env.REDIS_HOST,
-      port: process.env.REDIS_PORT,
-      password: process.env.REDIS_PASSWORD,
+      host: redisHost,
+      port: redisPort,
+      password: redisPassword,
       maxRetriesPerRequest: null,
-      connectTimeout: 20000,
+      connectTimeout: 10000,
       retryStrategy(times) {
-        const delay = Math.min(times * 100, 3000);
-        return times >= 3 ? null : delay; // Only retry 3 times
+        if (times > 3) return null;
+        return Math.min(times * 100, 3000);
       },
+    });
+
+    redisConnection.on('connect', () => {
+      logger.info('Successfully connected to Redis');
     });
 
     redisConnection.on('error', (error) => {
       logger.error('Redis connection error:', error);
+      if (error.code === 'ECONNREFUSED') {
+        logger.warn('Falling back to mock Redis client');
+        redisConnection = new MockRedisClient();
+      }
     });
   } catch (error) {
     logger.error('Failed to initialize Redis connection:', error);
-    // Fall back to mock client on error
     redisConnection = new MockRedisClient();
   }
 }
 
+export { redisConnection };
 export default redisConnection;
