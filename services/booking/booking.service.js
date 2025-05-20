@@ -606,26 +606,6 @@ class BookingService {
         // Don't rethrow - this shouldn't fail the booking confirmation
       }
 
-      // try {
-      //   if (booking && booking.checkIn && booking.checkOut) {
-      //     await bookingQueue.scheduleAllReminders(booking);
-      //     logger.info('Booking reminders scheduled successfully', {
-      //       bookingId,
-      //     });
-      //   } else {
-      //     logger.warn('Skipping reminder scheduling - missing dates', {
-      //       bookingId,
-      //       hasCheckIn: !!booking.checkIn,
-      //       hasCheckOut: !!booking.checkOut,
-      //     });
-      //   }
-      // } catch (reminderError) {
-      //   // Don't let reminder scheduling failure break the booking flow
-      //   logger.error('Failed to schedule booking reminders', {
-      //     bookingId,
-      //     error: reminderError.message,
-      //   });
-      // }
       // Send confirmation notifications
       await this.sendBookingNotifications(booking);
 

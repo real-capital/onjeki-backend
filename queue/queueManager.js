@@ -3,6 +3,9 @@ import IORedis from 'ioredis';
 import redisConnection from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
 import bookingQueue from './bookingQueue.js';
+import bookingWorker from '../workers/bookingWorker.js';
+
+const workers = [bookingWorker];
 
 // Import other queues
 // For API-only mode (Vercel), where we only need to connect to queues, not run workers

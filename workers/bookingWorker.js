@@ -83,13 +83,6 @@ const worker = new Worker(
   workerOptions
 );
 
-// worker.on('completed', (job) => {
-//   logger.info(`Job ${job.id} (${job.name}) completed`);
-// });
-
-// worker.on('failed', (job, err) => {
-//   logger.error(`Job ${job.id} (${job.name}) failed:`, err);
-// });
 
 // In your worker.js or bookingWorker.js
 worker.on('active', (job) => {

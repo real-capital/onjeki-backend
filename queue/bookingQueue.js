@@ -4,107 +4,32 @@ import { redisConnection } from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
 import IORedis from 'ioredis';
 
-// // Determine if we're using a real or mock Redis connection
-// const isRealRedis = redisConnection instanceof IORedis;
-
-// // Create the booking queue
-// export const bookingQueue = isRealRedis
-//   ? new Queue('bookingQueue', {
-//       connection: redisConnection,
-//       defaultJobOptions: {
-//         attempts: 3,
-//         backoff: {
-//           type: 'exponential',
-//           delay: 1000,
-//         },
-//         removeOnComplete: {
-//           age: 3600,
-//           count: 1000,
-//         },
-//         removeOnFail: {
-//           age: 24 * 3600,
-//         },
-//       },
-//     })
-//   : {
-//       // Mock implementation
-//       async add(name, data, options) {
-//         logger.info(`[MOCK] Added job to queue: ${name}`, { data, options });
-//         return { id: `mock-job-${Date.now()}` };
-//       },
-//       async removeJobs(jobId) {
-//         logger.info(`[MOCK] Removed job: ${jobId}`);
-//         return true;
-//       },
-//       async waitUntilReady() {
-//         return true;
-//       },
-//       async close() {
-//         return true;
-//       },
-//     };
-
-// // Create queue events listener
-// const bookingQueueEvents = new QueueEvents('bookingQueue', {
-//   connection: redisConnection,
-// });
-
 // Determine if we're using a mock Redis client
 const isMockRedis = !(redisConnection instanceof IORedis);
 
 // Create a mock version of the bookingQueue when using mock Redis
-export const bookingQueue = isMockRedis
-  ? {
-      // Mock queue implementation
-      async add(name, data, options) {
-        logger.info(`[MOCK] Added job to queue: ${name}`, { data, options });
-        return { id: `mock-job-${Date.now()}` };
-      },
-      async removeJobs(jobId) {
-        logger.info(`[MOCK] Removed job: ${jobId}`);
-        return true;
-      },
-      async waitUntilReady() {
-        return true;
-      },
-      async close() {
-        return true;
-      },
-      on() {
-        return this;
-      },
-    }
-  : new Queue('bookingQueue', {
-      connection: redisConnection,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
-        removeOnComplete: {
-          age: 3600,
-          count: 1000,
-        },
-        removeOnFail: {
-          age: 24 * 3600,
-        },
-      },
-    });
+export const bookingQueue = new Queue('bookingQueue', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+    removeOnComplete: {
+      age: 3600,
+      count: 1000,
+    },
+    removeOnFail: {
+      age: 24 * 3600,
+    },
+  },
+});
 
 // Create queue events listener - but only if using real Redis
-const bookingQueueEvents = isMockRedis
-  ? {
-      on() {
-        return this;
-      },
-      async waitUntilReady() {
-        return true;
-      },
-    }
-  : new QueueEvents('bookingQueue', {
-      connection: redisConnection,
-    });
+const bookingQueueEvents = new QueueEvents('bookingQueue', {
+  connection: redisConnection,
+});
 
 // Schedule reminder for day before booking
 export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
@@ -295,26 +220,7 @@ export const scheduleAllReminders = async (booking) => {
     throw error;
   }
 };
-// export const scheduleAllReminders = async (booking) => {
-//   try {
-//     const bookingId = booking._id.toString();
-//     const startTime = new Date(booking.startTime);
-//     const endTime = new Date(booking.endTime);
 
-//     await scheduleReminderDayBefore(bookingId, startTime);
-//     await schedule15MinReminder(bookingId, startTime);
-//     await scheduleAutoCheckIn(bookingId, startTime);
-//     await scheduleAutoCheckOut(bookingId, endTime);
-
-//     logger.info(`All reminders scheduled for booking ${bookingId}`);
-//     return { status: 'success', message: 'All reminders scheduled' };
-//   } catch (error) {
-//     logger.error(`Error scheduling reminders for booking:`, error);
-//     throw error;
-//   }
-// };
-
-// Cancel all reminders for a booking
 export const cancelAllReminders = async (bookingId) => {
   try {
     await bookingQueue.removeJobs(`day-before-${bookingId}`);
