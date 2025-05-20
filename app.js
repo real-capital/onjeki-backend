@@ -11,8 +11,14 @@ import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
 import hpp from 'hpp';
 import { Queue } from 'bullmq';
+// import { createBullBoard } from '@bull-board/api';
+// import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+// import { ExpressAdapter } from '@bull-board/express';
+// import { createBullBoard } from '@bull-board/api';
+// import { BullMQAdapter } from '@bull-board/api/dist/bullMQAdapter.js';
+// import { ExpressAdapter } from '@bull-board/express';
 import { createBullBoard } from '@bull-board/api';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'; // Note the .js extension
 import { ExpressAdapter } from '@bull-board/express';
 import { Route } from './interfaces/route.interface.js';
 
