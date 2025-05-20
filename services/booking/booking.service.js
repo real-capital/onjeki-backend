@@ -585,19 +585,31 @@ class BookingService {
         // even if earning record creation fails
       }
       await this.createBookingConversation(bookingId);
+      // Schedule non-critical operations to happen after transaction
 
       await session.commitTransaction();
-
+      try {
+        if (booking && booking.checkIn && booking.checkOut) {
+          await bookingQueue.scheduleAllReminders(booking);
+          logger.info('Booking reminders scheduled successfully', {
+            bookingId,
+          });
+        } else {
+          logger.warn('Skipping reminder scheduling - missing dates', {
+            bookingId,
+            hasCheckIn: !!booking.checkIn,
+            hasCheckOut: !!booking.checkOut,
+          });
+        }
+      } catch (reminderError) {
+        // Don't let reminder scheduling failure break the booking flow
+        logger.error('Failed to schedule booking reminders', {
+          bookingId,
+          error: reminderError.message,
+        });
+      }
       // Send confirmation notifications
       await this.sendBookingNotifications(booking);
-      // Schedule non-critical operations to happen after transaction
-      await bookingQueue.scheduleAllReminders(booking);
-      // this.scheduleBookingNotifications(booking._id).catch((err) => {
-      //   logger.error('Failed to schedule booking notifications', {
-      //     bookingId: booking._id,
-      //     error: err,
-      //   });
-      // });
 
       return booking;
     } catch (error) {

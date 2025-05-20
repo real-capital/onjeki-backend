@@ -21,24 +21,7 @@ export const bookingQueue = new Queue('bookingQueue', {
   },
 });
 
-// Create the booking queue
-// const bookingQueue = new Queue('bookingQueue', {
-//   connection: redisConnection,
-//   defaultJobOptions: {
-//     attempts: 3,
-//     backoff: {
-//       type: 'exponential',
-//       delay: 1000,
-//     },
-//     removeOnComplete: {
-//       age: 3600,
-//       count: 1000,
-//     },
-//     removeOnFail: {
-//       age: 24 * 3600,
-//     },
-//   },
-// });
+
 
 // Create queue events listener
 const bookingQueueEvents = new QueueEvents('bookingQueue', {
@@ -215,11 +198,30 @@ export const scheduleAutoCheckOut = async (bookingId, endTime) => {
 };
 
 // Schedule all reminders for a booking
+// Schedule all reminders for a booking
 export const scheduleAllReminders = async (booking) => {
   try {
     const bookingId = booking._id.toString();
-    const startTime = new Date(booking.startTime);
-    const endTime = new Date(booking.endTime);
+    
+    // CHANGE THIS: Use checkIn and checkOut instead of startTime and endTime
+    const startTime = new Date(booking.checkIn);
+    const endTime = new Date(booking.checkOut);
+    
+    // Add validation to prevent NaN errors
+    if (isNaN(startTime.getTime())) {
+      logger.error(`Invalid checkIn date for booking ${bookingId}: ${booking.checkIn}`);
+      throw new Error(`Invalid check-in date for booking ${bookingId}`);
+    }
+    
+    if (isNaN(endTime.getTime())) {
+      logger.error(`Invalid checkOut date for booking ${bookingId}: ${booking.checkOut}`);
+      throw new Error(`Invalid check-out date for booking ${bookingId}`);
+    }
+    
+    logger.info(`Scheduling reminders for booking ${bookingId}`, {
+      checkIn: startTime.toISOString(),
+      checkOut: endTime.toISOString()
+    });
 
     await scheduleReminderDayBefore(bookingId, startTime);
     await schedule15MinReminder(bookingId, startTime);
@@ -233,6 +235,24 @@ export const scheduleAllReminders = async (booking) => {
     throw error;
   }
 };
+// export const scheduleAllReminders = async (booking) => {
+//   try {
+//     const bookingId = booking._id.toString();
+//     const startTime = new Date(booking.startTime);
+//     const endTime = new Date(booking.endTime);
+
+//     await scheduleReminderDayBefore(bookingId, startTime);
+//     await schedule15MinReminder(bookingId, startTime);
+//     await scheduleAutoCheckIn(bookingId, startTime);
+//     await scheduleAutoCheckOut(bookingId, endTime);
+
+//     logger.info(`All reminders scheduled for booking ${bookingId}`);
+//     return { status: 'success', message: 'All reminders scheduled' };
+//   } catch (error) {
+//     logger.error(`Error scheduling reminders for booking:`, error);
+//     throw error;
+//   }
+// };
 
 // Cancel all reminders for a booking
 export const cancelAllReminders = async (bookingId) => {

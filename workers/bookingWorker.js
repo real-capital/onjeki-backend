@@ -20,7 +20,7 @@ const workerOptions = {
   },
   removeOnFail: {
     age: 24 * 3600,
-  }
+  },
 };
 
 const worker = new Worker(
@@ -47,7 +47,7 @@ const worker = new Worker(
       case 'auto-check-in':
         const bookingIn = await BookingModel.findById(bookingId);
         if (!bookingIn) throw new Error(`Booking ${bookingId} not found`);
-        
+
         if (!bookingIn.checkInDetails.isCheckedIn) {
           bookingIn.checkInDetails.isCheckedIn = true;
           bookingIn.checkInDetails.actualCheckInTime = new Date();
@@ -56,7 +56,7 @@ const worker = new Worker(
             status: 'CHECKED_IN',
             message: 'Auto-checked in by system',
           });
-          
+
           await bookingIn.save();
           await emailService.sendCheckInConfirmationEmail(bookingIn);
           // Uncomment when your notification service is ready
