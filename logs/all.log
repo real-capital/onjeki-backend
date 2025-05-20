@@ -40619,3 +40619,18 @@
 2025-05-20 17:01:41:141 [info]: Worker service started successfully
 2025-05-20 17:01:52:152 [info]: SIGINT received. Shutting down worker service...
 2025-05-20 17:02:01:21 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 357.695 ms
+2025-05-20 17:03:01:31 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 211.820 ms
+2025-05-20 17:04:01:41 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 214.201 ms
+2025-05-20 17:05:01:51 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 213.007 ms
+2025-05-20 17:06:01:61 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 211.165 ms
+2025-05-20 17:07:01:71 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 212.995 ms
+2025-05-20 17:08:01:81 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 210.395 ms
+2025-05-20 17:09:01:91 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 212.250 ms
+2025-05-20 17:10:01:101 [http]: GET /api/v1/queue/api/queues?page=1&jobsPerPage=10 304 - - 203.340 ms
+2025-05-20 17:10:46:1046 [info]: Redis configuration:
+2025-05-20 17:10:46:1046 [info]: Health check server running on port 8084
+2025-05-20 17:10:46:1046 [info]: Successfully connected to Redis
+2025-05-20 17:10:46:1046 [info]: Booking queue initialized successfully
+2025-05-20 17:10:46:1046 [info]: All queues and workers started successfully
+2025-05-20 17:10:46:1046 [info]: Worker service started successfully
+2025-05-20 17:10:46:1046 [info]: Connected to MongoDB

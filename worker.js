@@ -54,4 +54,5 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, () => {
   logger.info(`Health check server running on port ${PORT}`);
+  console.log(`Health check server running on port ${PORT}`);
 });
