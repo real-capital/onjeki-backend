@@ -48,8 +48,17 @@ const bookingQueueEvents = new QueueEvents('bookingQueue', {
 // Schedule reminder for day before booking
 export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
   try {
-    // Calculate delay: time until 24 hours before booking
-    const reminderTime = new Date(scheduledTime);
+    // Validate the input time
+    const startTimeMillis = new Date(scheduledTime).getTime();
+    if (isNaN(startTimeMillis)) {
+      logger.error(
+        `Invalid scheduledTime for booking ${bookingId}: ${scheduledTime}`
+      );
+      throw new Error(`Invalid booking start time: ${scheduledTime}`);
+    }
+
+    // Calculate delay with validation
+    const reminderTime = new Date(startTimeMillis);
     reminderTime.setDate(reminderTime.getDate() - 1);
 
     const now = new Date();
@@ -78,6 +87,38 @@ export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
     throw error;
   }
 };
+// export const scheduleReminderDayBefore = async (bookingId, scheduledTime) => {
+//   try {
+//     // Calculate delay: time until 24 hours before booking
+//     const reminderTime = new Date(scheduledTime);
+//     reminderTime.setDate(reminderTime.getDate() - 1);
+
+//     const now = new Date();
+//     let delay = reminderTime.getTime() - now.getTime();
+//     delay = Math.max(0, delay); // Ensure delay is not negative
+
+//     logger.info(
+//       `Scheduling day-before reminder for booking ${bookingId} with delay of ${delay}ms`
+//     );
+
+//     await bookingQueue.add(
+//       'notify-day-before',
+//       { bookingId },
+//       {
+//         delay,
+//         jobId: `day-before-${bookingId}`,
+//       }
+//     );
+
+//     return { status: 'success', message: 'Day before reminder scheduled' };
+//   } catch (error) {
+//     logger.error(
+//       `Error scheduling day-before reminder for booking ${bookingId}:`,
+//       error
+//     );
+//     throw error;
+//   }
+// };
 
 // Schedule reminder for 15 minutes before booking
 export const schedule15MinReminder = async (bookingId, scheduledTime) => {
