@@ -146,6 +146,7 @@ class BookingService {
       ],
     });
 
+
     if (existingBooking) return false;
 
     // 2. Check for blocked dates in the availability schema
@@ -158,6 +159,7 @@ class BookingService {
         },
       },
     });
+    console.log(blockedDates);
 
     if (blockedDates) return false;
 
@@ -172,6 +174,7 @@ class BookingService {
         new Date(booking.endDate) > startDate
       );
     });
+    console.log(isBooked);
 
     if (isBooked) return false;
 
@@ -185,6 +188,7 @@ class BookingService {
         },
       },
     });
+    console.log(calendar);
 
     if (calendar) return false;
 

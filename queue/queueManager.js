@@ -18,23 +18,6 @@ export const connectToAllQueues = async () => {
     throw error;
   }
 };
-// export const connectToAllQueues = async () => {
-//   try {
-//     // Check if we're using mock Redis
-//     if (!(redisConnection instanceof IORedis)) {
-//       logger.info('Using mock Redis client, skipping queue connection');
-//       return true;
-//     }
-
-//     // Connect to Redis queues
-//     await bookingQueue.bookingQueue.waitUntilReady();
-//     logger.info('Connected to all Redis queues successfully');
-//     return true;
-//   } catch (error) {
-//     logger.error('Failed to connect to Redis queues:', error);
-//     return false; // Don't throw, just return false
-//   }
-// };
 
 // For worker mode (Railway), where we start both queues and workers
 export const startAllQueuesAndWorkers = async () => {

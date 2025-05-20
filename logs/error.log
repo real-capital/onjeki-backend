@@ -35,3 +35,9 @@
 2025-05-20 16:38:22:3822 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
 2025-05-20 16:38:37:3837 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
 2025-05-20 16:40:12:4012 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, You already have a pending booking.
+2025-05-20 17:30:59:3059 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 17:31:12:3112 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 17:33:14:3314 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 17:35:02:352 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 17:35:26:3526 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 17:37:38:3738 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 500, print is not defined
