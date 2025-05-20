@@ -1,4 +1,3 @@
-
 // worker.js
 import 'dotenv/config';
 import mongoose from 'mongoose';
@@ -20,8 +19,10 @@ mongoose
   try {
     await startAllQueuesAndWorkers();
     logger.info('Worker service started successfully');
+    console.log('Worker service started successfully');
   } catch (error) {
     logger.error('Failed to start worker service:', error);
+    console.log('Failed to start worker service:', error);
     process.exit(1);
   }
 })();
@@ -40,7 +41,8 @@ process.on('SIGINT', async () => {
 });
 
 const app = express();
-const PORT = 3000;
+// const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
   res.send('Worker service is running');

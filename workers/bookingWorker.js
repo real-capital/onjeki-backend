@@ -83,12 +83,40 @@ const worker = new Worker(
   workerOptions
 );
 
-worker.on('completed', (job) => {
-  logger.info(`Job ${job.id} (${job.name}) completed`);
+// worker.on('completed', (job) => {
+//   logger.info(`Job ${job.id} (${job.name}) completed`);
+// });
+
+// worker.on('failed', (job, err) => {
+//   logger.error(`Job ${job.id} (${job.name}) failed:`, err);
+// });
+
+// In your worker.js or bookingWorker.js
+worker.on('active', (job) => {
+  logger.info(`Job ${job.id} has started processing`, {
+    name: job.name,
+    data: job.data,
+  });
+});
+
+worker.on('completed', (job, result) => {
+  logger.info(`Job ${job.id} (${job.name}) completed with result:`, {
+    result,
+    data: job.data,
+  });
 });
 
 worker.on('failed', (job, err) => {
-  logger.error(`Job ${job.id} (${job.name}) failed:`, err);
+  logger.error(`Job ${job.id} (${job.name}) failed:`, {
+    error: err.message,
+    stack: err.stack,
+    data: job.data,
+  });
+});
+
+// Also add a processing event handler
+worker.on('progress', (job, progress) => {
+  logger.info(`Job ${job.id} reported progress:`, progress);
 });
 
 // Handle process shutdown

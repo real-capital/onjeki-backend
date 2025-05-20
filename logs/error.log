@@ -26,3 +26,12 @@
 2025-05-20 14:43:15:4315 [error]: Failed to connect to Redis queues: redisConnection is not defined
 2025-05-20 14:43:27:4327 [error]: Failed to connect to Redis queues: IORedis is not defined
 2025-05-20 14:43:37:4337 [error]: Failed to connect to Redis queues: bookingQueue.waitUntilReady is not a function
+2025-05-20 15:32:28:3228 [error]: Redis connection error: read ECONNRESET
+2025-05-20 15:39:33:3933 [error]: Redis connection error: read ECONNRESET
+2025-05-20 16:35:01:351 [error]: Redis connection error: read ECONNRESET
+2025-05-20 16:37:48:3748 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 16:37:59:3759 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 16:38:08:388 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 16:38:22:3822 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 16:38:37:3837 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, Property not available for selected dates
+2025-05-20 16:40:12:4012 [error]: [Error Handler]: Path: /api/v1/booking, Method: POST, Status: 400, You already have a pending booking.

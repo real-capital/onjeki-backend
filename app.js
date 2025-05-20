@@ -124,11 +124,11 @@ class app {
   }
   initializeBullMQ() {
     // Only initialize in production if explicitly enabled AND not using mock Redis
-    if (
-      (process.env.NODE_ENV === 'development' ||
-        process.env.ENABLE_BULL_BOARD === 'true') &&
-      bookingQueue instanceof Queue
-    ) {
+    // if (
+    //   (process.env.NODE_ENV === 'development' ||
+    //     process.env.ENABLE_BULL_BOARD === 'true') &&
+    //   bookingQueue instanceof Queue
+    // ) {
       try {
         // Setup Bull Board UI
         const serverAdapter = new ExpressAdapter();
@@ -137,6 +137,13 @@ class app {
         createBullBoard({
           queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
           serverAdapter,
+          // options: {
+          //   // Add these options to show all jobs
+          //   allowRetries: true,
+          //   queueSchedulerPrefix: 'bull',
+          //   queuePrefix: 'bull',
+          //   showDelayedJobs: true, // Make sure this is true
+          // },
         });
 
         // Mount the Bull Board UI
@@ -148,9 +155,9 @@ class app {
           error
         );
       }
-    } else {
-      logger.info('BullMQ dashboard disabled');
-    }
+    // } else {
+    //   logger.info('BullMQ dashboard disabled');
+    // }
   }
 
   // initializeBullMQ() {

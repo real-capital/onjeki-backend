@@ -6,35 +6,35 @@ import bookingQueue from './bookingQueue.js';
 
 // Import other queues
 // For API-only mode (Vercel), where we only need to connect to queues, not run workers
-// export const connectToAllQueues = async () => {
-//   try {
-//     // Only initialize connections to the queues without starting workers
-//     await bookingQueue.bookingQueue.waitUntilReady();
-
-//     logger.info('Connected to all Redis queues successfully');
-//     return true;
-//   } catch (error) {
-//     logger.error('Failed to connect to Redis queues:', error);
-//     throw error;
-//   }
-// };
 export const connectToAllQueues = async () => {
   try {
-    // Check if we're using mock Redis
-    if (!(redisConnection instanceof IORedis)) {
-      logger.info('Using mock Redis client, skipping queue connection');
-      return true;
-    }
-
-    // Connect to Redis queues
+    // Only initialize connections to the queues without starting workers
     await bookingQueue.bookingQueue.waitUntilReady();
+
     logger.info('Connected to all Redis queues successfully');
     return true;
   } catch (error) {
     logger.error('Failed to connect to Redis queues:', error);
-    return false; // Don't throw, just return false
+    throw error;
   }
 };
+// export const connectToAllQueues = async () => {
+//   try {
+//     // Check if we're using mock Redis
+//     if (!(redisConnection instanceof IORedis)) {
+//       logger.info('Using mock Redis client, skipping queue connection');
+//       return true;
+//     }
+
+//     // Connect to Redis queues
+//     await bookingQueue.bookingQueue.waitUntilReady();
+//     logger.info('Connected to all Redis queues successfully');
+//     return true;
+//   } catch (error) {
+//     logger.error('Failed to connect to Redis queues:', error);
+//     return false; // Don't throw, just return false
+//   }
+// };
 
 // For worker mode (Railway), where we start both queues and workers
 export const startAllQueuesAndWorkers = async () => {
