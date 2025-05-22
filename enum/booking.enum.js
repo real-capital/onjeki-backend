@@ -4,6 +4,8 @@ const BookingStatus = Object.freeze({
   CONFIRMED: 'Confirmed',
   PENDING: 'Pending',
   COMPLETED: 'Completed',
+  CHECKED_IN: 'Checked in',
+  CHECKED_OUT: 'Checked out',
 });
 
 export { BookingStatus };

@@ -13,12 +13,7 @@ class EarningService {
   constructor() {
     this.serviceFeePercentage = 0.05; // 5% service fee
   }
-  // constructor(earningModel, payoutModel, paystackService, logger) {
-  //   EarningModel = earningModel;
-  //   PayoutModel = payoutModel;
-  //   paystackService = paystackService;
-  //   logger = logger;
-  // }
+
 
   /**
    * Create earning record when booking is confirmed
@@ -270,110 +265,7 @@ class EarningService {
       earnings,
       summary,
     };
-  } // async getHostEarnings(hostId, filters = {}) {
-  //   const query = { host: hostId };
-
-  //   // Apply date filters
-  //   if (filters.startDate) {
-  //     query.createdAt = { $gte: new Date(filters.startDate) };
-  //   }
-  //   if (filters.endDate) {
-  //     query.createdAt = { ...query.createdAt, $lte: new Date(filters.endDate) };
-  //   }
-
-  //   // Apply status filter
-  //   if (filters.status) {
-  //     query.status = filters.status;
-  //   }
-
-  //   const earnings = await EarningModel.find(query)
-  //     .populate('property', 'title')
-  //     .populate('booking', 'checkIn checkOut guests')
-  //     .sort({ createdAt: -1 });
-
-  //   // Calculate summary statistics
-  //   const summary = await this.getEarningsSummary(hostId);
-
-  //   return {
-  //     earnings,
-  //     summary,
-  //   };
-  // }
-
-  /**
-   * Get a summary of host earnings
-   */
-  // async getEarningsSummary(hostId) {
-  //   const [totalStats, monthlyStats, pendingStats] = await Promise.all([
-  //     // Total earnings
-  //     EarningModel.aggregate([
-  //       { $match: { host: new mongoose.Types.ObjectId(hostId) } },
-  //       {
-  //         $group: {
-  //           _id: null,
-  //           totalEarnings: { $sum: '$amount' },
-  //           totalServiceFees: { $sum: '$serviceFee' },
-  //           totalNetAmount: { $sum: '$netAmount' },
-  //           count: { $sum: 1 },
-  //         },
-  //       },
-  //     ]),
-
-  //     // Current month earnings
-  //     EarningModel.aggregate([
-  //       {
-  //         $match: {
-  //           host: new mongoose.Types.ObjectId(hostId),
-  //           createdAt: {
-  //             $gte: new Date(new Date().setDate(1)), // First day of current month
-  //           },
-  //         },
-  //       },
-  //       {
-  //         $group: {
-  //           _id: null,
-  //           monthlyEarnings: { $sum: '$amount' },
-  //           monthlyServiceFees: { $sum: '$serviceFee' },
-  //           monthlyNetAmount: { $sum: '$netAmount' },
-  //           count: { $sum: 1 },
-  //         },
-  //       },
-  //     ]),
-
-  //     // Pending earnings
-  //     EarningModel.aggregate([
-  //       {
-  //         $match: {
-  //           host: new mongoose.Types.ObjectId(hostId),
-  //           status: 'pending',
-  //         },
-  //       },
-  //       {
-  //         $group: {
-  //           _id: null,
-  //           pendingAmount: { $sum: '$netAmount' },
-  //           count: { $sum: 1 },
-  //         },
-  //       },
-  //     ]),
-  //   ]);
-
-  //   return {
-  //     total: totalStats[0] || {
-  //       totalEarnings: 0,
-  //       totalServiceFees: 0,
-  //       totalNetAmount: 0,
-  //       count: 0,
-  //     },
-  //     monthly: monthlyStats[0] || {
-  //       monthlyEarnings: 0,
-  //       monthlyServiceFees: 0,
-  //       monthlyNetAmount: 0,
-  //       count: 0,
-  //     },
-  //     pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
-  //   };
-  // }
+  } 
   /**
    * Get a summary of host earnings
    */

@@ -146,7 +146,6 @@ class BookingService {
       ],
     });
 
-
     if (existingBooking) return false;
 
     // 2. Check for blocked dates in the availability schema
@@ -1401,10 +1400,10 @@ class BookingService {
       // if (booking.status !== BookingStatus.CONFIRMED) {
       //   throw new Error(`Booking is not in CONFIRMED status: ${bookingId}`);
       // }
-      if (
-        booking.status !== BookingStatus.CONFIRMED &&
-        booking.status !== BookingStatus.CHECKED_IN
-      ) {
+      const hasCheckedIn = booking.timeline.some(
+        (entry) => entry.status === 'CHECKED_IN'
+      );
+      if (booking.status !== BookingStatus.CONFIRMED || !hasCheckedIn) {
         throw new Error('Booking is not in a valid state for completion');
       }
 

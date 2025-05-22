@@ -101,8 +101,8 @@ export const redisConnection = new IORedis({
   host: process.env.REDIS_HOST,
   port: process.env.REDIS_PORT,
   maxRetriesPerRequest: null,
-  enableOfflineQueue: true,
-  offlineQueue: true,
+  enableOfflineQueue: false,
+  offlineQueue: false,
 });
 
 redisConnection.on('connect', () => {

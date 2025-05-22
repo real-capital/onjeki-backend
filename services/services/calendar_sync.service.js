@@ -171,7 +171,7 @@ class CalendarSyncService {
       const bookings = await Booking.find({
         property: property._id,
         checkOut: { $gte: new Date() },
-        status: { $in: ['confirmed', 'checked_in'] }
+        status: { $in: ['CONFIRMED', 'checked_in'] }
       }).populate('guest', 'profile.name');
 
       for (const booking of bookings) {
