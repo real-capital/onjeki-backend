@@ -275,25 +275,30 @@ scheduleEarningJobs();
 subscriptionRenewalJob();
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.log(err);
-  logger.error(err);
-  process.exit(1);
-});
+// process.on('unhandledRejection', (err) => {
+//   logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+//   console.log(err);
+//   logger.error(err);
+//   process.exit(1);
+// });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.log(err);
-  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  logger.error(err);
-  process.exit(1);
-});
+// // Handle uncaught exceptions
+// process.on('uncaughtException', (err) => {
+//   console.log(err);
+//   logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+//   logger.error(err);
+//   process.exit(1);
+// });
 
 // Add cleanup handlers
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received. Cleaning up...');
-  app.cleanup();
-  process.exit(0);
-});
+// process.on('SIGTERM', () => {
+//   logger.info('SIGTERM received. Cleaning up...');
+//   this.cleanup();
+//   process.exit(0);
+// });
+// process.on('SIGINT', () => {
+//   logger.info('SIGINT received. Cleaning up...');
+//   this.cleanup();
+//   process.exit(0);
+// });
 export default app;

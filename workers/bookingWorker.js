@@ -83,7 +83,6 @@ const worker = new Worker(
   workerOptions
 );
 
-
 // In your worker.js or bookingWorker.js
 worker.on('active', (job) => {
   logger.info(`Job ${job.id} has started processing`, {
@@ -116,11 +115,13 @@ worker.on('progress', (job, progress) => {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Closing booking worker...');
   await worker.close();
+  process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received. Closing booking worker...');
   await worker.close();
+  process.exit(0);
 });
 
 logger.info('Booking worker started and listening for jobs...');

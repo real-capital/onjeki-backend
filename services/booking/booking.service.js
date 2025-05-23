@@ -1188,41 +1188,6 @@ class BookingService {
       );
     }
   }
-  // async cancelBooking(bookingId, userId) {
-  //   try {
-  //     const booking = await BookingModel.findOne({
-  //       _id: bookingId,
-  //       user: userId,
-  //     });
-
-  //     if (!booking) {
-  //       throw new HttpException(StatusCodes.NOT_FOUND, 'Booking not found');
-  //     }
-
-  //     if (booking.status === BookingStatus.CANCELED) {
-  //       throw new HttpException(
-  //         StatusCodes.BAD_REQUEST,
-  //         'Booking is already cancelled'
-  //       );
-  //     }
-  //     await booking.cancel(userId, reason);
-
-  //     // booking.status = BookingStatus.CANCELED;
-  //     // await booking.save();
-
-  //     // Update property status
-  //     await PropModel.findByIdAndUpdate(booking.property, {
-  //       isBooked: false,
-  //     });
-
-  //     return booking;
-  //   } catch (error) {
-  //     throw new HttpException(
-  //       error.statusCode || StatusCodes.BAD_REQUEST,
-  //       error.message
-  //     );
-  //   }
-  // }
 
   async deleteBooking(bookingId, userId) {
     const session = await mongoose.startSession();
@@ -1436,6 +1401,470 @@ class BookingService {
       session.endSession();
     }
   }
+
+  /**
+   * Get host's bookings for today (check-ins and check-outs)
+   */
+  async getHostTodayBookings(hostId, startOfDay, endOfDay) {
+    try {
+      // Find bookings where:
+      // 1. The host matches the provided hostId
+      // 2. Check-in date is today
+      // 3. Check-out date is today
+      const todayBookings = await BookingModel.find({
+        host: hostId,
+        $or: [
+          // Check-in today
+          {
+            checkIn: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+          },
+          // Check-out today
+          {
+            checkOut: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+          },
+        ],
+        // Don't include cancelled bookings
+        status: { $ne: BookingStatus.CANCELLED },
+      })
+        .populate('guest', 'name email phone photo')
+        .populate('property', 'title location photos')
+        .sort('checkIn');
+
+      return todayBookings;
+    } catch (error) {
+      logger.error('Error getting host today bookings', {
+        error,
+        hostId,
+      });
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Error fetching today's bookings"
+      );
+    }
+  }
+  /**
+   * Get host's upcoming bookings
+   */
+  async getHostUpcomingBookings(hostId, options = {}) {
+    try {
+      const { limit = 10, page = 1 } = options;
+      const skip = (page - 1) * limit;
+
+      // Get the start of today
+      const today = new Date();
+      const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+
+      // Find bookings where:
+      // 1. The host matches the provided hostId
+      // 2. Check-in date is in the future
+      // 3. Status is confirmed (not cancelled, completed, etc.)
+      const upcomingBookings = await BookingModel.find({
+        host: hostId,
+        checkIn: { $gt: startOfToday },
+        status: BookingStatus.CONFIRMED,
+      })
+        .populate('guest', 'name email phone photo')
+        .populate('property', 'title location photos')
+        .sort('checkIn')
+        .skip(skip)
+        .limit(limit);
+
+      // Get total count for pagination
+      const total = await BookingModel.countDocuments({
+        host: hostId,
+        checkIn: { $gt: startOfToday },
+        status: BookingStatus.CONFIRMED,
+      });
+
+      return {
+        bookings: upcomingBookings,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting host upcoming bookings', {
+        error,
+        hostId,
+      });
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching upcoming bookings'
+      );
+    }
+  }
+
+  /**
+   * Get host's completed bookings
+   */
+  async getHostCompletedBookings(hostId, options = {}) {
+    try {
+      const { limit = 10, page = 1 } = options;
+      const skip = (page - 1) * limit;
+
+      // Find bookings where:
+      // 1. The host matches the provided hostId
+      // 2. Status is completed or checkout details exist
+      const completedBookings = await BookingModel.find({
+        host: hostId,
+        $or: [
+          { status: BookingStatus.COMPLETED },
+          { 'checkOutDetails.isCheckedOut': true },
+        ],
+      })
+        .populate('guest', 'name email phone photo')
+        .populate('property', 'title location photos')
+        .sort('-checkOut') // Most recent checkouts first
+        .skip(skip)
+        .limit(limit);
+
+      // Get total count for pagination
+      const total = await BookingModel.countDocuments({
+        host: hostId,
+        $or: [
+          { status: BookingStatus.COMPLETED },
+          { 'checkOutDetails.isCheckedOut': true },
+        ],
+      });
+
+      return {
+        bookings: completedBookings,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting host completed bookings', {
+        error,
+        hostId,
+      });
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching completed bookings'
+      );
+    }
+  }
+  /**
+   * Check in a guest
+   */
+  async checkInGuest(bookingId, hostId, checkInData) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking and verify it's valid for check-in
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        host: hostId,
+        status: BookingStatus.CONFIRMED,
+        'checkInDetails.isCheckedIn': { $ne: true },
+      })
+        .populate('guest')
+        .populate('property')
+        .session(session);
+
+      if (!booking) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Booking not found or cannot be checked in'
+        );
+      }
+
+      // Validate that it's check-in day or after
+      const today = new Date();
+      const checkInDate = new Date(booking.checkIn);
+      const checkInDayStart = new Date(
+        checkInDate.getFullYear(),
+        checkInDate.getMonth(),
+        checkInDate.getDate()
+      );
+
+      if (today < checkInDayStart) {
+        throw new HttpException(
+          StatusCodes.BAD_REQUEST,
+          'Cannot check in before the check-in date'
+        );
+      }
+
+      // Update the booking with check-in details
+      booking.checkInDetails = {
+        isCheckedIn: true,
+        actualCheckInTime: new Date(),
+        checkInNotes: checkInData.checkInNotes || '',
+        checkInPhotos: checkInData.checkInPhotos || [],
+      };
+
+      // Add to timeline
+      booking.timeline.push({
+        status: 'CHECKED_IN',
+        message: 'Guest has checked in',
+        createdAt: new Date(),
+      });
+
+      // Set guest action timestamps
+      booking.guestActions.checkedInAt = new Date();
+
+      await booking.save({ session });
+
+      // Notify the guest about successful check-in
+      // You can implement notification logic here (email, push notification, etc.)
+
+      await session.commitTransaction();
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Error checking in guest', {
+        error,
+        bookingId,
+        hostId,
+      });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Check out a guest
+   */
+  async checkOutGuest(bookingId, hostId, checkOutData) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Find the booking and verify it's valid for check-out
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        host: hostId,
+        status: BookingStatus.CONFIRMED,
+        'checkInDetails.isCheckedIn': true,
+        'checkOutDetails.isCheckedOut': { $ne: true },
+      })
+        .populate('guest')
+        .populate('property')
+        .session(session);
+
+      if (!booking) {
+        throw new HttpException(
+          StatusCodes.NOT_FOUND,
+          'Booking not found or cannot be checked out'
+        );
+      }
+
+      // Update the booking with check-out details
+      booking.checkOutDetails = {
+        isCheckedOut: true,
+        checkOutTime: new Date(),
+        checkOutNotes: checkOutData.checkOutNotes || '',
+        checkOutPhotos: checkOutData.checkOutPhotos || [],
+      };
+
+      // Add to timeline
+      booking.timeline.push({
+        status: 'CHECKED_OUT',
+        message: 'Guest has checked out',
+        createdAt: new Date(),
+      });
+
+      // Set guest action timestamps
+      booking.guestActions.checkedOutAt = new Date();
+
+      // Update status to completed
+      booking.status = BookingStatus.COMPLETED;
+
+      await booking.save({ session });
+
+      // Process earnings after checkout
+      const earningService = new EarningService();
+      await earningService.processBookingEarnings(bookingId);
+
+      await session.commitTransaction();
+
+      // Send notifications
+      await this.sendCheckoutNotifications(booking);
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('Error checking out guest', {
+        error,
+        bookingId,
+        hostId,
+      });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Upload photos for a booking (check-in or check-out)
+   */
+  async uploadBookingPhotos(bookingId, hostId, type, files) {
+    try {
+      // Verify the booking belongs to this host
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        host: hostId,
+      });
+
+      if (!booking) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'Booking not found');
+      }
+
+      // Process and upload each file
+      // This would depend on your file storage solution (S3, local, etc.)
+      const uploadPromises = files.map((file) => this.uploadFile(file));
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      // Return the URLs of the uploaded files
+      return uploadedUrls;
+    } catch (error) {
+      logger.error('Error uploading booking photos', {
+        error,
+        bookingId,
+        hostId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to upload a file
+   * This is just a placeholder - implement based on your storage solution
+   */
+  async uploadFile(file) {
+    // Example implementation for uploading to S3
+    // Replace with your actual file upload logic
+    try {
+      // Example using AWS SDK
+      /*
+    const s3 = new AWS.S3();
+    const uploadResult = await s3.upload({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: `bookings/${Date.now()}-${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      ACL: 'public-read',
+    }).promise();
+    
+    return uploadResult.Location;
+    */
+
+      // For now, return a placeholder URL
+      return `https://example.com/uploads/${Date.now()}-${file.originalname}`;
+    } catch (error) {
+      logger.error('Error uploading file', {
+        error,
+        filename: file.originalname,
+      });
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error uploading file'
+      );
+    }
+  }
+  /**
+   * Send notifications after checkout
+   */
+  // async sendCheckoutNotifications(booking) {
+  //   try {
+  //     // Notify guest
+  //     await notificationService.sendNotification({
+  //       type: 'CHECKOUT_COMPLETE',
+  //       recipient: booking.guest._id,
+  //       title: 'Checkout Complete',
+  //       message: `You've successfully checked out of ${booking.property.title}. Thank you for staying!`,
+  //       booking: booking._id,
+  //     });
+
+  //     // Notify host
+  //     await notificationService.sendNotification({
+  //       type: 'GUEST_CHECKED_OUT',
+  //       recipient: booking.host,
+  //       title: 'Guest Checked Out',
+  //       message: `Your guest has checked out from ${booking.property.title}.`,
+  //       booking: booking._id,
+  //     });
+
+  //     // Optionally send emails
+  //     await this.sendCheckoutEmails(booking);
+
+  //     logger.info('Checkout notifications sent successfully', {
+  //       bookingId: booking._id,
+  //       guestId: booking.guest._id,
+  //       hostId: booking.host,
+  //     });
+  //   } catch (error) {
+  //     logger.error('Error sending checkout notifications', {
+  //       error,
+  //       bookingId: booking._id,
+  //     });
+  //     // Don't throw error here - notifications are supplementary
+  //   }
+  // }
+
+  /**
+   * Send checkout emails
+   */
+  // async sendCheckoutEmails(booking) {
+  //   try {
+  //     // Guest email
+  //     await emailService.sendEmail({
+  //       to: booking.guest.email,
+  //       subject: 'Checkout Complete - Thank You for Staying!',
+  //       template: 'checkout-complete-guest',
+  //       templateData: {
+  //         guestName: booking.guest.name,
+  //         propertyName: booking.property.title,
+  //         checkInDate: booking.checkIn,
+  //         checkOutDate: booking.checkOut,
+  //         bookingId: booking._id,
+  //         totalAmount: booking.pricing.total,
+  //         reviewLink: `${process.env.FRONTEND_URL}/bookings/${booking._id}/review`,
+  //       },
+  //     });
+
+  //     // Host email
+  //     await emailService.sendEmail({
+  //       to: booking.host.email,
+  //       subject: 'Guest Has Checked Out',
+  //       template: 'checkout-complete-host',
+  //       templateData: {
+  //         hostName: booking.host.name,
+  //         guestName: booking.guest.name,
+  //         propertyName: booking.property.title,
+  //         checkInDate: booking.checkIn,
+  //         checkOutDate: booking.checkOut,
+  //         bookingId: booking._id,
+  //         totalAmount: booking.pricing.total,
+  //         earnings: booking.pricing.total - booking.pricing.serviceFee,
+  //       },
+  //     });
+
+  //     logger.info('Checkout emails sent successfully', {
+  //       bookingId: booking._id,
+  //     });
+  //   } catch (error) {
+  //     logger.error('Error sending checkout emails', {
+  //       error,
+  //       bookingId: booking._id,
+  //     });
+  //     // Don't throw error - emails are supplementary
+  //   }
+  // }
 }
 
 export default BookingService;

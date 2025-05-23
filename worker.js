@@ -23,7 +23,7 @@ mongoose
   } catch (error) {
     logger.error('Failed to start worker service:', error);
     console.log('Failed to start worker service:', error);
-    // process.exit(1);
+    process.exit(1);
   }
 })();
 
@@ -31,19 +31,20 @@ mongoose
 process.on('SIGTERM', async (err) => {
   logger.info('SIGTERM received. Shutting down worker service...');
   console.log(`SIGTERM received. Shutting down worker service... ${err}`);
-  // await stopAllQueuesAndWorkers();
-  // process.exit(0);
+  await stopAllQueuesAndWorkers();
+  process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down worker service...');
   console.log('SIGINT received. Shutting down worker service...');
-  // await stopAllQueuesAndWorkers();
-  // process.exit(0);
+  await stopAllQueuesAndWorkers();
+  process.exit(0);
 });
 process.on('exit', (code) => {
   logger.info(`Process exiting with code ${code}`);
   console.log(`Process exiting with code ${code}`);
+    process.exit(0);
 });
 
 const app = express();

@@ -35,7 +35,7 @@ try {
     EarningsRoute,
     PayoutRoute,
     BankRoute,
-    UserBankRoute
+    UserBankRoute,
     // PaymentRoute,
   ];
 
@@ -48,7 +48,40 @@ try {
 
   const app = new App(routes);
   app.listen();
+
+  // Signal handlers must be here where `app` exists
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Cleaning up...');
+    app.cleanup();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    logger.info('SIGINT received. Cleaning up...');
+    app.cleanup();
+    process.exit(0);
+  });
+
+  // Optional: these can stay here or in app.js
+  process.on('unhandledRejection', (err) => {
+    logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+    logger.error(err);
+    process.exit(1);
+  });
+
+  process.on('uncaughtException', (err) => {
+    logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+    logger.error(err);
+    process.exit(1);
+  });
 } catch (error) {
   logger.error('Failed to start application:', error);
   process.exit(1);
 }
+
+//   const app = new App(routes);
+//   app.listen();
+// } catch (error) {
+//   logger.error('Failed to start application:', error);
+//   process.exit(1);
+// }

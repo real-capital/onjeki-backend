@@ -58,9 +58,14 @@ class BookingController {
       this.getHostBookingsWithEarnings.bind(this);
     this.checkPayoutEligibility = this.checkPayoutEligibility.bind(this);
     this.callback = this.callback.bind(this);
-
     this.handleSubscriptionCreation =
       this.handleSubscriptionCreation.bind(this);
+    this.getHostTodayBookings = this.getHostTodayBookings.bind(this);
+    this.getHostUpcomingBookings = this.getHostUpcomingBookings.bind(this);
+    this.getHostCompletedBookings = this.getHostCompletedBookings.bind(this);
+    this.checkInGuest = this.checkInGuest.bind(this);
+    this.checkOutGuest = this.checkOutGuest.bind(this);
+    this.uploadBookingPhotos = this.uploadBookingPhotos.bind(this);
   }
 
   async handlePaystackWebhook(req, res) {
@@ -876,6 +881,202 @@ class BookingController {
     } catch (error) {
       logger.error('Error checking payout eligibility', {
         error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Get host's bookings for today (check-ins and check-outs)
+   */
+  getHostTodayBookings = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+
+      // Get today's date range (start and end of day)
+      const today = new Date();
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+      const bookings = await this.bookingService.getHostTodayBookings(
+        hostId,
+        startOfDay,
+        endOfDay
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: bookings,
+      });
+    } catch (error) {
+      logger.error('Error getting host today bookings', {
+        error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Get host's upcoming bookings
+   */
+  getHostUpcomingBookings = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+      const { limit = 10, page = 1 } = req.query;
+
+      const bookings = await this.bookingService.getHostUpcomingBookings(
+        hostId,
+        {
+          limit: parseInt(limit),
+          page: parseInt(page),
+        }
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: bookings,
+      });
+    } catch (error) {
+      logger.error('Error getting host upcoming bookings', {
+        error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Get host's completed bookings
+   */
+  getHostCompletedBookings = async (req, res, next) => {
+    try {
+      const hostId = req.user._id;
+      const { limit = 10, page = 1 } = req.query;
+
+      const bookings = await this.bookingService.getHostCompletedBookings(
+        hostId,
+        {
+          limit: parseInt(limit),
+          page: parseInt(page),
+        }
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: bookings,
+      });
+    } catch (error) {
+      logger.error('Error getting host completed bookings', {
+        error,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Check in a guest
+   */
+  checkInGuest = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const hostId = req.user._id;
+      const { checkInNotes } = req.body;
+
+      // Check if photos were uploaded separately through the upload-photos endpoint
+      // or if the photo URLs are included in the request body
+      const checkInPhotos = req.body.checkInPhotos || [];
+
+      const booking = await this.bookingService.checkInGuest(
+        bookingId,
+        hostId,
+        {
+          checkInNotes,
+          checkInPhotos,
+        }
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: booking,
+        message: 'Guest checked in successfully',
+      });
+    } catch (error) {
+      logger.error('Error checking in guest', {
+        error,
+        bookingId: req.params.id,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Check out a guest
+   */
+  checkOutGuest = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const hostId = req.user._id;
+      const { checkOutNotes } = req.body;
+
+      // Check if photos were uploaded separately or included in request
+      const checkOutPhotos = req.body.checkOutPhotos || [];
+
+      const booking = await this.bookingService.checkOutGuest(
+        bookingId,
+        hostId,
+        {
+          checkOutNotes,
+          checkOutPhotos,
+        }
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: booking,
+        message: 'Guest checked out successfully',
+      });
+    } catch (error) {
+      logger.error('Error checking out guest', {
+        error,
+        bookingId: req.params.id,
+        userId: req.user._id,
+      });
+      next(error);
+    }
+  };
+  /**
+   * Upload photos for check-in or check-out
+   */
+  uploadBookingPhotos = async (req, res, next) => {
+    try {
+      const bookingId = req.params.id;
+      const hostId = req.user._id;
+      const { type } = req.query; // 'checkin' or 'checkout'
+
+      // Handle file uploads - this depends on your file upload middleware
+      // Assuming you're using multer or similar and files are in req.files
+      if (!req.files || req.files.length === 0) {
+        throw new HttpException(StatusCodes.BAD_REQUEST, 'No photos uploaded');
+      }
+
+      // Process and store the uploaded files
+      const photoUrls = await this.bookingService.uploadBookingPhotos(
+        bookingId,
+        hostId,
+        type,
+        req.files
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          photoUrls,
+        },
+        message: 'Photos uploaded successfully',
+      });
+    } catch (error) {
+      logger.error('Error uploading booking photos', {
+        error,
+        bookingId: req.params.id,
         userId: req.user._id,
       });
       next(error);

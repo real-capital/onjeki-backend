@@ -114,6 +114,134 @@ class BookingRoute extends Route {
       isAuthenticated,
       this.controller.completeBooking
     );
+
+    /**
+     * @api {get} /api/booking/host/today Get Today's Bookings
+     * @apiName GetHostTodayBookings
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Get all bookings for today (check-ins and check-outs)
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object[]} data List of today's bookings
+     */
+    this.router.get(
+      `${this.path}/host/today`,
+      isAuthenticated,
+      this.controller.getHostTodayBookings
+    );
+
+    /**
+     * @api {get} /api/booking/host/upcoming Get Upcoming Bookings
+     * @apiName GetHostUpcomingBookings
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Get all upcoming bookings (future check-ins)
+     *
+     * @apiParam {Number} [limit=10] Number of bookings to return
+     * @apiParam {Number} [page=1] Page number for pagination
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object} data Response data
+     * @apiSuccess {Object[]} data.bookings List of upcoming bookings
+     * @apiSuccess {Object} data.pagination Pagination information
+     */
+    this.router.get(
+      `${this.path}/host/upcoming`,
+      isAuthenticated,
+      this.controller.getHostUpcomingBookings
+    );
+
+    /**
+     * @api {get} /api/booking/host/completed Get Completed Bookings
+     * @apiName GetHostCompletedBookings
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Get all completed bookings
+     *
+     * @apiParam {Number} [limit=10] Number of bookings to return
+     * @apiParam {Number} [page=1] Page number for pagination
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object} data Response data
+     * @apiSuccess {Object[]} data.bookings List of completed bookings
+     * @apiSuccess {Object} data.pagination Pagination information
+     */
+
+    this.router.get(
+      `${this.path}/host/completed`,
+      isAuthenticated,
+      this.controller.getHostCompletedBookings
+    );
+    /**
+     * @api {post} /api/booking/:id/checkin Check In Guest
+     * @apiName CheckInGuest
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Check in a guest for a booking
+     *
+     * @apiParam {String} id Booking ID
+     * @apiParam {String} [checkInNotes] Notes about the check-in
+     * @apiParam {String[]} [checkInPhotos] Array of photo URLs (if uploaded separately)
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object} data Updated booking
+     * @apiSuccess {String} message Success message
+     */
+    this.router.post(
+      `${this.path}/:id/checkin`,
+      isAuthenticated,
+      this.controller.checkInGuest
+    );
+
+    /**
+     * @api {post} /api/booking/:id/checkout Check Out Guest
+     * @apiName CheckOutGuest
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Check out a guest for a booking
+     *
+     * @apiParam {String} id Booking ID
+     * @apiParam {String} [checkOutNotes] Notes about the check-out
+     * @apiParam {String[]} [checkOutPhotos] Array of photo URLs (if uploaded separately)
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object} data Updated booking
+     * @apiSuccess {String} message Success message
+     */
+    this.router.post(
+      `${this.path}/:id/checkout`,
+      isAuthenticated,
+      this.controller.checkOutGuest
+    );
+
+    /**
+     * @api {post} /api/booking/:id/upload-photos Upload Booking Photos
+     * @apiName UploadBookingPhotos
+     * @apiGroup Booking
+     * @apiPermission authenticated host
+     *
+     * @apiDescription Upload photos for check-in or check-out
+     *
+     * @apiParam {String} id Booking ID
+     * @apiParam {String} type Type of photos ('checkin' or 'checkout')
+     * @apiParam {File[]} photos Photos to upload (multipart/form-data)
+     *
+     * @apiSuccess {String} status Success status
+     * @apiSuccess {Object} data Response data
+     * @apiSuccess {String[]} data.photoUrls URLs of the uploaded photos
+     * @apiSuccess {String} message Success message
+     */
+    this.router.post(
+      `${this.path}/:id/upload-photos`,
+      isAuthenticated,
+      this.controller.uploadBookingPhotos
+    );
   }
 }
 
