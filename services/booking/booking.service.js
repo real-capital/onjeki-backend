@@ -1117,8 +1117,16 @@ class BookingService {
     try {
       const bookings = await BookingModel.find({ host: userId })
         .sort('-createdAt')
-        .populate('guest', 'name email phone photo')
-        .populate('property', 'title location photos');
+        .populate('guest', 'name email photo phoneNumber')
+        .populate('host', 'name email photo phoneNumber')
+        .populate({
+          path: 'property',
+          select: 'title location rules photo guests owner', // Only fetch specific fields for property
+          populate: {
+            path: 'owner',
+            select: 'name email phoneNumber', // Only fetch selected fields for owner
+          },
+        });
 
       return bookings;
     } catch (error) {
