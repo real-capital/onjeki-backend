@@ -253,7 +253,7 @@ class EarningService {
     }
 
     const earnings = await EarningModel.find(query)
-      .populate('property', 'title')
+      .populate('property', 'title photo')
       .populate('booking', 'checkIn checkOut guests')
       .sort({ createdAt: -1 });
 
