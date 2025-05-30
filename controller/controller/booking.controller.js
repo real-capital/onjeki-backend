@@ -462,6 +462,21 @@ class BookingController {
       next(error);
     }
   };
+  getHostBookingById = async (req, res, next) => {
+    try {
+      const booking = await this.bookingService.getHostBookingById(
+        req.params.bookingId,
+        req.user._id
+      );
+
+      res.json({
+        status: 'success',
+        data: booking,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   createBooking = async (req, res, next) => {
     try {

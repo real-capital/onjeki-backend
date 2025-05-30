@@ -1137,6 +1137,37 @@ class BookingService {
     }
   }
 
+  async getHostBookingById(bookingId, userId) {
+    try {
+      const booking = await BookingModel.findOne({
+        _id: bookingId,
+        host: userId,
+      })
+        .populate('guest', 'name email photo phoneNumber')
+        .populate('host', 'name email photo phoneNumber')
+        .populate({
+          path: 'property',
+          select: 'title location rules photo guests owner', // Only fetch specific fields for property
+          populate: {
+            path: 'owner',
+            select: 'name email phoneNumber', // Only fetch selected fields for owner
+          },
+        })
+        .sort('-createdAt');
+
+      if (!booking) {
+        throw new HttpException(404, 'Booking not found');
+      }
+
+      return booking;
+    } catch (error) {
+      throw new HttpException(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Error fetching bookings'
+      );
+    }
+  }
+
   async getPendingBookings(userId) {
     try {
       const bookings = await BookingModel.find({

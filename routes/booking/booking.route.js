@@ -62,6 +62,11 @@ class BookingRoute extends Route {
       isAuthenticated,
       this.controller.getHostBookings
     );
+    this.router.get(
+      `${this.path}/host/bookings/:bookingId`,
+      isAuthenticated,
+      this.controller.getHostBookingById
+    );
 
     // Get pending bookings
     this.router.get(
