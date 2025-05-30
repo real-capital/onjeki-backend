@@ -414,14 +414,12 @@ export class SocketService {
       const { messageId, conversationId } = data;
       const userId = socket.user._id.toString();
 
-      // ✅ Validate message existence
       const message = await MessageModel.findById(messageId);
       if (!message) {
         console.error('❌ Message not found');
         return socket.emit('message_error', { error: 'Message not found' });
       }
 
-      // Check if already read by this user
       const alreadyRead = message.readBy.some(
         (entry) => entry.user.toString() === userId.toString()
       );
@@ -433,8 +431,6 @@ export class SocketService {
           error: 'Conversation not found',
         });
       }
-
-      // ✅ Ensure user is a participant of the conversation
       if (
         !conversation.participants.some(
           (p) => p.toString() === userId.toString()
@@ -457,7 +453,7 @@ export class SocketService {
             },
             $set: { status: 'READ' },
           },
-          { new: true } // Return updated document
+          { new: true }
         ).populate({
           path: 'readBy.user',
           select: 'name email profile.photo',
@@ -465,19 +461,16 @@ export class SocketService {
 
         console.log(`✅ Message marked as read by user: ${userId}`);
 
-        // ✅ Reset unread count in conversation
         conversation.unreadCounts.set(userId, 0);
         await conversation.save();
         console.log(`📌 Unread count reset for user: ${userId}`);
 
-        // ✅ Notify other participants
         socket.to(conversationId).emit('message_read', {
           messageId,
           userId: socket.user._id,
           conversationId,
         });
 
-        // ✅ Send acknowledgment to the user
         socket.emit('message_read_success', {
           messageId,
           conversationId,
