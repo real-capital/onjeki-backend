@@ -82,6 +82,36 @@ class BankService {
       };
     }
   }
+  async createTransferRecipient(name, accountNumber, bankCode) {
+    try {
+      const response = await fetch(
+        `https://api.paystack.co/transferrecipient`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'nuban',
+            name,
+            account_number: accountNumber,
+            bank_code: bankCode,
+            currency: 'NGN',
+          }),
+        }
+      );
+
+      const data = await response.json();
+      return data.data.recipient_code;
+    } catch (error) {
+      logger.error('Error creating transfer recipient', {
+        error,
+        accountNumber,
+      });
+      throw new Error('Failed to create transfer recipient');
+    }
+  }
 }
 
 export default BankService;

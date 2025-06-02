@@ -4,11 +4,9 @@ import { StatusCodes } from 'http-status-codes';
 import { logger } from '../../utils/logger.js';
 import HttpException from '../../utils/exception.js';
 import BankService from '../../services/payment/bank.service.js';
-
+const bankService = new BankService();
 class UserBankController {
-  constructor() {
-    this.bankService = new BankService();
-  }
+
 
   /**
    * Save user bank account details
@@ -27,7 +25,7 @@ class UserBankController {
       }
       
       // Verify bank account with Paystack
-      const verification = await this.bankService.verifyBankAccount(accountNumber, bankCode);
+      const verification = await bankService.verifyBankAccount(accountNumber, bankCode);
       
       if (!verification.isVerified) {
         throw new HttpException(
@@ -45,7 +43,7 @@ class UserBankController {
       }
       
       // Create transfer recipient (needed for payouts)
-      const recipientCode = await this.bankService.createTransferRecipient(
+      const recipientCode = await bankService.createTransferRecipient(
         verification.accountName,
         accountNumber,
         bankCode

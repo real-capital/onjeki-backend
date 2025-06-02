@@ -145,8 +145,6 @@ class PayoutService {
    */
   async createTransferRecipient(name, accountNumber, bankCode) {
     try {
-      // In a real implementation, you would call the Paystack API
-      // This is simulated for this example
       const response = await fetch(
         `${this.paystackBaseUrl}/transferrecipient`,
         {
