@@ -90,27 +90,77 @@
 // export default redisConnection;
 
 // jobs/redis-connection.js
+// import IORedis from 'ioredis';
+// import dotenv from 'dotenv';
+// import { logger } from '../utils/logger.js';
+
+// dotenv.config();
+
+// export const redisConnection = new IORedis({
+//   password: process.env.REDIS_PASSWORD,
+//   host: process.env.REDIS_HOST,
+//   port: process.env.REDIS_PORT,
+//   maxRetriesPerRequest: null,
+//   enableOfflineQueue: false,
+//   offlineQueue: false,
+// });
+
+// redisConnection.on('connect', () => {
+//   logger.info('Connected to Redis cluster');
+// });
+
+// redisConnection.on('error', (error) => {
+//   logger.error('Redis connection error:', error);
+// });
+
+// export default redisConnection;
+
+// jobs/redis-connection.js
 import IORedis from 'ioredis';
 import dotenv from 'dotenv';
 import { logger } from '../utils/logger.js';
+import { isWorker, isVercel } from '../utils/environment.js';
 
 dotenv.config();
 
-export const redisConnection = new IORedis({
-  password: process.env.REDIS_PASSWORD,
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  maxRetriesPerRequest: null,
-  enableOfflineQueue: false,
-  offlineQueue: false,
-});
+let redisConnection;
 
-redisConnection.on('connect', () => {
-  logger.info('Connected to Redis cluster');
-});
+// Only create Redis connection if needed
+if (isWorker() || (!isVercel() && process.env.ENABLE_REDIS !== 'false')) {
+  redisConnection = new IORedis({
+    password: process.env.REDIS_PASSWORD,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+    maxRetriesPerRequest: null,
+    enableOfflineQueue: isWorker(), // true for Railway worker, false for others
+    ...(isVercel() && {
+      lazyConnect: true,
+      connectTimeout: 5000,
+      commandTimeout: 5000,
+    }),
+    ...(isWorker() && {
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        logger.info(`Retrying Redis connection... attempt ${times}`);
+        return delay;
+      },
+    }),
+  });
 
-redisConnection.on('error', (error) => {
-  logger.error('Redis connection error:', error);
-});
+  redisConnection.on('connect', () => {
+    logger.info(`Redis connected (${isWorker() ? 'Worker' : 'API'} mode)`);
+  });
 
+  redisConnection.on('error', (error) => {
+    if (isVercel()) {
+      logger.warn('Redis error on Vercel (non-critical):', error.message);
+    } else {
+      logger.error('Redis connection error:', error.message);
+    }
+  });
+} else {
+  logger.info('Redis connection skipped (Vercel API mode)');
+}
+
+export { redisConnection };
 export default redisConnection;

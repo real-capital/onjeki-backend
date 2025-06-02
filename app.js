@@ -34,9 +34,12 @@ import { scheduleEarningJobs } from './jobs/earningJob.js';
 import { subscriptionRenewalJob } from './jobs/subscriptionRenewalJob.js';
 import { bookingQueue } from './queue/bookingQueue.js';
 import { connectToAllQueues } from './queue/queueManager.js';
+import { isWorker, isVercel, getEnvironmentInfo } from './utils/environment.js';
 
 // Load environment variables
 dotenv.config();
+
+logger.info('Environment info:', getEnvironmentInfo());
 
 // App Init
 class app {
@@ -45,20 +48,22 @@ class app {
     this.port = process.env.PORT || 8000;
     this.server = createServer(this.app);
 
-    // Initialize middlewares, routes, error handling, etc.
-
-    // Initialize in correct order
     this.initializeMiddlewares();
-    // this.initializeSocket();
 
     this.initializeServices();
-    this.initializeBullMQ();
+    if (
+      (isWorker() || !isVercel()) &&
+      process.env.ENABLE_BULL_BOARD !== 'false'
+    ) {
+      this.initializeBullMQ();
+    }
     this.initializeRoutes(routes);
     this.initializeErrorHandling();
     this.listRoutes();
     this.DBconnection();
-    this.connectToQueues();
-    // this.startQueues();
+    if (isWorker()) {
+      this.connectToQueues();
+    }
   }
 
   listen() {
@@ -123,77 +128,28 @@ class app {
     });
   }
   initializeBullMQ() {
-    // Only initialize in production if explicitly enabled AND not using mock Redis
-    // if (
-    //   (process.env.NODE_ENV === 'development' ||
-    //     process.env.ENABLE_BULL_BOARD === 'true') &&
-    //   bookingQueue instanceof Queue
-    // ) {
-      try {
-        // Setup Bull Board UI
-        const serverAdapter = new ExpressAdapter();
-        serverAdapter.setBasePath('/api/v1/queue');
+    try {
+      const serverAdapter = new ExpressAdapter();
+      serverAdapter.setBasePath('/api/v1/queue');
 
-        createBullBoard({
-          queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
-          serverAdapter,
-          // options: {
-          //   // Add these options to show all jobs
-          //   allowRetries: true,
-          //   queueSchedulerPrefix: 'bull',
-          //   queuePrefix: 'bull',
-          //   showDelayedJobs: true, // Make sure this is true
-          // },
-        });
+      createBullBoard({
+        queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
+        serverAdapter,
+      });
 
-        // Mount the Bull Board UI
-        this.app.use('/api/v1/queue', serverAdapter.getRouter());
-        logger.info('BullMQ dashboard initialized successfully');
-      } catch (error) {
-        logger.warn(
-          'Failed to initialize BullMQ dashboard, continuing without it:',
-          error
-        );
-      }
-    // } else {
-    //   logger.info('BullMQ dashboard disabled');
-    // }
+      // Mount the Bull Board UI
+      this.app.use('/api/v1/queue', serverAdapter.getRouter());
+      logger.info('BullMQ dashboard initialized successfully');
+    } catch (error) {
+      logger.warn(
+        'Failed to initialize BullMQ dashboard, continuing without it:',
+        error
+      );
+    }
   }
-
-  // initializeBullMQ() {
-  //   // Only initialize in production if explicitly enabled
-  //   if (
-  //     process.env.NODE_ENV === 'development' ||
-  //     process.env.ENABLE_BULL_BOARD === 'true'
-  //   ) {
-  //     try {
-  //       // Setup Bull Board UI
-  //       const serverAdapter = new ExpressAdapter();
-  //       serverAdapter.setBasePath('/api/v1/queue');
-
-  //       createBullBoard({
-  //         queues: [new BullMQAdapter(bookingQueue, { readOnlyMode: true })],
-  //         serverAdapter,
-  //       });
-
-  //       // Mount the Bull Board UI
-  //       this.app.use('/api/v1/queue', serverAdapter.getRouter());
-  //       logger.info('BullMQ dashboard initialized successfully');
-  //     } catch (error) {
-  //       logger.warn(
-  //         'Failed to initialize BullMQ dashboard, continuing without it:',
-  //         error
-  //       );
-  //       // Just log the error but don't throw - this will allow the app to start
-  //     }
-  //   } else {
-  //     logger.info('BullMQ dashboard disabled in production');
-  //   }
-  // }
 
   async connectToQueues() {
     try {
-      // Connect to queues but don't start workers (for Vercel API)
       await connectToAllQueues();
     } catch (error) {
       logger.error('Failed to connect to queues:', error);
@@ -274,31 +230,4 @@ scheduleEmailJobs();
 scheduleEarningJobs();
 subscriptionRenewalJob();
 
-// Handle unhandled promise rejections
-// process.on('unhandledRejection', (err) => {
-//   logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-//   console.log(err);
-//   logger.error(err);
-//   process.exit(1);
-// });
-
-// // Handle uncaught exceptions
-// process.on('uncaughtException', (err) => {
-//   console.log(err);
-//   logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-//   logger.error(err);
-//   process.exit(1);
-// });
-
-// Add cleanup handlers
-// process.on('SIGTERM', () => {
-//   logger.info('SIGTERM received. Cleaning up...');
-//   this.cleanup();
-//   process.exit(0);
-// });
-// process.on('SIGINT', () => {
-//   logger.info('SIGINT received. Cleaning up...');
-//   this.cleanup();
-//   process.exit(0);
-// });
 export default app;

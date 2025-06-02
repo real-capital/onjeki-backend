@@ -5,11 +5,15 @@ import { logger } from '../utils/logger.js';
 import bookingQueue from './bookingQueue.js';
 import bookingWorker from '../workers/bookingWorker.js';
 
+const IS_VERCEL = process.env.VERCEL === '1';
 const workers = [bookingWorker];
-
 // Import other queues
 // For API-only mode (Vercel), where we only need to connect to queues, not run workers
 export const connectToAllQueues = async () => {
+  if (IS_VERCEL) {
+    logger.info('Skipping queue connection on Vercel');
+    return true;
+  }
   try {
     // Only initialize connections to the queues without starting workers
     await bookingQueue.bookingQueue.waitUntilReady();
@@ -24,6 +28,11 @@ export const connectToAllQueues = async () => {
 
 // For worker mode (Railway), where we start both queues and workers
 export const startAllQueuesAndWorkers = async () => {
+  if (IS_VERCEL) {
+    logger.info('Skipping worker startup on Vercel');
+    return true;
+  }
+
   try {
     await bookingQueue.startBookingQueue();
 
@@ -37,6 +46,9 @@ export const startAllQueuesAndWorkers = async () => {
 
 // For graceful shutdown
 export const stopAllQueuesAndWorkers = async () => {
+  if (IS_VERCEL) {
+    return true;
+  }
   try {
     await bookingQueue.stopBookingQueue();
 
