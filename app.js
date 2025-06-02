@@ -229,7 +229,6 @@
 
 // export default app;
 
-
 // app.js
 import express from 'express';
 import cors from 'cors';
@@ -283,23 +282,32 @@ class app {
     this.app = express();
     this.port = process.env.PORT || 8000;
     this.server = createServer(this.app);
+    this.routes = routes;
 
+    // Call async init
+    this.initialize();
+  }
+
+  async initialize() {
     this.initializeMiddlewares();
     this.initializeServices();
-    
-    // Only initialize BullMQ dashboard for non-Vercel environments
+    this.initializeRoutes(this.routes);
+
+    // Initialize BullMQ dashboard BEFORE error handling
     if (!isVercel() && process.env.ENABLE_BULL_BOARD !== 'false') {
-      this.initializeBullMQ();
+      await this.initializeBullMQ(); // Make sure this is awaited
     }
-    
-    this.initializeRoutes(routes);
-    this.initializeErrorHandling();
+
+    // List routes to verify
     this.listRoutes();
-    this.DBconnection();
-    
-    // Only connect to queues if not on Vercel
+
+    // Initialize error handling AFTER all routes
+    this.initializeErrorHandling();
+
+    await this.DBconnection();
+
     if (!isVercel()) {
-      this.connectToQueues();
+      await this.connectToQueues();
     }
   }
 
@@ -361,13 +369,24 @@ class app {
 
   async initializeBullMQ() {
     try {
+      logger.info('Starting BullMQ dashboard initialization...');
+
+      // Check environment
+      logger.info('Environment checks:', {
+        isVercel: isVercel(),
+        ENABLE_BULL_BOARD: process.env.ENABLE_BULL_BOARD,
+        NODE_ENV: process.env.NODE_ENV,
+      });
+
       // Dynamic import to avoid loading on Vercel
       const { bookingQueue } = await import('./queue/bookingQueue.js');
-      
+
       if (!bookingQueue) {
         logger.warn('Booking queue not available, skipping BullMQ dashboard');
         return;
       }
+
+      logger.info('Booking queue loaded successfully');
 
       const serverAdapter = new ExpressAdapter();
       serverAdapter.setBasePath('/api/v1/queue');
@@ -378,9 +397,17 @@ class app {
       });
 
       this.app.use('/api/v1/queue', serverAdapter.getRouter());
-      logger.info('BullMQ dashboard initialized successfully');
+      logger.info('BullMQ dashboard mounted at /api/v1/queue');
+
+      // Test the route
+      this.app._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+          logger.info(`Registered route: ${middleware.route.path}`);
+        }
+      });
     } catch (error) {
-      logger.warn('Failed to initialize BullMQ dashboard:', error.message);
+      logger.error('Failed to initialize BullMQ dashboard:', error);
+      logger.error('Stack trace:', error.stack);
     }
   }
 
@@ -427,11 +454,11 @@ class app {
       } else if (typeof err === 'object') {
         message = JSON.stringify(err);
       }
-      
+
       logger.error(
         `[Error Handler]: Path: ${req.path}, Method: ${req.method}, Status: ${status}, ${message}`
       );
-      
+
       return res.status(status).json({
         status: 'error',
         message,
@@ -481,7 +508,7 @@ subscriptionRenewalJob();
 //       scheduleEmailJobs();
 //       scheduleEarningJobs();
 //       subscriptionRenewalJob();
-      
+
 //       logger.info('Background jobs scheduled successfully');
 //     } catch (error) {
 //       logger.error('Failed to schedule background jobs:', error);

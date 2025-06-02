@@ -323,16 +323,16 @@ const scheduleAllRemindersVercel = async (booking) => {
     const results = [];
 
     // Test reminder (10 seconds)
-    try {
-      await vercelQueueClient.addJob(
-        'notify-day-before-test',
-        { bookingId },
-        { delay: 10000, jobId: `test-reminder-${bookingId}` }
-      );
-      results.push('test reminder scheduled');
-    } catch (error) {
-      logger.warn('Failed to schedule test reminder:', error);
-    }
+    // try {
+    //   await vercelQueueClient.addJob(
+    //     'notify-day-before-test',
+    //     { bookingId },
+    //     { delay: 10000, jobId: `test-reminder-${bookingId}` }
+    //   );
+    //   results.push('test reminder scheduled');
+    // } catch (error) {
+    //   logger.warn('Failed to schedule test reminder:', error);
+    // }
 
     // Day before reminder
     const dayBeforeTime = startTime.getTime() - 24 * 60 * 60 * 1000;
