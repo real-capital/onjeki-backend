@@ -416,14 +416,14 @@ const scheduleAllRemindersNormal = async (booking) => {
     });
 
     // Test reminder (10 seconds)
-    await bookingQueue.add(
-      'notify-day-before-test',
-      { bookingId },
-      {
-        delay: 10000,
-        jobId: `test-reminder-${bookingId}`,
-      }
-    );
+    // await bookingQueue.add(
+    //   'notify-day-before-test',
+    //   { bookingId },
+    //   {
+    //     delay: 10000,
+    //     jobId: `test-reminder-${bookingId}`,
+    //   }
+    // );
 
     // Schedule all reminders
     await scheduleReminderDayBefore(bookingId, startTime);
