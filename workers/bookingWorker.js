@@ -6,6 +6,7 @@ import NotificationService from '../services/notification/notification.service.j
 import BookingService from '../services/booking/booking.service.js';
 import { redisConnection } from '../jobs/redis-connection.js';
 import { logger } from '../utils/logger.js';
+import { BookingStatus } from '../enum/booking.enum.js';
 
 // Initialize services
 const notificationService = new NotificationService();
@@ -30,11 +31,11 @@ const worker = new Worker(
     logger.info(`📩 Processing ${job.name} for booking ${bookingId}`);
 
     switch (job.name) {
-      case 'notify-day-before-test':
-        const bookingText = await BookingModel.findById(bookingId);
-        if (!bookingText) throw new Error(`Booking ${bookingId} not found`);
-        await emailService.sendCheckInReminderEmail(bookingText);
-        return { status: 'success', message: 'Check-in reminder email sent' };
+      // case 'notify-day-before-test':
+      //   const bookingText = await BookingModel.findById(bookingId);
+      //   if (!bookingText) throw new Error(`Booking ${bookingId} not found`);
+      //   await emailService.sendCheckInReminderEmail(bookingText);
+      //   return { status: 'success', message: 'Check-in reminder email sent' };
       case 'notify-day-before':
         const booking = await BookingModel.findById(bookingId);
         if (!booking) throw new Error(`Booking ${bookingId} not found`);
@@ -55,16 +56,14 @@ const worker = new Worker(
         if (!bookingIn.checkInDetails.isCheckedIn) {
           bookingIn.checkInDetails.isCheckedIn = true;
           bookingIn.checkInDetails.actualCheckInTime = new Date();
-          bookingIn.status = 'CHECKED_IN';
+          bookingIn.status = BookingStatus.CHECKED_IN; // ✅ Use the correct value from BookingStatus
           bookingIn.timeline.push({
-            status: 'CHECKED_IN',
+            status: 'CHECKED_IN', // This is fine for timeline
             message: 'Auto-checked in by system',
           });
 
           await bookingIn.save();
           await emailService.sendCheckInConfirmationEmail(bookingIn);
-          // Uncomment when your notification service is ready
-          // await notificationService.notifyUser(bookingIn.guest, 'You have been automatically checked in.');
           return { status: 'success', message: 'Auto check-in completed' };
         }
         return { status: 'skipped', message: 'Already checked in' };

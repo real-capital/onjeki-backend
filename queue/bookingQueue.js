@@ -166,13 +166,9 @@ export const scheduleAutoCheckOut = async (bookingId, endTime) => {
   }
 };
 
-// Schedule all reminders for a booking
-// Schedule all reminders for a booking
 export const scheduleAllReminders = async (booking) => {
   try {
     const bookingId = booking._id.toString();
-
-    // CHANGE THIS: Use checkIn and checkOut instead of startTime and endTime
     const startTime = new Date(booking.checkIn);
     const endTime = new Date(booking.checkOut);
 
@@ -196,17 +192,17 @@ export const scheduleAllReminders = async (booking) => {
       checkOut: endTime.toISOString(),
     });
     // First, schedule a test reminder with 10 seconds delay for immediate testing
-    await bookingQueue.add(
-      'notify-day-before-test',
-      { bookingId },
-      {
-        delay: 10000, // 10 seconds delay for testing
-        jobId: `test-reminder-${bookingId}`,
-      }
-    );
-    logger.info(
-      `Test reminder scheduled for booking ${bookingId} (10 second delay)`
-    );
+    // await bookingQueue.add(
+    //   'notify-day-before-test',
+    //   { bookingId },
+    //   {
+    //     delay: 10000, // 10 seconds delay for testing
+    //     jobId: `test-reminder-${bookingId}`,
+    //   }
+    // );
+    // logger.info(
+    //   `Test reminder scheduled for booking ${bookingId} (10 second delay)`
+    // );
 
     await scheduleReminderDayBefore(bookingId, startTime);
     await schedule15MinReminder(bookingId, startTime);
