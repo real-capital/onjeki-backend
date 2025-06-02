@@ -18,15 +18,15 @@ import BankRoute from './routes/payment/bank.route.js';
 import UserBankRoute from './routes/payment/user-bank.route.js';
 
 // Check if we're on Vercel before importing heavy dependencies
-const IS_VERCEL = process.env.VERCEL === '1';
+// const IS_VERCEL = process.env.VERCEL === '1';
 
-// Conditional cleanup handler for Vercel
-if (IS_VERCEL) {
-  process.on('exit', async () => {
-    const { vercelQueueClient } = await import('./queue/vercelQueueClient.js');
-    await vercelQueueClient.close();
-  });
-}
+// // Conditional cleanup handler for Vercel
+// if (IS_VERCEL) {
+//   process.on('exit', async () => {
+//     const { vercelQueueClient } = await import('./queue/vercelQueueClient.js');
+//     await vercelQueueClient.close();
+//   });
+// }
 
 try {
   const routes = [
