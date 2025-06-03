@@ -152,8 +152,6 @@ class RentSalesChatService {
         status: 'active',
       };
 
-      // If user is in "user" mode, only show conversations where they initiated (they're not the owner)
-      // If user is in "buyer" mode, only show conversations about properties they own
       if (role === 'user') {
         query['$expr'] = { $ne: ['$property.owner', userId] };
       } else if (role === 'host') {

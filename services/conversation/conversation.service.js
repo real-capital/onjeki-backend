@@ -1,5 +1,3 @@
-
-
 // export default ConversationService;
 
 // services/conversation/conversation.service.js
@@ -258,16 +256,22 @@ class ConversationService {
   //   }
   // }
 
-  async getConversations(userId, options = {}) {
+  async getConversations(userId, role = 'user', options = {}) {
     const { page = 1, limit = 20, status = 'active' } = options;
     const skip = (page - 1) * limit;
 
     try {
-      // Find all conversations for this user with proper population
-      const conversations = await Conversation.find({
+      let query = {
         participants: userId,
-        status,
-      })
+        status: 'active',
+      };
+      if (role === 'guest') {
+        query['$expr'] = { $ne: ['$property.owner', userId] };
+      } else if (role === 'host') {
+        query['$expr'] = { $eq: ['$property.owner', userId] };
+      }
+      // Find all conversations for this user with proper population
+      const conversations = await Conversation.find(query)
         .populate('participants', 'name profile.photo email')
         .populate({
           path: 'property',
