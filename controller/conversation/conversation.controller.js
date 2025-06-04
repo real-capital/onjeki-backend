@@ -184,11 +184,11 @@ class ConversationController {
   getConversations = async (req, res, next) => {
     try {
       const userId = req.user._id;
-      const { page, limit, status } = req.query;
+      const { page, limit, status,role } = req.query;
 
       const result = await this.conversationService.getConversations(
         userId,
-        req.body.role,
+        role,
         {
           page: parseInt(page) || 1,
           limit: parseInt(limit) || 20,

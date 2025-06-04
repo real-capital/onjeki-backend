@@ -36,11 +36,11 @@ class RentOrSalesChatController {
   getConversations = async (req, res, next) => {
     try {
       const userId = req.user._id;
-      const { page = 1, limit = 20 } = req.query;
+      const { page = 1, limit = 20, role } = req.query;
 
       const result = await rentSalesChatService.getConversations(
         userId,
-        req.body.role,
+        role,
         parseInt(page),
         parseInt(limit)
       );
