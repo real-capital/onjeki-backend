@@ -7,6 +7,7 @@ import { StatusCodes } from 'http-status-codes';
 import HttpException from '../../utils/exception.js';
 import NotificationService from '../notification/notification.service.js';
 import { SocketService } from '../chat/socket.service.js';
+import mongoose from 'mongoose';
 
 class RentSalesChatService {
   constructor() {
@@ -142,51 +143,198 @@ class RentSalesChatService {
       throw error;
     }
   }
-
-  async getUserConversations(userId, page = 1, limit = 20, role = 'user') {
+  async getConversations(userId, page = 1, limit = 20, role = 'user') {
     try {
       const skip = (page - 1) * limit;
 
-      let query = {
-        participants: userId,
-        status: 'active',
-      };
-
-      if (role === 'user') {
-        query['$expr'] = { $ne: ['$property.owner', userId] };
-      } else if (role === 'host') {
-        query['$expr'] = { $eq: ['$property.owner', userId] };
-      }
-
-      // Find all rent/sales conversations for this user
-      const conversations = await RentSalesConversation.find(query)
-        .populate('participants', 'name email profile.photo')
-        .populate({
-          path: 'property',
-          select: 'title photo.images price location type status',
-          model: 'RentAndSales',
-        })
-        .populate({
-          path: 'lastMessage',
-          populate: {
-            path: 'sender',
-            select: 'name email profile.photo',
+      const pipeline = [
+        // Match user's conversations
+        {
+          $match: {
+            participants: new mongoose.Types.ObjectId(userId),
+            status: 'active',
           },
-        })
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(limit);
+        },
+        // Lookup property details from RentAndSales collection
+        {
+          $lookup: {
+            from: 'rentandsales', // Collection name for RentAndSales model
+            localField: 'property',
+            foreignField: '_id',
+            as: 'propertyDetails',
+          },
+        },
+        {
+          $unwind: {
+            path: '$propertyDetails',
+            preserveNullAndEmptyArrays: false, // Only keep conversations with properties
+          },
+        },
+        // Filter based on role
+        {
+          $match:
+            role === 'user'
+              ? {
+                  'propertyDetails.owner': {
+                    $ne: new mongoose.Types.ObjectId(userId),
+                  },
+                }
+              : {
+                  'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
+                },
+        },
+        // Lookup participants
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'participants',
+            foreignField: '_id',
+            as: 'participants',
+          },
+        },
+        // Project participants to only include needed fields
+        {
+          $addFields: {
+            participants: {
+              $map: {
+                input: '$participants',
+                as: 'participant',
+                in: {
+                  _id: '$$participant._id',
+                  name: '$$participant.name',
+                  email: '$$participant.email',
+                  profile: {
+                    photo: '$$participant.profile.photo',
+                  },
+                },
+              },
+            },
+          },
+        },
+        // Lookup last message
+        {
+          $lookup: {
+            from: 'messages',
+            localField: 'lastMessage',
+            foreignField: '_id',
+            as: 'lastMessageData',
+          },
+        },
+        {
+          $unwind: {
+            path: '$lastMessageData',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        // Lookup sender for last message
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'lastMessageData.sender',
+            foreignField: '_id',
+            as: 'lastMessageSender',
+          },
+        },
+        {
+          $unwind: {
+            path: '$lastMessageSender',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        // Format the response to match the original structure
+        {
+          $addFields: {
+            property: {
+              _id: '$propertyDetails._id',
+              title: '$propertyDetails.title',
+              photo: '$propertyDetails.photo',
+              price: '$propertyDetails.price',
+              location: '$propertyDetails.location',
+              type: '$propertyDetails.type',
+              status: '$propertyDetails.status',
+            },
+            lastMessage: {
+              $cond: {
+                if: { $ne: ['$lastMessageData', null] },
+                then: {
+                  _id: '$lastMessageData._id',
+                  content: '$lastMessageData.content',
+                  createdAt: '$lastMessageData.createdAt',
+                  sender: {
+                    _id: '$lastMessageSender._id',
+                    name: '$lastMessageSender.name',
+                    email: '$lastMessageSender.email',
+                    profile: {
+                      photo: '$lastMessageSender.profile.photo',
+                    },
+                  },
+                },
+                else: null,
+              },
+            },
+          },
+        },
+        // Remove temporary fields
+        {
+          $project: {
+            propertyDetails: 0,
+            lastMessageData: 0,
+            lastMessageSender: 0,
+          },
+        },
+        // Sort and paginate
+        { $sort: { updatedAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      const total = await RentSalesConversation.countDocuments({
-        participants: userId,
-        status: 'active',
-      });
+      const conversations = await RentSalesConversation.aggregate(pipeline);
+
+      // Count pipeline - only include filtering stages
+      const countPipeline = [
+        {
+          $match: {
+            participants: new mongoose.Types.ObjectId(userId),
+            status: 'active',
+          },
+        },
+        {
+          $lookup: {
+            from: 'rentandsales',
+            localField: 'property',
+            foreignField: '_id',
+            as: 'propertyDetails',
+          },
+        },
+        {
+          $unwind: {
+            path: '$propertyDetails',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $match:
+            role === 'user'
+              ? {
+                  'propertyDetails.owner': {
+                    $ne: new mongoose.Types.ObjectId(userId),
+                  },
+                }
+              : {
+                  'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
+                },
+        },
+        { $count: 'total' },
+      ];
+
+      const countResult = await RentSalesConversation.aggregate(countPipeline);
+      const total = countResult[0]?.total || 0;
 
       return {
         conversations,
         pagination: {
-          page,
-          limit,
+          page: Number(page),
+          limit: Number(limit),
           total,
           pages: Math.ceil(total / limit),
         },
@@ -196,6 +344,60 @@ class RentSalesChatService {
       throw error;
     }
   }
+
+  // async getConversations(userId, page = 1, limit = 20, role = 'user') {
+  //   try {
+  //     const skip = (page - 1) * limit;
+
+  //     let query = {
+  //       participants: userId,
+  //       status: 'active',
+  //     };
+
+  //     if (role === 'user') {
+  //       query['$expr'] = { $ne: ['$property.owner', userId] };
+  //     } else if (role === 'host') {
+  //       query['$expr'] = { $eq: ['$property.owner', userId] };
+  //     }
+
+  //     // Find all rent/sales conversations for this user
+  //     const conversations = await RentSalesConversation.find(query)
+  //       .populate('participants', 'name email profile.photo')
+  //       .populate({
+  //         path: 'property',
+  //         select: 'title photo.images price location type status',
+  //         model: 'RentAndSales',
+  //       })
+  //       .populate({
+  //         path: 'lastMessage',
+  //         populate: {
+  //           path: 'sender',
+  //           select: 'name email profile.photo',
+  //         },
+  //       })
+  //       .sort({ updatedAt: -1 })
+  //       .skip(skip)
+  //       .limit(limit);
+
+  //     const total = await RentSalesConversation.countDocuments({
+  //       participants: userId,
+  //       status: 'active',
+  //     });
+
+  //     return {
+  //       conversations,
+  //       pagination: {
+  //         page,
+  //         limit,
+  //         total,
+  //         pages: Math.ceil(total / limit),
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error('Error getting rent/sales conversations:', error);
+  //     throw error;
+  //   }
+  // }
 
   async getConversationMessages(conversationId, userId, page = 1, limit = 50) {
     try {

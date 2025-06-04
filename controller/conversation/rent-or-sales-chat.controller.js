@@ -33,12 +33,12 @@ class RentOrSalesChatController {
       };
     
       // Get user's rent/sales conversations
-      getUserConversations = async (req, res, next) => {
+      getConversations = async (req, res, next) => {
         try {
           const userId = req.user._id;
           const { page = 1, limit = 20 } = req.query;
     
-          const result = await rentSalesChatService.getUserConversations(
+          const result = await rentSalesChatService.getConversations(
             userId,
             parseInt(page),
             parseInt(limit)

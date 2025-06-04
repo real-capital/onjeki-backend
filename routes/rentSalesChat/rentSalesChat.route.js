@@ -20,7 +20,7 @@ class RentSalesChatRoute extends Route {
     this.router.get(
       `${this.path}/conversations`,
       isAuthenticated,
-      this.controller.getUserConversations
+      this.controller.getConversations
     );
     this.router.get(
       `${this.path}/conversations/:conversationId/messages`,
