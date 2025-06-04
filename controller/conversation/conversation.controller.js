@@ -122,8 +122,6 @@
 
 // export default ConversationController;
 
-
-
 // controllers/conversation/conversation.controller.js
 import { StatusCodes } from 'http-status-codes';
 
@@ -184,7 +182,7 @@ class ConversationController {
   getConversations = async (req, res, next) => {
     try {
       const userId = req.user._id;
-      const { page, limit, status,role } = req.query;
+      const { page, limit, role } = req.query;
 
       const result = await this.conversationService.getConversations(
         userId,
@@ -192,7 +190,6 @@ class ConversationController {
         {
           page: parseInt(page) || 1,
           limit: parseInt(limit) || 20,
-          status
         }
       );
 
@@ -214,9 +211,9 @@ class ConversationController {
       const result = await this.conversationService.getConversationMessages(
         conversationId,
         userId,
-        { 
-          page: parseInt(page) || 1, 
-          limit: parseInt(limit) || 50 
+        {
+          page: parseInt(page) || 1,
+          limit: parseInt(limit) || 50,
         }
       );
 

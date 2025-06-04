@@ -40,9 +40,9 @@ class RentOrSalesChatController {
 
       const result = await rentSalesChatService.getConversations(
         userId,
-        role,
         parseInt(page),
-        parseInt(limit)
+        parseInt(limit),
+        role,
       );
 
       res.status(StatusCodes.OK).json({
