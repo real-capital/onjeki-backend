@@ -716,8 +716,8 @@ class BookingService {
       );
 
       // Also send a review request
-      await emailService.sendReviewRequestEmail(booking);
-      logger.info(`Review request email sent for booking ${booking._id}`);
+      // await emailService.sendReviewRequestEmail(booking);
+      // logger.info(`Review request email sent for booking ${booking._id}`);
 
       // Create notification for host
       await NotificationModel.create({
@@ -737,6 +737,7 @@ class BookingService {
         booking: booking._id,
       });
     } catch (error) {
+      console.error('Error sending checkout notifications:', error);
       logger.error('Error sending checkout notifications', {
         error,
         bookingId: booking._id,
@@ -1382,7 +1383,6 @@ class BookingService {
     }
   }
 
-
   async completeBooking(bookingId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1412,12 +1412,13 @@ class BookingService {
         status: 'CHECKED_OUT',
         message: 'Stay completed, guest checked out',
       });
-
       await booking.save({ session });
 
       // Update the earning status to available
       const earningService = new EarningService();
-      await earningService.processBookingEarnings(bookingId);
+      await earningService.processBookingEarnings(bookingId, session);
+      // const property = await PropertyModel.findById(booking.property);
+      // await property.removeBookedDates(bookingId);
 
       await session.commitTransaction();
 
@@ -1427,6 +1428,7 @@ class BookingService {
       return booking;
     } catch (error) {
       await session.abortTransaction();
+      console.error('Error completing booking:', error);
       logger.error('Error completing booking', { error, bookingId });
       throw error;
     } finally {
@@ -1720,7 +1722,7 @@ class BookingService {
 
       // Process earnings after checkout
       const earningService = new EarningService();
-      await earningService.processBookingEarnings(bookingId);
+      await earningService.processBookingEarnings(bookingId, session);
 
       await session.commitTransaction();
 

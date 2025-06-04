@@ -489,6 +489,8 @@ class app {
 scheduleEmailJobs();
 scheduleEarningJobs();
 subscriptionRenewalJob();
+const bookingService = new BookingService();
+// bookingService.completeBooking('683da20f106ca150345f200b');
 
 // Only run scheduled jobs if not on Vercel
 // if (!isVercel()) {

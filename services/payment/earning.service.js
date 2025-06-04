@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import PaystackService from './payment.service.js';
 import BookingModel from '../../models/booking.model.js';
 import UserModel from '../../models/user.model.js';
+import { BookingStatus } from '../../enum/booking.enum.js';
 
 // services/earningService.js
 const paystackService = new PaystackService();
@@ -13,7 +14,6 @@ class EarningService {
   constructor() {
     this.serviceFeePercentage = 0.05; // 5% service fee
   }
-
 
   /**
    * Create earning record when booking is confirmed
@@ -91,93 +91,114 @@ class EarningService {
    * Process booking earnings when a booking is completed
    * This will update the existing earning record, not create a new one
    */
-  async processBookingEarnings(bookingId) {
-    const session = await mongoose.startSession();
+async processBookingEarnings(bookingId, existingSession = null) {
+  let session = existingSession;
+  let shouldCommit = false;
+  
+  // Only create a new session if one wasn't provided
+  if (!session) {
+    session = await mongoose.startSession();
     session.startTransaction();
+    shouldCommit = true; // We'll need to commit if we created our own session
+  }
 
-    try {
-      // Find the booking
-      const booking = await BookingModel.findById(bookingId)
-        .populate('property')
-        .populate('host')
-        .session(session);
+  try {
+    // Find the booking
+    const booking = await BookingModel.findById(bookingId)
+      .populate('property')
+      .populate('host')
+      .session(session);
 
-      if (!booking) {
-        throw new Error(`Booking not found: ${bookingId}`);
-      }
+    if (!booking) {
+      throw new Error(`Booking not found: ${bookingId}`);
+    }
 
-      if (booking.status !== BookingStatus.COMPLETED) {
-        throw new Error(`Booking is not completed: ${bookingId}`);
-      }
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new Error(`Booking is not completed: ${bookingId}`);
+    }
 
-      // Find the existing earning record
-      const earning = await EarningModel.findOne({
-        booking: bookingId,
-      }).session(session);
+    // Find the existing earning record
+    const earning = await EarningModel.findOne({
+      booking: bookingId,
+    }).session(session);
 
-      if (!earning) {
-        // If no earning exists, create one (fallback, but shouldn't normally happen)
-        logger.warn(
-          `No earning record found for completed booking: ${bookingId}. Creating new record.`
-        );
+    if (!earning) {
+      // If no earning exists, create one (fallback, but shouldn't normally happen)
+      logger.warn(
+        `No earning record found for completed booking: ${bookingId}. Creating new record.`
+      );
 
-        const serviceFee =
-          booking.pricing.serviceFee ||
-          booking.pricing.total * this.serviceFeePercentage;
-        const netAmount = booking.pricing.total - serviceFee;
+      const serviceFee =
+        booking.pricing.serviceFee ||
+        booking.pricing.total * this.serviceFeePercentage;
+      const netAmount = booking.pricing.total - serviceFee;
 
-        const newEarning = new EarningModel({
-          host: booking.host._id,
-          property: booking.property._id,
-          booking: booking._id,
-          amount: booking.pricing.total,
-          serviceFee: serviceFee,
-          netAmount: netAmount,
-          currency: booking.pricing.currency || 'NGN',
-          status: 'pending',
-          availableDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        });
+      const newEarning = new EarningModel({
+        host: booking.host._id,
+        property: booking.property._id,
+        booking: booking._id,
+        amount: booking.pricing.total,
+        serviceFee: serviceFee,
+        netAmount: netAmount,
+        currency: booking.pricing.currency || 'NGN',
+        status: 'pending',
+        availableDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
 
-        await newEarning.save({ session });
+      await newEarning.save({ session });
 
-        // Update host record
-        await UserModel.findByIdAndUpdate(
-          booking.host._id,
-          { $inc: { 'hostProfile.totalEarnings': netAmount } },
-          { session }
-        );
+      // Update host record
+      await UserModel.findByIdAndUpdate(
+        booking.host._id,
+        { $inc: { 'hostProfile.totalEarnings': netAmount } },
+        { session }
+      );
 
+      // Only commit if we created our own transaction
+      if (shouldCommit) {
         await session.commitTransaction();
-        return newEarning;
       }
+      
+      return newEarning;
+    }
 
-      // Ensure availableDate is set correctly (24 hours from now)
-      earning.availableDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // Ensure availableDate is set correctly (24 hours from now)
+    earning.availableDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      // If you want to ensure the status stays as pending, uncomment:
-      // earning.status = 'pending';
+    // If you want to ensure the status stays as pending, uncomment:
+    // earning.status = 'pending';
 
-      await earning.save({ session });
+    await earning.save({ session });
 
-      // Update host record with earning information if not already done
-      if (!booking.host.hostProfile?.totalEarnings) {
-        await UserModel.findByIdAndUpdate(
-          booking.host._id,
-          { $inc: { 'hostProfile.totalEarnings': earning.netAmount } },
-          { session }
-        );
-      }
+    // Update host record with earning information if not already done
+    if (!booking.host.hostProfile?.totalEarnings) {
+      await UserModel.findByIdAndUpdate(
+        booking.host._id,
+        { $inc: { 'hostProfile.totalEarnings': earning.netAmount } },
+        { session }
+      );
+    }
 
+    // Only commit if we created our own transaction
+    if (shouldCommit) {
       await session.commitTransaction();
-      return earning;
-    } catch (error) {
+    }
+    
+    return earning;
+  } catch (error) {
+    // Only abort if we created our own transaction
+    if (shouldCommit) {
       await session.abortTransaction();
-      logger.error('Error processing booking earnings', { error, bookingId });
-      throw error;
-    } finally {
+    }
+    logger.error('Error processing booking earnings', { error, bookingId });
+    throw error;
+  } finally {
+    // Only end session if we created it
+    if (shouldCommit) {
       session.endSession();
     }
   }
+}
   /**
    * Get host earnings with filtering options
    */
@@ -265,7 +286,7 @@ class EarningService {
       earnings,
       summary,
     };
-  } 
+  }
   /**
    * Get a summary of host earnings
    */
@@ -515,7 +536,7 @@ class EarningService {
         {
           $match: {
             host: new mongoose.Types.ObjectId(hostId),
-            status: { $in: ['available', 'paid',''] },
+            status: { $in: ['available', 'paid', ''] },
           },
         },
         {
