@@ -3,20 +3,32 @@ import PropertyModel from '../../models/properties.model.js';
 
 class SearchService {
   async searchProperties(filters, pagination, sorting = { createdAt: -1 }) {
-    const query = this.buildSearchQuery(filters);
+    // Extract excludeOwnerId from filters
+    const { excludeOwnerId, ...searchFilters } = filters;
+
+    // Build the query with the remaining filters
+    const query = this.buildSearchQuery(searchFilters);
+
+    // Only exclude owner's properties if excludeOwnerId is provided
+    if (excludeOwnerId) {
+      query.owner = { $ne: excludeOwnerId };
+    }
+
     const { page = 1, limit = 10 } = pagination;
     const skip = (page - 1) * limit;
+
     console.log('Built query:', JSON.stringify(query, null, 2));
+
     try {
       const [properties, total] = await Promise.all([
         PropertyModel.find(query)
           .populate({
             path: 'amenities',
-            select: 'amenity _id', // Make sure to select these fields
+            select: 'amenity _id',
           })
           .populate({
             path: 'buildingType',
-            select: 'buildingType _id', // Make sure to select these fields
+            select: 'buildingType _id',
           })
           .populate('owner', 'name email')
           .sort(sorting)
@@ -25,17 +37,6 @@ class SearchService {
           .lean(),
         PropertyModel.countDocuments(query),
       ]);
-
-      // const [properties, total] = await Promise.all([
-      //   PropertyModel.find(query)
-      //     .populate('amenities')
-      //     .populate('buildingType')
-      //     .populate('owner', 'name email')
-      //     .skip(skip)
-      //     .limit(limit)
-      //     .sort(sorting),
-      //   PropertyModel.countDocuments(query),
-      // ]);
 
       return {
         properties,

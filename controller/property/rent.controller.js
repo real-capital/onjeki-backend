@@ -44,6 +44,12 @@ class RentOrSalesController {
     try {
       // const filters = req.query;
       const { filters, pagination, sort } = this.parseSearchParams(req);
+
+      // Add the excludeOwnerId to filters if user is logged in
+      if (req.user) {
+        filters.excludeOwnerId = req.user._id;
+      }
+
       console.log('Parsed search parameters:', { filters, pagination, sort });
 
       const result = await rentOrSalesService.searchRentOrSales(

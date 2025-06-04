@@ -97,7 +97,12 @@ class RentOrSalesService {
       console.log('Received filters:', filters);
       console.log('Pagination:', pagination);
       console.log('Sort:', sort);
-      const query = this.buildSearchQuery(filters);
+      const { excludeOwnerId, ...searchFilters } = filters;
+      const query = this.buildSearchQuery(searchFilters);
+
+      if (excludeOwnerId) {
+        query.owner = { $ne: excludeOwnerId };
+      }
       const { page = 1, limit = 10 } = pagination;
       const skip = (page - 1) * limit;
       const sortQuery = this.buildSortQuery(sort);

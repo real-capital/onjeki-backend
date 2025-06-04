@@ -415,6 +415,12 @@ class PropertyController {
       console.log('Search request query:', req.query);
 
       const { filters, pagination, sort } = await this.parseSearchParams(req);
+
+      // Add the excludeOwnerId to filters if user is logged in
+      if (req.user) {
+        filters.excludeOwnerId = req.user._id;
+      }
+
       console.log('Parsed search parameters:', { filters, pagination, sort });
 
       const result = await searchService.searchProperties(
@@ -575,7 +581,6 @@ class PropertyController {
     };
   };
 
-
   async bulkUpdateCalendar(req, res) {
     try {
       const { propertyId } = req.params;
@@ -610,7 +615,6 @@ class PropertyController {
         .json({ message: 'Failed to fetch calendar', error: error.message });
     }
   }
-
 }
 
 export default PropertyController;

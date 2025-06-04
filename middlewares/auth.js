@@ -14,7 +14,6 @@ export const isAuthenticated = async (req, res, next) => {
     });
   }
 
-
   try {
     const decoded = Jwt.verifyJwt(token); // Verify token and get decoded data (user info)
     // console.log('decoded');
@@ -38,6 +37,42 @@ export const isAuthenticated = async (req, res, next) => {
       status: 'error',
       message: 'Invalid token',
     });
+  }
+};
+
+// middleware/optionalAuth.middleware.js
+export const optionalAuthMiddleware = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      // No token, but that's okay - just continue without user
+      req.user = null;
+      return next();
+    }
+
+    // Verify token if present
+    const decoded = Jwt.verifyJwt(token); // Verify token and get decoded data (user info)
+    // console.log('decoded');
+    // console.log(decoded);
+    const user = await User.findById(decoded.id);
+    // console.log(user);
+
+    if (!user) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        status: 'error',
+        message: 'User not found',
+      });
+    }
+
+    req.user = user;
+
+    // req.user = decoded; // Add user info to request object
+    next();
+  } catch (error) {
+    // Token is invalid, but we still allow the request
+    req.user = null;
+    next();
   }
 };
 

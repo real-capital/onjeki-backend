@@ -4,7 +4,10 @@ import multer from 'multer';
 import { Route } from '../../interfaces/route.interface.js';
 import PropertyController from '../../controller/property/property.controller.js';
 import { validate } from '../../middlewares/validation.js';
-import { isAuthenticated } from '../../middlewares/auth.js';
+import {
+  isAuthenticated,
+  optionalAuthMiddleware,
+} from '../../middlewares/auth.js';
 import { validateSearchQuery } from '../../validation/validateSearch.js';
 import RentOrSalesController from '../../controller/property/rent.controller.js';
 
@@ -113,11 +116,13 @@ class PropertyRoute extends Route {
     this.router.get(
       `${this.path}/search`,
       validateSearchQuery,
+      optionalAuthMiddleware,
       this.controller.searchProperties
     );
     this.router.get(
       `${this.path}/rent/search`,
       validateSearchQuery,
+      optionalAuthMiddleware,
       this.rentController.searchRentOrSales
     );
 
