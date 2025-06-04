@@ -158,7 +158,7 @@ class RentSalesChatService {
         // Lookup property details from RentAndSales collection
         {
           $lookup: {
-            from: 'rentandsales', // Collection name for RentAndSales model
+            from: 'rentandsales', // Adjust if your collection name is different
             localField: 'property',
             foreignField: '_id',
             as: 'propertyDetails',
@@ -167,7 +167,27 @@ class RentSalesChatService {
         {
           $unwind: {
             path: '$propertyDetails',
-            preserveNullAndEmptyArrays: false, // Only keep conversations with properties
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        // Convert owner to ObjectId if needed
+        {
+          $addFields: {
+            propertyOwnerId: {
+              $cond: {
+                if: { $eq: [{ $type: '$propertyDetails.owner' }, 'objectId'] },
+                then: '$propertyDetails.owner',
+                else: {
+                  $cond: {
+                    if: {
+                      $eq: [{ $type: '$propertyDetails.owner' }, 'string'],
+                    },
+                    then: { $toObjectId: '$propertyDetails.owner' },
+                    else: null,
+                  },
+                },
+              },
+            },
           },
         },
         // Filter based on role
@@ -175,12 +195,12 @@ class RentSalesChatService {
           $match:
             role === 'user'
               ? {
-                  'propertyDetails.owner': {
+                  propertyOwnerId: {
                     $ne: new mongoose.Types.ObjectId(userId),
                   },
                 }
               : {
-                  'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
+                  propertyOwnerId: new mongoose.Types.ObjectId(userId),
                 },
         },
         // Lookup participants
@@ -214,7 +234,7 @@ class RentSalesChatService {
         // Lookup last message
         {
           $lookup: {
-            from: 'messages',
+            from: 'rentsalesmessages', // Adjust based on your collection name
             localField: 'lastMessage',
             foreignField: '_id',
             as: 'lastMessageData',
@@ -241,7 +261,7 @@ class RentSalesChatService {
             preserveNullAndEmptyArrays: true,
           },
         },
-        // Format the response to match the original structure
+        // Format the response
         {
           $addFields: {
             property: {
@@ -252,6 +272,7 @@ class RentSalesChatService {
               location: '$propertyDetails.location',
               type: '$propertyDetails.type',
               status: '$propertyDetails.status',
+              owner: '$propertyDetails.owner', // Include for debugging
             },
             lastMessage: {
               $cond: {
@@ -280,6 +301,7 @@ class RentSalesChatService {
             propertyDetails: 0,
             lastMessageData: 0,
             lastMessageSender: 0,
+            propertyOwnerId: 0,
           },
         },
         // Sort and paginate
@@ -290,7 +312,18 @@ class RentSalesChatService {
 
       const conversations = await RentSalesConversation.aggregate(pipeline);
 
-      // Count pipeline - only include filtering stages
+      // Debug log
+      if (conversations.length > 0) {
+        console.log('Sample rent/sales conversation:', {
+          conversationId: conversations[0]._id,
+          propertyOwner: conversations[0].property?.owner,
+          currentUserId: userId,
+          role: role,
+          isOwner: conversations[0].property?.owner?.toString() === userId,
+        });
+      }
+
+      // Count pipeline
       const countPipeline = [
         {
           $match: {
@@ -313,15 +346,34 @@ class RentSalesChatService {
           },
         },
         {
+          $addFields: {
+            propertyOwnerId: {
+              $cond: {
+                if: { $eq: [{ $type: '$propertyDetails.owner' }, 'objectId'] },
+                then: '$propertyDetails.owner',
+                else: {
+                  $cond: {
+                    if: {
+                      $eq: [{ $type: '$propertyDetails.owner' }, 'string'],
+                    },
+                    then: { $toObjectId: '$propertyDetails.owner' },
+                    else: null,
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
           $match:
             role === 'user'
               ? {
-                  'propertyDetails.owner': {
+                  propertyOwnerId: {
                     $ne: new mongoose.Types.ObjectId(userId),
                   },
                 }
               : {
-                  'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
+                  propertyOwnerId: new mongoose.Types.ObjectId(userId),
                 },
         },
         { $count: 'total' },

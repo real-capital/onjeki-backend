@@ -188,6 +188,7 @@ class ConversationController {
 
       const result = await this.conversationService.getConversations(
         userId,
+        req.body.role,
         {
           page: parseInt(page) || 1,
           limit: parseInt(limit) || 20,
