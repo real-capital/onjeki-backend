@@ -265,7 +265,7 @@ class ConversationService {
         participants: userId,
         status: 'active',
       };
-      if (role === 'guest') {
+      if (role === 'user') {
         query['$expr'] = { $ne: ['$property.owner', userId] };
       } else if (role === 'host') {
         query['$expr'] = { $eq: ['$property.owner', userId] };

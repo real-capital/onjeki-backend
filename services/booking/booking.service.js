@@ -1382,10 +1382,7 @@ class BookingService {
     }
   }
 
-  /**
-   * Mark a booking as completed after checkout
-   * This is where we process the final earning
-   */
+
   async completeBooking(bookingId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1400,14 +1397,10 @@ class BookingService {
       if (!booking) {
         throw new Error(`Booking not found: ${bookingId}`);
       }
-
-      // if (booking.status !== BookingStatus.CONFIRMED) {
-      //   throw new Error(`Booking is not in CONFIRMED status: ${bookingId}`);
-      // }
       const hasCheckedIn = booking.timeline.some(
         (entry) => entry.status === 'CHECKED_IN'
       );
-      if (booking.status !== BookingStatus.CONFIRMED || !hasCheckedIn) {
+      if (booking.status !== BookingStatus.CHECKED_IN || !hasCheckedIn) {
         throw new Error('Booking is not in a valid state for completion');
       }
 
