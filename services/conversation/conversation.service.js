@@ -340,8 +340,10 @@ class ConversationService {
           },
         },
         {
-          $unwind: '$propertyDetails',
-          preserveNullAndEmptyArrays: false,
+          $unwind: {
+            path: '$propertyDetails',
+            preserveNullAndEmptyArrays: false,
+          },
         },
         // Filter based on role
         {
@@ -356,7 +358,7 @@ class ConversationService {
                   'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
                 },
         },
-        // Populate other fields
+        // Lookup participants
         {
           $lookup: {
             from: 'users',
@@ -365,7 +367,7 @@ class ConversationService {
             as: 'participants',
           },
         },
-              // Project participants to only include needed fields
+        // Project participants to only include needed fields
         {
           $addFields: {
             participants: {
@@ -382,6 +384,21 @@ class ConversationService {
                 },
               },
             },
+          },
+        },
+        // Lookup booking
+        {
+          $lookup: {
+            from: 'bookings',
+            localField: 'booking',
+            foreignField: '_id',
+            as: 'bookingData',
+          },
+        },
+        {
+          $unwind: {
+            path: '$bookingData',
+            preserveNullAndEmptyArrays: true,
           },
         },
         // Lookup last message
@@ -423,8 +440,22 @@ class ConversationService {
               photo: '$propertyDetails.photo',
               price: '$propertyDetails.price',
               location: '$propertyDetails.location',
-              type: '$propertyDetails.type',
-              status: '$propertyDetails.status',
+              rules: '$propertyDetails.rules',
+              guests: '$propertyDetails.guests',
+              bedrooms: '$propertyDetails.bedrooms',
+            },
+            booking: {
+              $cond: {
+                if: { $ne: ['$bookingData', null] },
+                then: {
+                  _id: '$bookingData._id',
+                  checkIn: '$bookingData.checkIn',
+                  checkOut: '$bookingData.checkOut',
+                  totalAmount: '$bookingData.totalAmount',
+                  status: '$bookingData.status',
+                },
+                else: null,
+              },
             },
             lastMessage: {
               $cond: {
@@ -453,10 +484,12 @@ class ConversationService {
             propertyDetails: 0,
             lastMessageData: 0,
             lastMessageSender: 0,
+            bookingData: 0,
           },
         },
-        // ... more lookups for booking, lastMessage, etc.
+        // Sort
         { $sort: { updatedAt: -1 } },
+        // Pagination
         { $skip: skip },
         { $limit: limit },
       ];
@@ -464,43 +497,42 @@ class ConversationService {
       const conversations = await Conversation.aggregate(pipeline);
 
       // Count pipeline
-      // const countPipeline = pipeline.slice(0, 3); // Keep only match and filter stages
-      // countPipeline.push({ $count: 'total' });
-       const countPipeline = [
-              {
-                $match: {
-                  participants: new mongoose.Types.ObjectId(userId),
-                  status: 'active',
+      const countPipeline = [
+        {
+          $match: {
+            participants: new mongoose.Types.ObjectId(userId),
+            status: 'active',
+          },
+        },
+        {
+          $lookup: {
+            from: 'properties',
+            localField: 'property',
+            foreignField: '_id',
+            as: 'propertyDetails',
+          },
+        },
+        {
+          $unwind: {
+            path: '$propertyDetails',
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+        {
+          $match:
+            role === 'user'
+              ? {
+                  'propertyDetails.owner': {
+                    $ne: new mongoose.Types.ObjectId(userId),
+                  },
+                }
+              : {
+                  'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
                 },
-              },
-              {
-                $lookup: {
-                  from: 'properties',
-                  localField: 'property',
-                  foreignField: '_id',
-                  as: 'propertyDetails',
-                },
-              },
-              {
-                $unwind: {
-                  path: '$propertyDetails',
-                  preserveNullAndEmptyArrays: false,
-                },
-              },
-              {
-                $match:
-                  role === 'user'
-                    ? {
-                        'propertyDetails.owner': {
-                          $ne: new mongoose.Types.ObjectId(userId),
-                        },
-                      }
-                    : {
-                        'propertyDetails.owner': new mongoose.Types.ObjectId(userId),
-                      },
-              },
-              { $count: 'total' },
-            ];
+        },
+        { $count: 'total' },
+      ];
+
       const countResult = await Conversation.aggregate(countPipeline);
       const total = countResult[0]?.total || 0;
 
@@ -515,7 +547,7 @@ class ConversationService {
       };
     } catch (error) {
       console.error('Error fetching conversations:', error);
-       throw error;
+      throw error;
     }
   }
 
