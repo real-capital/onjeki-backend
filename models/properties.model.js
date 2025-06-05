@@ -449,7 +449,7 @@ propertySchema.pre('save', function (next) {
 
 // Helper Methods
 propertySchema.methods = {
-  async removeBookedDates(bookingId) {
+  async removeBookedDates(bookingId, session = null) {
     // Remove from bookedDates
     this.availability.bookedDates = this.availability.bookedDates.filter(
       (date) => !date.bookingId.equals(bookingId)
@@ -460,7 +460,9 @@ propertySchema.methods = {
       (entry) => !entry.bookingId || !entry.bookingId.equals(bookingId)
     );
 
-    await this.save();
+    // Use session if provided
+    const saveOptions = session ? { session } : {};
+    await this.save(saveOptions);
   },
   getDatesInRange(startDate, endDate) {
     const dates = [];

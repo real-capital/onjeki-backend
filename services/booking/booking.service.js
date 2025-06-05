@@ -974,6 +974,71 @@ class BookingService {
     }
   }
 
+  // async cancelBooking(bookingId, userId, reason) {
+  //   const session = await mongoose.startSession();
+  //   session.startTransaction();
+  //   try {
+  //     const booking = await BookingModel.findOne({
+  //       _id: bookingId,
+  //       guest: userId,
+  //       // status: { $in: ['PENDING', 'CONFIRMED'] },
+  //     });
+
+  //     if (!booking) {
+  //       throw new HttpException(
+  //         404,
+  //         'Booking not found or cannot be cancelled'
+  //       );
+  //     }
+
+  //     // Calculate refund amount based on cancellation policy
+  //     const refundAmount = await booking.calculateRefundAmount(booking);
+
+  //     // Find associated earning
+  //     const earning = await EarningModel.findOne({ booking: bookingId });
+  //     if (earning) {
+  //       // Update earning status to cancelled
+  //       earning.status = 'cancelled';
+  //       earning.notes = 'Booking was cancelled';
+  //       await earning.save({ session });
+
+  //       logger.info('Earning marked as cancelled due to booking cancellation', {
+  //         earningId: earning._id,
+  //         bookingId,
+  //       });
+  //     }
+
+  //     // Process refund if payment was made
+  //     if (booking.payment.status === 'PAID') {
+  //       await refundService.processRefund(booking, userId);
+  //     }
+
+  //     booking.timeline.push({
+  //       status: 'CANCELLED',
+  //       message: `Booking cancelled by guest: ${reason}`,
+  //     });
+
+  //     await booking.save();
+  //     await session.commitTransaction();
+  //     // Send notifications
+  //     // TODO: Implement sendCancellationNotifications method
+  //     await this.sendCancellationNotifications(booking);
+
+  //     // Cancel all reminders
+  //     await bookingQueue.cancelAllReminders(bookingId);
+
+  //     return booking;
+  //   } catch (error) {
+  //     await session.abortTransaction();
+  //     logger.error('Error handling booking cancellation', {
+  //       bookingId,
+  //       error,
+  //     });
+  //     throw error;
+  //   } finally {
+  //     session.endSession();
+  //   }
+  // }
   async cancelBooking(bookingId, userId, reason) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -981,8 +1046,7 @@ class BookingService {
       const booking = await BookingModel.findOne({
         _id: bookingId,
         guest: userId,
-        // status: { $in: ['PENDING', 'CONFIRMED'] },
-      });
+      }).session(session); // ADD SESSION HERE
 
       if (!booking) {
         throw new HttpException(
@@ -992,10 +1056,13 @@ class BookingService {
       }
 
       // Calculate refund amount based on cancellation policy
-      const refundAmount = await booking.calculateRefundAmount(booking);
+      // const refundAmount = await booking.calculateRefundAmount(booking);
 
       // Find associated earning
-      const earning = await EarningModel.findOne({ booking: bookingId });
+      const earning = await EarningModel.findOne({
+        booking: bookingId,
+      }).session(session); // ADD SESSION HERE
+
       if (earning) {
         // Update earning status to cancelled
         earning.status = 'cancelled';
@@ -1008,9 +1075,9 @@ class BookingService {
         });
       }
 
-      // Process refund if payment was made
+      // Process refund if payment was made - PASS THE SESSION
       if (booking.payment.status === 'PAID') {
-        await refundService.processRefund(booking, userId);
+        await refundService.processRefund(booking._id, userId, session); // PASS SESSION
       }
 
       booking.timeline.push({
@@ -1018,18 +1085,21 @@ class BookingService {
         message: `Booking cancelled by guest: ${reason}`,
       });
 
-      await booking.save();
+      await booking.save({ session }); // ADD SESSION HERE
+
       await session.commitTransaction();
-      // Send notifications
-      // TODO: Implement sendCancellationNotifications method
+
+      // Send notifications (after commit)
       await this.sendCancellationNotifications(booking);
 
       // Cancel all reminders
-      await bookingQueue.cancelAllReminders(id);
+      await bookingQueue.cancelAllReminders(bookingId); // Fix: use bookingId not id
 
       return booking;
     } catch (error) {
-      await session.abortTransaction();
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       logger.error('Error handling booking cancellation', {
         bookingId,
         error,
