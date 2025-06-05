@@ -106,7 +106,7 @@ class RefundService {
       await payment.save({ session });
 
       // Update booking status
-      booking.status = BookingStatus.CANCELED;
+      booking.status = BookingStatus.CANCELLED;
       booking.cancellation = {
         cancelledBy: userId,
         cancelledAt: new Date(),

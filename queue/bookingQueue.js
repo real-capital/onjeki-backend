@@ -224,8 +224,8 @@
 //     await bookingQueue.removeJobs(`check-in-${bookingId}`);
 //     await bookingQueue.removeJobs(`check-out-${bookingId}`);
 
-//     logger.info(`All reminders canceled for booking ${bookingId}`);
-//     return { status: 'success', message: 'All reminders canceled' };
+//     logger.info(`All reminders cancelled for booking ${bookingId}`);
+//     return { status: 'success', message: 'All reminders cancelled' };
 //   } catch (error) {
 //     logger.error(`Error canceling reminders for booking ${bookingId}:`, error);
 //     throw error;
@@ -595,8 +595,8 @@ export const cancelAllReminders = async (bookingId) => {
     await bookingQueue.removeJobs(`check-out-${bookingId}`);
     await bookingQueue.removeJobs(`test-reminder-${bookingId}`);
 
-    logger.info(`All reminders canceled for booking ${bookingId}`);
-    return { status: 'success', message: 'All reminders canceled' };
+    logger.info(`All reminders cancelled for booking ${bookingId}`);
+    return { status: 'success', message: 'All reminders cancelled' };
   } catch (error) {
     logger.error(`Error canceling reminders for booking ${bookingId}:`, error);
     throw error;

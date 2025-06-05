@@ -357,7 +357,7 @@ class BookingController {
 
     // Update booking status
     const booking = payment.booking;
-    booking.status = BookingStatus.CANCELED;
+    booking.status = BookingStatus.CANCELLED;
     booking.cancellation = {
       ...booking.cancellation,
       refundAmount: data.amount / 100, // Convert from kobo
