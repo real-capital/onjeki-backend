@@ -994,8 +994,6 @@ class BookingService {
       // Calculate refund amount based on cancellation policy
       const refundAmount = await booking.calculateRefundAmount(booking);
 
-
-
       // Find associated earning
       const earning = await EarningModel.findOne({ booking: bookingId });
       if (earning) {
@@ -1009,12 +1007,12 @@ class BookingService {
           bookingId,
         });
       }
- 
+
       // Process refund if payment was made
       if (booking.payment.status === 'PAID') {
         await refundService.processRefund(booking, userId);
       }
-     
+
       booking.timeline.push({
         status: 'CANCELLED',
         message: `Booking cancelled by guest: ${reason}`,
@@ -1407,8 +1405,8 @@ class BookingService {
       // Update the earning status to available
       const earningService = new EarningService();
       await earningService.processBookingEarnings(bookingId, session);
-      // const property = await PropertyModel.findById(booking.property);
-      // await property.removeBookedDates(bookingId);
+      const property = await PropertyModel.findById(booking.property);
+      await property.removeBookedDates(bookingId);
 
       await session.commitTransaction();
 
