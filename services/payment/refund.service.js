@@ -101,22 +101,22 @@ class RefundService {
       console.log(refundResponse);
 
       // Update payment status
-      payment.status = 'REFUNDED';
+      payment.status = 'PROCESSING_REFUND';
       payment.refundedAt = new Date();
       await payment.save({ session });
 
       // Update booking status
-      booking.status = BookingStatus.CANCELLED;
+      booking.status = BookingStatus.CANCELED;
       booking.cancellation = {
         cancelledBy: userId,
         cancelledAt: new Date(),
         refundAmount,
         refundPercentage,
-        refundStatus: 'Completed',
+        refundStatus: 'Processing',
       };
       booking.timeline.push({
         status: 'REFUND_INITIATED',
-        message: `Refund processed: ${refundPercentage}% of total amount`,
+        message: `Refund initiated: ${refundPercentage}% of total amount`,
       });
       await booking.save({ session });
 

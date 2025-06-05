@@ -1055,9 +1055,6 @@ class BookingService {
         );
       }
 
-      // Calculate refund amount based on cancellation policy
-      // const refundAmount = await booking.calculateRefundAmount(booking);
-
       // Find associated earning
       const earning = await EarningModel.findOne({
         booking: bookingId,

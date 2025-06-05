@@ -186,6 +186,7 @@ const bookingSchema = new Schema(
             'CHECKED_OUT',
             'COMPLETED',
             'REFUND_INITIATED',
+            'REFUND_COMPLETED',
           ],
         },
         message: String,

@@ -342,7 +342,7 @@ class BookingController {
 
   async handleRefundProcessed(data) {
     const payment = await PaymentModel.findOne({
-      transactionReference: data.transaction_reference,
+      transactionReference: data.reference,
     }).populate('booking');
 
     if (!payment) {
@@ -359,10 +359,15 @@ class BookingController {
     const booking = payment.booking;
     booking.status = BookingStatus.CANCELED;
     booking.cancellation = {
+      ...booking.cancellation,
       refundAmount: data.amount / 100, // Convert from kobo
-      refundStatus: 'Processed',
+      refundStatus: 'Completed',
       refundedAt: new Date(),
     };
+    booking.timeline.push({
+      status: 'REFUND_COMPLETED',
+      message: `Refund completed successfully`,
+    });
     await booking.save();
     await webhookMonitorService.logWebhookEvent(
       'PAYSTACK',
