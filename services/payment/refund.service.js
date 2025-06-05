@@ -4,6 +4,7 @@ import BookingModel from '../../models/booking.model.js';
 import PaymentModel from '../../models/paymentModel.js';
 import mongoose from 'mongoose';
 import emailService from '../../services/email/otpMail.service.js';
+import { BookingStatus } from '../../enum/booking.enum.js';
 
 class RefundService {
   constructor() {
