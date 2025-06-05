@@ -341,42 +341,78 @@ class BookingController {
   }
 
   async handleRefundProcessed(data) {
-    const payment = await PaymentModel.findOne({
-      transactionReference: data.reference,
-    }).populate('booking');
+    try {
+      const transactionRef = data.transaction_reference;
 
-    if (!payment) {
-      throw new Error('Payment not found');
+      if (!transactionRef) {
+        throw new Error('Transaction reference not found in webhook data');
+      }
+
+      const payment = await PaymentModel.findOne({
+        transactionReference: transactionRef,
+      })
+        .populate('booking')
+        .session(session);
+
+      if (!payment) {
+        throw new Error(`Payment not found for reference: ${transactionRef}`);
+      }
+
+      // Update payment status
+      payment.status = 'REFUNDED';
+      payment.refundedAt = new Date();
+      payment.gatewayResponse = data;
+      await payment.save();
+
+      // Update booking status
+      const booking = payment.booking;
+      booking.status = BookingStatus.CANCELLED;
+      booking.cancellation = {
+        ...booking.cancellation,
+        refundAmount: parseFloat(data.amount) / 100, // Convert from kobo
+        refundStatus: 'Completed',
+        refundedAt: new Date(),
+      };
+      booking.timeline.push({
+        status: 'REFUND_COMPLETED',
+        message: `Refund of ₦${
+          parseFloat(data.amount) / 100
+        } completed successfully`,
+      });
+      await booking.save();
+      await webhookMonitorService.logWebhookEvent(
+        'PAYSTACK',
+        'refund.processed',
+        data,
+        { success: true }
+      );
+
+      logger.info('Refund webhook processed successfully', {
+        paymentId: payment._id,
+        bookingId: booking._id,
+        refundAmount: parseFloat(data.amount) / 100,
+        refundReference: data.refund_reference,
+      });
+    } catch (error) {
+      logger.error('Error in handleRefundProcessed', {
+        error: error.message,
+        transactionReference: data.transaction_reference,
+        refundReference: data.refund_reference,
+      });
+
+      // Log failed webhook
+      await webhookMonitorService.logWebhookEvent(
+        'PAYSTACK',
+        'refund.processed',
+        data,
+        {
+          success: false,
+          error: error.message,
+        }
+      );
+      throw error;
     }
-
-    // Update payment status
-    payment.status = 'REFUNDED';
-    payment.refundedAt = new Date();
-    payment.gatewayResponse = data;
-    await payment.save();
-
-    // Update booking status
-    const booking = payment.booking;
-    booking.status = BookingStatus.CANCELLED;
-    booking.cancellation = {
-      ...booking.cancellation,
-      refundAmount: data.amount / 100, // Convert from kobo
-      refundStatus: 'Completed',
-      refundedAt: new Date(),
-    };
-    booking.timeline.push({
-      status: 'REFUND_COMPLETED',
-      message: `Refund completed successfully`,
-    });
-    await booking.save();
-    await webhookMonitorService.logWebhookEvent(
-      'PAYSTACK',
-      'charge.refund',
-      data,
-      { success: true }
-    );
   }
-
   // Helper functions for webhook event handling
   async handleChargeSuccess(chargeData) {
     try {
