@@ -130,6 +130,7 @@ class BookingController {
       }
 
       const event = req.body;
+      console.log(event);
 
       // Enhanced event handling
       switch (event.event) {
@@ -140,7 +141,9 @@ class BookingController {
           await this.handleChargeFailed(event.data);
           break;
         case 'refund.processed':
+          logger.info('About to handle refund.processed');
           await this.handleRefundProcessed(event.data);
+          logger.info('Successfully handled refund.processed');
           break;
         case 'subscription.create':
           await this.handleSubscriptionCreation(event.data);
@@ -163,6 +166,7 @@ class BookingController {
 
       res.status(200).json({ status: 'success' });
     } catch (error) {
+      console.log(error);
       if (error.message.includes('transfer')) {
         logger.error('Error processing transfer webhook', {
           error,
@@ -341,6 +345,7 @@ class BookingController {
   }
 
   async handleRefundProcessed(data) {
+    console.log(data);
     try {
       const transactionRef = data.transaction_reference;
 
@@ -350,9 +355,7 @@ class BookingController {
 
       const payment = await PaymentModel.findOne({
         transactionReference: transactionRef,
-      })
-        .populate('booking')
-        .session(session);
+      }).populate('booking');
 
       if (!payment) {
         throw new Error(`Payment not found for reference: ${transactionRef}`);
@@ -394,6 +397,8 @@ class BookingController {
         refundReference: data.refund_reference,
       });
     } catch (error) {
+      console.log(error);
+      console.error('Error processing refund webhook', error);
       logger.error('Error in handleRefundProcessed', {
         error: error.message,
         transactionReference: data.transaction_reference,
@@ -452,20 +457,20 @@ class BookingController {
     }
   }
 
-  async handleRefundProcessed(refundData) {
-    const payment = await PaymentModel.findOne({
-      transactionReference: refundData.transaction_reference,
-    }).populate('booking');
+  // async handleRefundProcessed(refundData) {
+  //   const payment = await PaymentModel.findOne({
+  //     transactionReference: refundData.transaction_reference,
+  //   }).populate('booking');
 
-    if (!payment) {
-      logger.warn('Payment not found for refund', {
-        reference: refundData.transaction_reference,
-      });
-      return;
-    }
+  //   if (!payment) {
+  //     logger.warn('Payment not found for refund', {
+  //       reference: refundData.transaction_reference,
+  //     });
+  //     return;
+  //   }
 
-    await this.bookingService.processRefund(payment.booking._id);
-  }
+  //   await this.bookingService.processRefund(payment.booking._id);
+  // }
 
   // Convert methods to arrow functions to automatically bind them
   calculatePrice = async (req, res, next) => {
