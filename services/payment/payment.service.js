@@ -1,7 +1,7 @@
 // services/payment/paystack.service.js
 import axios from 'axios';
 import crypto from 'crypto';
-import HttpException from '../../utils/exception';
+import HttpException from '../../utils/exception.js';
 
 class PaystackService {
   constructor() {
