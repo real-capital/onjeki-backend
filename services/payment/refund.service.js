@@ -112,7 +112,7 @@ class RefundService {
         cancelledAt: new Date(),
         refundAmount,
         refundPercentage,
-        refundStatus: 'COMPLETED',
+        refundStatus: 'Completed',
       };
       booking.timeline.push({
         status: 'REFUND_INITIATED',
