@@ -1056,7 +1056,7 @@ class BookingService {
     try {
       // Send email to host
       // TODO: Implement sendCancellationEmail method
-      await emailService.sendBookingCancellationEmail(booking);
+      // await emailService.sendBookingCancellationEmail(booking);
 
       // Create notification for host
       await NotificationModel.create({

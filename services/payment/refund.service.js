@@ -2,6 +2,8 @@
 import PaystackService from './payment.service.js';
 import BookingModel from '../../models/booking.model.js';
 import PaymentModel from '../../models/paymentModel.js';
+import mongoose from 'mongoose';
+import emailService from '../../services/email/otpMail.service.js';
 
 class RefundService {
   constructor() {
@@ -124,7 +126,7 @@ class RefundService {
 
   async sendRefundNotifications(booking) {
     // Send email to guest about refund
-    await emailService.sendRefundConfirmationEmail(booking);
+    // await emailService.sendRefundConfirmationEmail(booking);
 
     // Create notification record
     await NotificationModel.create({
