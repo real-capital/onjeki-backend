@@ -1009,23 +1009,12 @@ class BookingService {
           bookingId,
         });
       }
-      // Remove booked dates from property
-      // const property = await PropertyModel.findById(booking.property);
-      // await property.removeBookedDates(bookingId);
-
+ 
       // Process refund if payment was made
       if (booking.payment.status === 'PAID') {
         await refundService.processRefund(booking, userId);
       }
-            // Update booking status
-      // booking.status = BookingStatus.CANCELLED;
-      // booking.cancellation = {
-      //   cancelledBy: userId,
-      //   reason,
-      //   cancelledAt: new Date(),
-      //   refundAmount,
-      //   refundStatus: 'Pending',
-      // };
+     
       booking.timeline.push({
         status: 'CANCELLED',
         message: `Booking cancelled by guest: ${reason}`,

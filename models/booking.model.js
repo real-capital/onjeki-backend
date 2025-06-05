@@ -109,7 +109,7 @@ const bookingSchema = new Schema(
       refundAmount: Number,
       refundStatus: {
         type: String,
-        enum: ['Pending', 'Processed', 'Failed', 'Processing'],
+        enum: ['Pending', 'Processed', 'Failed', 'Processing', 'Completed'],
       },
     },
     specialRequests: String,
