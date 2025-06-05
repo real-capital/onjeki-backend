@@ -170,6 +170,7 @@ class BookingController {
           reference: event.data?.reference,
         });
       } else {
+        logger.error(error);
         logger.error('Error processing webhook', {
           error,
         });
