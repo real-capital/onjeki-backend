@@ -49,6 +49,37 @@ const validateBookingCreation = [
   body('guests').isObject(),
   body('guests.adults').isNumeric(),
 ];
+export const validatePersonalInfo = [
+  body('name')
+    .optional()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Name must be between 2 and 50 characters'),
+  body('username')
+    .optional()
+    .isLength({ min: 2, max: 30 })
+    .withMessage('Username must be between 2 and 30 characters'),
+  body('preferredName')
+    .optional()
+    .isLength({ min: 2, max: 30 })
+    .withMessage('Preferred name must be between 2 and 30 characters'),
+  body('address')
+    .optional()
+    .isLength({ min: 5, max: 200 })
+    .withMessage('Address must be between 5 and 200 characters'),
+];
+
+export const validateEmail = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+];
+
+export const validatePhone = [
+  body('phoneNumber')
+    .isMobilePhone()
+    .withMessage('Please provide a valid phone number'),
+];
 
 export {
   validateCreateAccount,

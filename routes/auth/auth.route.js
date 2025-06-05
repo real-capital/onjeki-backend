@@ -8,8 +8,10 @@ import {
   validateCreateAccount,
   validateOtp,
   validate,
+  validateEmail,
+  validatePhone,
+  validatePersonalInfo,
 } from '../../middlewares/validation.js';
-// import PropertyController from '../../controller/property/property.controller.js';
 import { isAuthenticated } from '../../middlewares/auth.js';
 import { validateImages } from '../../middlewares/image-processing.js';
 import multer from 'multer';
@@ -18,9 +20,7 @@ class AuthRoute extends Route {
   constructor() {
     super(express.Router());
     this.path = '/auth';
-    // this.router = Router();
     this.controller = new AuthController();
-    // this.propController = new PropertyController();
     this.initializeRoute();
   }
 
@@ -95,6 +95,29 @@ class AuthRoute extends Route {
       upload.single('avatar'),
       // validateImages,
       this.controller.updateUserImage
+    );
+    this.router.patch(
+      `${this.path}/personal-info`,
+      isAuthenticated,
+      validatePersonalInfo,
+      validate,
+      this.controller.updatePersonalInfo
+    );
+
+    this.router.patch(
+      `${this.path}/email`,
+      isAuthenticated,
+      validateEmail,
+      validate,
+      this.controller.updateEmail
+    );
+
+    this.router.patch(
+      `${this.path}/phone`,
+      isAuthenticated,
+      validatePhone,
+      validate,
+      this.controller.updatePhoneNumber
     );
   }
 }

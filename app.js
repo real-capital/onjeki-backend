@@ -263,6 +263,7 @@ import { isWorker, isVercel, getEnvironmentInfo } from './utils/environment.js';
 import { scheduleEmailJobs } from './jobs/email-jobs.js';
 import { scheduleEarningJobs } from './jobs/earningJob.js';
 import { subscriptionRenewalJob } from './jobs/subscriptionRenewalJob.js';
+import bookingQueue from './queue/bookingQueue.js';
 
 // Remove these direct imports - they'll be dynamically imported
 // import { scheduleEmailJobs } from './jobs/email-jobs.js';
@@ -412,7 +413,9 @@ class app {
   }
 
   async connectToQueues() {
+   
     try {
+    
       const { connectToAllQueues } = await import('./queue/queueManager.js');
       await connectToAllQueues();
       logger.info('Connected to queues successfully');
@@ -489,7 +492,7 @@ class app {
 scheduleEmailJobs();
 scheduleEarningJobs();
 subscriptionRenewalJob();
-const bookingService = new BookingService();
+
 // bookingService.completeBooking('683da20f106ca150345f200b');
 
 // Only run scheduled jobs if not on Vercel

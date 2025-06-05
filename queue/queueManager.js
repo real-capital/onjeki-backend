@@ -88,6 +88,7 @@ export const connectToAllQueues = async () => {
     if (bookingQueue.bookingQueue) {
       await bookingQueue.bookingQueue.waitUntilReady();
       logger.info('Connected to all Redis queues successfully');
+        //  await bookingQueue.clearQueue();
     }
     return true;
   } catch (error) {
@@ -112,6 +113,7 @@ export const startAllQueuesAndWorkers = async () => {
     const { default: bookingWorker } = await import(
       '../workers/bookingWorker.js'
     );
+ 
 
     await bookingQueue.startBookingQueue();
     logger.info('All queues and workers started successfully');

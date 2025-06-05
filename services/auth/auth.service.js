@@ -105,21 +105,26 @@ class AuthService {
   }
 
   async getUser(userId) {
-    const user = UserModel.findById(userId);
-    if (!user) {
-      throw new HttpException(StatusCodes.NOT_FOUND, 'User Not Found');
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User Not Found');
+      }
+      return user;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
     }
-    return user;
   }
 
   async updateUserName(name, userId) {
     try {
-      // const userId = req.user.id; // Get user ID from token
-
       const user = await UserModel.findById(userId);
       console.log(user);
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
       }
 
       user.name = name;
@@ -134,6 +139,135 @@ class AuthService {
     }
   }
 
+  async updatePersonalInfo(userId, updateData) {
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+
+      // Define allowed fields for update
+      const allowedFields = ['name', 'username', 'address', 'dateOfBirth'];
+      const updateFields = {};
+
+      // Only update allowed fields that are provided
+      allowedFields.forEach((field) => {
+        if (updateData[field] !== undefined) {
+          updateFields[field] = updateData[field];
+        }
+      });
+
+      // Handle preferred name (username) specifically
+      if (updateData.preferredName !== undefined) {
+        updateFields.username = updateData.preferredName;
+      }
+
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        userId,
+        { $set: updateFields },
+        { new: true, runValidators: true }
+      );
+
+      return updatedUser;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+
+  async updateEmail(userId, newEmail) {
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+
+      // Check if email is already in use by another user
+      const existingUser = await UserModel.findOne({
+        email: newEmail.toLowerCase(),
+        _id: { $ne: userId },
+      });
+
+      if (existingUser) {
+        throw new HttpException(
+          StatusCodes.CONFLICT,
+          'Email is already in use'
+        );
+      }
+
+      // If email is different, require verification
+      if (user.email !== newEmail.toLowerCase()) {
+        // Generate OTP for email verification
+        const otp = otpGenerator.generate(6, {
+          digits: true,
+          upperCaseAlphabets: false,
+          lowerCaseAlphabets: false,
+          specialChars: false,
+        });
+
+        const otpExpiration = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const otpRecord = new OtpModel({
+          userId: user._id,
+          otp,
+          expiration: otpExpiration,
+          // purpose: 'email_update',
+          newEmail: newEmail.toLowerCase(),
+        });
+
+        await otpRecord.save();
+
+        // Send OTP to new email
+        await otpEmailService.sendOtp(newEmail, otp);
+
+        return {
+          message: 'OTP sent to new email address for verification',
+          requiresVerification: true,
+        };
+      }
+
+      return {
+        message: 'Email is the same as current email',
+        requiresVerification: false,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+
+  async updatePhoneNumber(userId, phoneNumber) {
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
+      }
+
+      // Update phone number and reset verification status if changed
+      const updateData = { phoneNumber };
+      if (user.phoneNumber !== phoneNumber) {
+        updateData.isPhoneVerified = false;
+      }
+
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+
+      return updatedUser;
+    } catch (error) {
+      throw new HttpException(
+        error.statusCode || StatusCodes.BAD_REQUEST,
+        error.message
+      );
+    }
+  }
+
+  // Also fix your updateUserImage method (there's a bug in the await)
   async updateUserImage(userId, imageFile) {
     const MAX_RETRY_ATTEMPTS = 3;
     try {
@@ -178,7 +312,8 @@ class AuthService {
         }
       }
 
-      user = UserModel.findOneAndUpdate(
+      // Fix: Add await here
+      user = await UserModel.findOneAndUpdate(
         { _id: userId },
         {
           $set: {

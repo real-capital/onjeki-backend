@@ -106,6 +106,64 @@ class AuthController {
       next(error);
     }
   }
+  async updatePersonalInfo(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      const user = await authService.updatePersonalInfo(req.user.id, req.body);
+      res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
+        status: 'success',
+        user,
+        message: 'Personal information updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async updateEmail(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      const result = await authService.updateEmail(req.user.id, req.body.email);
+      res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
+        status: 'success',
+        message: result.message,
+        requiresVerification: result.requiresVerification,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updatePhoneNumber(req, res, next) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
+    }
+
+    try {
+      const user = await authService.updatePhoneNumber(
+        req.user.id,
+        req.body.phoneNumber
+      );
+      res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
+        status: 'success',
+        user,
+        message: 'Phone number updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 
   async startGoogleLogin(req, res) {
     const redirectUri = CALLBACK_URL; // The URL to which Google will redirect the user after login
