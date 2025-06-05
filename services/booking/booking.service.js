@@ -1010,8 +1010,8 @@ class BookingService {
         });
       }
       // Remove booked dates from property
-      const property = await PropertyModel.findById(booking.property);
-      await property.removeBookedDates(bookingId);
+      // const property = await PropertyModel.findById(booking.property);
+      // await property.removeBookedDates(bookingId);
 
       // Process refund if payment was made
       if (booking.payment.status === 'PAID') {

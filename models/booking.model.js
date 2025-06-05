@@ -109,7 +109,7 @@ const bookingSchema = new Schema(
       refundAmount: Number,
       refundStatus: {
         type: String,
-        enum: ['Pending', 'Processed', 'Failed'],
+        enum: ['Pending', 'Processed', 'Failed', 'Processing'],
       },
     },
     specialRequests: String,
@@ -177,12 +177,15 @@ const bookingSchema = new Schema(
             'PENDING_HOST_APPROVAL',
             'PAYMENT_INITIATED',
             'PAYMENT_CONFIRMED',
+            'PAYMENT_FAILED',
+            'PAYMENT_CANCELLED',
             'ACCEPTED',
             'REJECTED',
             'CANCELLED',
             'CHECKED_IN',
             'CHECKED_OUT',
             'COMPLETED',
+            'REFUND_INITIATED',
           ],
         },
         message: String,
@@ -299,7 +302,7 @@ bookingSchema.methods = {
 
       if (refund.success) {
         this.cancellation.refundStatus = 'Processed';
-        this.payment.status = 'Refunded';
+        this.payment.status = 'REFUNDED';
         this.payment.refundedAt = now;
       } else {
         this.cancellation.refundStatus = 'Failed';

@@ -7,6 +7,7 @@ import emailService from '../../services/email/otpMail.service.js';
 import { BookingStatus } from '../../enum/booking.enum.js';
 import HttpException from '../../utils/exception.js';
 import PropertyModel from '../../models/properties.model.js';
+import NotificationModel from '../../models/notifications.model.js';
 
 class RefundService {
   constructor() {
@@ -95,7 +96,7 @@ class RefundService {
         cancelledAt: new Date(),
         refundAmount,
         refundPercentage,
-        refundStatus: 'PROCESSING'
+        refundStatus: 'Processing'
       };
       booking.timeline.push({
         status: 'REFUND_INITIATED',
