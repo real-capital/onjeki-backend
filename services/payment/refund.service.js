@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import emailService from '../../services/email/otpMail.service.js';
 import { BookingStatus } from '../../enum/booking.enum.js';
 import HttpException from '../../utils/exception.js';
+import PropertyModel from '../../models/properties.model.js';
 
 class RefundService {
   constructor() {
