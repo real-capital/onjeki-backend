@@ -994,21 +994,7 @@ class BookingService {
       // Calculate refund amount based on cancellation policy
       const refundAmount = await booking.calculateRefundAmount(booking);
 
-      // Update booking status
-      booking.status = BookingStatus.CANCELLED;
-      booking.cancellation = {
-        cancelledBy: userId,
-        reason,
-        cancelledAt: new Date(),
-        refundAmount,
-        refundStatus: 'Pending',
-      };
-      booking.timeline.push({
-        status: 'CANCELLED',
-        message: `Booking cancelled by guest: ${reason}`,
-      });
 
-      await booking.save();
 
       // Find associated earning
       const earning = await EarningModel.findOne({ booking: bookingId });
@@ -1031,6 +1017,21 @@ class BookingService {
       if (booking.payment.status === 'PAID') {
         await refundService.processRefund(booking, userId);
       }
+            // Update booking status
+      // booking.status = BookingStatus.CANCELLED;
+      // booking.cancellation = {
+      //   cancelledBy: userId,
+      //   reason,
+      //   cancelledAt: new Date(),
+      //   refundAmount,
+      //   refundStatus: 'Pending',
+      // };
+      booking.timeline.push({
+        status: 'CANCELLED',
+        message: `Booking cancelled by guest: ${reason}`,
+      });
+
+      await booking.save();
       await session.commitTransaction();
       // Send notifications
       // TODO: Implement sendCancellationNotifications method

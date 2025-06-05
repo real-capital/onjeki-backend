@@ -1057,9 +1057,6 @@ class PropertyService {
     }
   }
 
-  /**
-   * Update property price with market analysis
-   */
   async suggestPriceOptimization(propertyId, userId) {
     try {
       const property = await PropertyModel.findOne({
