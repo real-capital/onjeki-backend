@@ -36,11 +36,7 @@ class AuthRoute extends Route {
       this.controller.startGoogleLogin
     );
     this.router.get(`${this.path}/google-login`, this.controller.googleLogin);
-    // this.router.post(
-    //   `${this.path}/apple`,
-    //   dtoValidationMiddleware(createUserDto, 'body', 'missing params'),
-    //   this.controller.appleLogin
-    // );
+
     this.router.post(
       `${this.path}/login`,
       validateOtp,

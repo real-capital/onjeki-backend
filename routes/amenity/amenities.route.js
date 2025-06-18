@@ -1,4 +1,3 @@
-// import { Router } from 'express';
 import express from 'express';
 import { Route } from '../../interfaces/route.interface.js';
 
@@ -19,8 +18,7 @@ class AmenitiesRoute extends Route {
       this.controller.createAmenity
     );
     this.router.get(`${this.path}`, this.controller.getAllAmenities);
-      this.router.get(`${this.path}/:id`, this.controller.getAmenityById);
-      
+    this.router.get(`${this.path}/:id`, this.controller.getAmenityById);
   }
 }
 

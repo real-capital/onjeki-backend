@@ -91,114 +91,114 @@ class EarningService {
    * Process booking earnings when a booking is completed
    * This will update the existing earning record, not create a new one
    */
-async processBookingEarnings(bookingId, existingSession = null) {
-  let session = existingSession;
-  let shouldCommit = false;
-  
-  // Only create a new session if one wasn't provided
-  if (!session) {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    shouldCommit = true; // We'll need to commit if we created our own session
-  }
+  async processBookingEarnings(bookingId, existingSession = null) {
+    let session = existingSession;
+    let shouldCommit = false;
 
-  try {
-    // Find the booking
-    const booking = await BookingModel.findById(bookingId)
-      .populate('property')
-      .populate('host')
-      .session(session);
-
-    if (!booking) {
-      throw new Error(`Booking not found: ${bookingId}`);
+    // Only create a new session if one wasn't provided
+    if (!session) {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      shouldCommit = true; // We'll need to commit if we created our own session
     }
 
-    if (booking.status !== BookingStatus.COMPLETED) {
-      throw new Error(`Booking is not completed: ${bookingId}`);
-    }
+    try {
+      // Find the booking
+      const booking = await BookingModel.findById(bookingId)
+        .populate('property')
+        .populate('host')
+        .session(session);
 
-    // Find the existing earning record
-    const earning = await EarningModel.findOne({
-      booking: bookingId,
-    }).session(session);
+      if (!booking) {
+        throw new Error(`Booking not found: ${bookingId}`);
+      }
 
-    if (!earning) {
-      // If no earning exists, create one (fallback, but shouldn't normally happen)
-      logger.warn(
-        `No earning record found for completed booking: ${bookingId}. Creating new record.`
-      );
+      if (booking.status !== BookingStatus.COMPLETED) {
+        throw new Error(`Booking is not completed: ${bookingId}`);
+      }
 
-      const serviceFee =
-        booking.pricing.serviceFee ||
-        booking.pricing.total * this.serviceFeePercentage;
-      const netAmount = booking.pricing.total - serviceFee;
+      // Find the existing earning record
+      const earning = await EarningModel.findOne({
+        booking: bookingId,
+      }).session(session);
 
-      const newEarning = new EarningModel({
-        host: booking.host._id,
-        property: booking.property._id,
-        booking: booking._id,
-        amount: booking.pricing.total,
-        serviceFee: serviceFee,
-        netAmount: netAmount,
-        currency: booking.pricing.currency || 'NGN',
-        status: 'pending',
-        availableDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
+      if (!earning) {
+        // If no earning exists, create one (fallback, but shouldn't normally happen)
+        logger.warn(
+          `No earning record found for completed booking: ${bookingId}. Creating new record.`
+        );
 
-      await newEarning.save({ session });
+        const serviceFee =
+          booking.pricing.serviceFee ||
+          booking.pricing.total * this.serviceFeePercentage;
+        const netAmount = booking.pricing.total - serviceFee;
 
-      // Update host record
-      await UserModel.findByIdAndUpdate(
-        booking.host._id,
-        { $inc: { 'hostProfile.totalEarnings': netAmount } },
-        { session }
-      );
+        const newEarning = new EarningModel({
+          host: booking.host._id,
+          property: booking.property._id,
+          booking: booking._id,
+          amount: booking.pricing.total,
+          serviceFee: serviceFee,
+          netAmount: netAmount,
+          currency: booking.pricing.currency || 'NGN',
+          status: 'pending',
+          availableDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        });
+
+        await newEarning.save({ session });
+
+        // Update host record
+        await UserModel.findByIdAndUpdate(
+          booking.host._id,
+          { $inc: { 'hostProfile.totalEarnings': netAmount } },
+          { session }
+        );
+
+        // Only commit if we created our own transaction
+        if (shouldCommit) {
+          await session.commitTransaction();
+        }
+
+        return newEarning;
+      }
+
+      // Ensure availableDate is set correctly (24 hours from now)
+      earning.availableDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // If you want to ensure the status stays as pending, uncomment:
+      // earning.status = 'pending';
+
+      await earning.save({ session });
+
+      // Update host record with earning information if not already done
+      if (!booking.host.hostProfile?.totalEarnings) {
+        await UserModel.findByIdAndUpdate(
+          booking.host._id,
+          { $inc: { 'hostProfile.totalEarnings': earning.netAmount } },
+          { session }
+        );
+      }
 
       // Only commit if we created our own transaction
       if (shouldCommit) {
         await session.commitTransaction();
       }
-      
-      return newEarning;
-    }
 
-    // Ensure availableDate is set correctly (24 hours from now)
-    earning.availableDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    // If you want to ensure the status stays as pending, uncomment:
-    // earning.status = 'pending';
-
-    await earning.save({ session });
-
-    // Update host record with earning information if not already done
-    if (!booking.host.hostProfile?.totalEarnings) {
-      await UserModel.findByIdAndUpdate(
-        booking.host._id,
-        { $inc: { 'hostProfile.totalEarnings': earning.netAmount } },
-        { session }
-      );
-    }
-
-    // Only commit if we created our own transaction
-    if (shouldCommit) {
-      await session.commitTransaction();
-    }
-    
-    return earning;
-  } catch (error) {
-    // Only abort if we created our own transaction
-    if (shouldCommit) {
-      await session.abortTransaction();
-    }
-    logger.error('Error processing booking earnings', { error, bookingId });
-    throw error;
-  } finally {
-    // Only end session if we created it
-    if (shouldCommit) {
-      session.endSession();
+      return earning;
+    } catch (error) {
+      // Only abort if we created our own transaction
+      if (shouldCommit) {
+        await session.abortTransaction();
+      }
+      logger.error('Error processing booking earnings', { error, bookingId });
+      throw error;
+    } finally {
+      // Only end session if we created it
+      if (shouldCommit) {
+        session.endSession();
+      }
     }
   }
-}
   /**
    * Get host earnings with filtering options
    */
@@ -345,47 +345,63 @@ async processBookingEarnings(bookingId, existingSession = null) {
       status: 'pending',
     };
 
-    const [totalStats, monthlyStats, pendingStats] = await Promise.all([
-      // Total earnings (all time or filtered by period)
-      EarningModel.aggregate([
-        { $match: period === 'all' ? totalQuery : baseQuery },
-        {
-          $group: {
-            _id: null,
-            totalEarnings: { $sum: '$amount' },
-            totalServiceFees: { $sum: '$serviceFee' },
-            totalNetAmount: { $sum: '$netAmount' },
-            count: { $sum: 1 },
+    const [totalStats, monthlyStats, pendingStats, paidStats] =
+      await Promise.all([
+        // Total earnings (all time or filtered by period)
+        EarningModel.aggregate([
+          { $match: period === 'all' ? totalQuery : baseQuery },
+          {
+            $group: {
+              _id: null,
+              totalEarnings: { $sum: '$amount' },
+              totalServiceFees: { $sum: '$serviceFee' },
+              totalNetAmount: { $sum: '$netAmount' },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ]),
+        ]),
 
-      // Current month earnings (always show current month regardless of period)
-      EarningModel.aggregate([
-        { $match: monthlyQuery },
-        {
-          $group: {
-            _id: null,
-            monthlyEarnings: { $sum: '$amount' },
-            monthlyServiceFees: { $sum: '$serviceFee' },
-            monthlyNetAmount: { $sum: '$netAmount' },
-            count: { $sum: 1 },
+        // Current month earnings (always show current month regardless of period)
+        EarningModel.aggregate([
+          { $match: monthlyQuery },
+          {
+            $group: {
+              _id: null,
+              monthlyEarnings: { $sum: '$amount' },
+              monthlyServiceFees: { $sum: '$serviceFee' },
+              monthlyNetAmount: { $sum: '$netAmount' },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ]),
+        ]),
 
-      // Pending earnings (filtered by period if specified)
-      EarningModel.aggregate([
-        { $match: pendingQuery },
-        {
-          $group: {
-            _id: null,
-            pendingAmount: { $sum: '$netAmount' },
-            count: { $sum: 1 },
+        // Pending earnings (filtered by period if specified)
+        EarningModel.aggregate([
+          { $match: pendingQuery },
+          {
+            $group: {
+              _id: null,
+              pendingAmount: { $sum: '$netAmount' },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ]),
-    ]);
+        ]),
+        EarningModel.aggregate([
+          {
+            $match: {
+              ...baseQuery,
+              status: { $in: ['paid', 'completed'] }, // Adjust status values as needed
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              paidAmount: { $sum: '$netAmount' },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+      ]);
 
     return {
       total: totalStats[0] || {
@@ -401,6 +417,7 @@ async processBookingEarnings(bookingId, existingSession = null) {
         count: 0,
       },
       pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
+      paid: paidStats[0] || { paidAmount: 0, count: 0 },
       // Add the period used for filtering to the response
       periodUsed: period || 'all',
     };
