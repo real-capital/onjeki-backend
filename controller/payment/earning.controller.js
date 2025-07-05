@@ -5,15 +5,7 @@ import { logger } from '../../utils/logger.js';
 // controllers/earningController.js
 const earningService = new EarningService();
 class EarningController {
-  //   constructor(earningService) {
-  //     earningService = earningService;
-  //   }
 
-  /**
-   * Get host earnings
-   */
-
-  // In your earnings controller file
   getHostEarnings = async (req, res, next) => {
     try {
       const hostId = req.user.id;

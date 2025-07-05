@@ -268,30 +268,7 @@ class PropertyController {
     }
   }
 
-  // async updateProperty(req, res) {
-  //   const errors = validationResult(req);
-  //   if (!errors.isEmpty()) {
-  //     return next(new HttpException(StatusCodes.BAD_REQUEST, errors.array()));
-  //   }
-  //   try {
-  //     const propertyId = req.params.id;
-  //     const userId = req.user.id; // Assuming you have auth middleware
-  //     const propertyData = req.body;
 
-  //     const updatedProperty = await propertyService.updateProperty(
-  //       propertyId,
-  //       propertyData,
-  //       userId
-  //     );
-
-  //     res.status(StatusCodes.OK).json({
-  //       status: 'success',
-  //       data: updatedProperty,
-  //     });
-  //   } catch (error) {
-  //     next(error);
-  //   }
-  // }
 
   getListingByuser = async (req, res, next) => {
     try {
@@ -471,18 +448,15 @@ class PropertyController {
     if (listStatus) filters.listStatus = listStatus;
 
     if (type) filters.type = type;
-    // if (buildingType) filters.buildingType = buildingType;
     if (space) filters.space = space;
     if (listStatus) filters.listStatus = listStatus;
-    // In your parseSearchParams method:
-
-    // In your parseSearchParams method:
+   
     if (search) {
-      filters.search = search; // Keep the regular search
+      filters.search = search; 
 
       console.log('Searching for:', search);
 
-      // Step 1: Check if search term matches any amenity names
+
       const matchingAmenities = await amenityModel
         .find({
           amenity: new RegExp(search, 'i'),
@@ -491,26 +465,25 @@ class PropertyController {
 
       console.log('Matching amenities:', matchingAmenities);
 
-      // Step 2: Check if search term matches any building types
+     
       const matchingBuildingTypes = await BuildingModel.find({
         buildingType: new RegExp(search, 'i'),
       }).select('_id buildingType');
 
       console.log('Matching building types:', matchingBuildingTypes);
 
-      // If we found matches, include them in the appropriate filter conditions
+
       if (matchingAmenities.length > 0 || matchingBuildingTypes.length > 0) {
-        // We'll use $or at the top level to combine with the existing search
+     
         filters.$or = filters.$or || [];
 
-        // Add amenities condition if needed
         if (matchingAmenities.length > 0) {
           const amenityIds = matchingAmenities.map((doc) => doc._id);
           filters.$or.push({ amenities: { $in: amenityIds } });
           console.log('Added amenity IDs to $or:', amenityIds);
         }
 
-        // Add building type condition if needed
+
         if (matchingBuildingTypes.length > 0) {
           const buildingTypeIds = matchingBuildingTypes.map((doc) => doc._id);
           filters.$or.push({ buildingType: { $in: buildingTypeIds } });

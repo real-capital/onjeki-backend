@@ -9,7 +9,6 @@ class SearchService {
     // Build the query with the remaining filters
     const query = this.buildSearchQuery(searchFilters);
 
-    // Only exclude owner's properties if excludeOwnerId is provided
     if (excludeOwnerId) {
       query.owner = { $ne: excludeOwnerId };
     }

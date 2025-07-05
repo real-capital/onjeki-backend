@@ -9,9 +9,7 @@ class PayoutController {
     this.payoutService = new PayoutService();
   }
 
-  /**
-   * Request a payout
-   */
+
   requestPayout = async (req, res, next) => {
     try {
       const hostId = req.user._id;

@@ -372,7 +372,7 @@ class BookingController {
       booking.status = BookingStatus.CANCELLED;
       booking.cancellation = {
         ...booking.cancellation,
-        refundAmount: parseFloat(data.amount) / 100, // Convert from kobo
+        refundAmount: parseFloat(data.amount) / 100, 
         refundStatus: 'Completed',
         refundedAt: new Date(),
       };
@@ -457,20 +457,7 @@ class BookingController {
     }
   }
 
-  // async handleRefundProcessed(refundData) {
-  //   const payment = await PaymentModel.findOne({
-  //     transactionReference: refundData.transaction_reference,
-  //   }).populate('booking');
-
-  //   if (!payment) {
-  //     logger.warn('Payment not found for refund', {
-  //       reference: refundData.transaction_reference,
-  //     });
-  //     return;
-  //   }
-
-  //   await this.bookingService.processRefund(payment.booking._id);
-  // }
+ 
 
   // Convert methods to arrow functions to automatically bind them
   calculatePrice = async (req, res, next) => {
@@ -783,9 +770,7 @@ class BookingController {
     }
   };
 
-  /**
-   * Complete a booking after checkout
-   */
+  
   completeBooking = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -808,7 +793,7 @@ class BookingController {
     }
   };
 
-  // controller/booking.controller.js
+
   guestCheckout = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -845,7 +830,7 @@ class BookingController {
       next(error);
     }
   };
-  // controller/booking.controller.js
+
   hostCompleteBooking = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -891,9 +876,7 @@ class BookingController {
     }
   };
 
-  /**
-   * Get host's booking history with earnings data
-   */
+
   /**
    * @route GET /api/bookings/host/earnings
    * @desc Get host's booking history with earnings data
@@ -926,9 +909,7 @@ class BookingController {
     }
   };
 
-  /**
-   * Check host payout eligibility
-   */
+
   checkPayoutEligibility = async (req, res, next) => {
     try {
       const hostId = req.user._id;
@@ -948,9 +929,7 @@ class BookingController {
       next(error);
     }
   };
-  /**
-   * Get host's bookings for today (check-ins and check-outs)
-   */
+ 
   getHostTodayBookings = async (req, res, next) => {
     try {
       const hostId = req.user._id;
@@ -1034,9 +1013,7 @@ class BookingController {
       next(error);
     }
   };
-  /**
-   * Check in a guest
-   */
+  
   checkInGuest = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -1070,9 +1047,7 @@ class BookingController {
       next(error);
     }
   };
-  /**
-   * Check out a guest
-   */
+ 
   checkOutGuest = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -1105,17 +1080,13 @@ class BookingController {
       next(error);
     }
   };
-  /**
-   * Upload photos for check-in or check-out
-   */
+
   uploadBookingPhotos = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
       const hostId = req.user._id;
       const { type } = req.query; // 'checkin' or 'checkout'
 
-      // Handle file uploads - this depends on your file upload middleware
-      // Assuming you're using multer or similar and files are in req.files
       if (!req.files || req.files.length === 0) {
         throw new HttpException(StatusCodes.BAD_REQUEST, 'No photos uploaded');
       }

@@ -98,7 +98,6 @@ class RentOrSalesController {
     const filters = {};
     const sort = `${sortBy}_${sortOrder}`;
 
-    // Add filters only if they exist
     if (listStatus) filters.listStatus = listStatus;
     if (type) filters.type = type;
     if (propertyType) filters.propertyType = propertyType;
@@ -121,19 +120,7 @@ class RentOrSalesController {
       if (country) filters.location.country = country;
     }
 
-    // Amenities
-    // if (amenities) {
-    //   filters.amenities = amenities.split(',').map((id) => id.trim());
-    // }
 
-    // Numeric filters
-    // if (guests) filters.guests = Number(guests);
-    // if (bedrooms) filters.bedrooms = Number(bedrooms);
-
-    // Boolean filters
-    // if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
-    // if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
-    //
     return {
       filters,
       pagination: {

@@ -56,9 +56,8 @@ class PropertyService {
     console.log(images);
     console.log('uploading');
     let uploadedImages = [];
-    let imageUrls = []; // Initialize as an empty array
+    let imageUrls = []; 
     try {
-      // Handle image uploads if present
       if (images && Array.isArray(images)) {
         uploadedImages = await uploadService.uploadMultipleImages(
           images,
@@ -74,7 +73,6 @@ class PropertyService {
 
       return imageUrls;
     } catch (error) {
-      // If there's an error, cleanup any uploaded images
       if (uploadedImages.length > 0) {
         try {
           await Promise.all(
@@ -101,14 +99,12 @@ class PropertyService {
     session.startTransaction();
     let uploadedImages = [];
     try {
-      // Fetch the user to check their verification status
       const user = await UserModel.findById(userId);
 
       if (!user) {
         throw new HttpException(StatusCodes.NOT_FOUND, 'User not found');
       }
 
-      // Handle image uploads if present
       if (propertyData.images && Array.isArray(propertyData.images)) {
         const uploadedImages = await uploadService.uploadMultipleImages(
           propertyData.images,
@@ -128,41 +124,35 @@ class PropertyService {
         };
       }
 
-      // Set listStatus based on user verification
-      let initialListStatus = EListStatus.UNDER_REVIEW;
+    let initialListStatus = EListStatus.UNDER_REVIEW;
 
-      // Check if user is verified (using verification_status or other relevant fields)
-      if (
+     if (
         user.verification_status === 'verified' ||
         (user.isEmailVerified && user.isPhoneVerified)
-        // || user.hostProfile?.superhost === true
-      ) {
+     ) {
         initialListStatus = EListStatus.APPROVED;
       }
 
       const property = new PropertyModel({
         ...propertyData,
         owner: userId,
-        listStatus: initialListStatus, // Set initial status based on verification
+        listStatus: initialListStatus, 
       });
 
       await property.save();
 
-      // Check if this is the user's first property and update hostProfile
       const propertiesCount = await PropertyModel.countDocuments({
         owner: userId,
       });
 
       if (propertiesCount === 1) {
-        // This is their first property - update the user to mark them as a host
         await UserModel.findByIdAndUpdate(
           userId,
           {
             'hostProfile.joinedAt': new Date(),
-            // Set other initial hosting metrics if needed
-            'hostProfile.responseRate': 100, // Initial perfect rate
-            'hostProfile.responseTime': 60, // Initial response time in minutes
-            'hostProfile.acceptanceRate': 100, // Initial perfect rate
+            'hostProfile.responseRate': 100, 
+            'hostProfile.responseTime': 60, 
+            'hostProfile.acceptanceRate': 100, 
           },
           { new: true }
         );
@@ -170,7 +160,6 @@ class PropertyService {
       await session.commitTransaction();
       return property;
     } catch (error) {
-      // If there's an error, cleanup any uploaded images
       if (uploadedImages.length > 0) {
         try {
           await Promise.all(
@@ -198,7 +187,6 @@ class PropertyService {
     console.log('Updating property with data:', updateData);
 
     try {
-      // Convert nested object to dot notation
       const flattenedUpdate = {};
 
       function flatten(obj, prefix = '') {
@@ -253,13 +241,11 @@ class PropertyService {
         );
       }
 
-      // Upload images to cloud storage
       uploadedImages = await uploadService.uploadMultipleImages(
         files,
         `properties/${userId}`
       );
 
-      // Format the image data
       const newImages = await Promise.all(
         uploadedImages.map(async (image) => ({
           url: image.secure_url,
@@ -269,7 +255,6 @@ class PropertyService {
         }))
       );
 
-      // Add new images to existing ones
       const existingImages = property.photo?.images || [];
       property.photo = {
         images: [...existingImages, ...newImages],

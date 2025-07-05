@@ -42,12 +42,7 @@ class PropertyRoute extends Route {
       validate,
       this.rentController.createRentOrSale
     );
-    // this.router.patch(
-    //   `${this.path}/:id`,
-    //   isAuthenticated,
-    //   // uploadMiddleware.array('images'), // If you're handling file uploads
-    //   this.controller.updateProperty
-    // );
+  
 
     this.router.patch(
       `${this.path}/:id`,
