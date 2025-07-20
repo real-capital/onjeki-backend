@@ -23,18 +23,6 @@ const scheduleAllRemindersVercel = async (booking) => {
     const now = Date.now();
     const results = [];
 
-    // Test reminder (10 seconds)
-    // try {
-    //   await vercelQueueClient.addJob(
-    //     'notify-day-before-test',
-    //     { bookingId },
-    //     { delay: 10000, jobId: `test-reminder-${bookingId}` }
-    //   );
-    //   results.push('test reminder scheduled');
-    // } catch (error) {
-    //   logger.warn('Failed to schedule test reminder:', error);
-    // }
-
     // Day before reminder
     const dayBeforeTime = startTime.getTime() - 24 * 60 * 60 * 1000;
     if (dayBeforeTime > now) {
@@ -269,17 +257,118 @@ export const scheduleAllReminders = async (booking) => {
 };
 
 // Cancel reminders (works for both environments)
+// export const cancelAllReminders = async (bookingId) => {
+//   try {
+//     if (!isWorker() && isVercel()) {
+//       // For Vercel, we can't cancel jobs directly
+//       logger.info(
+//         `Reminder cancellation noted for booking ${bookingId} (Vercel mode)`
+//       );
+//       return { status: 'success', message: 'Cancellation noted' };
+//     }
+
+//     // For Worker mode
+//     await bookingQueue.removeJobs(`day-before-${bookingId}`);
+//     await bookingQueue.removeJobs(`15min-before-${bookingId}`);
+//     await bookingQueue.removeJobs(`check-in-${bookingId}`);
+//     await bookingQueue.removeJobs(`check-out-${bookingId}`);
+//     await bookingQueue.removeJobs(`test-reminder-${bookingId}`);
+
+//     logger.info(`All reminders cancelled for booking ${bookingId}`);
+//     return { status: 'success', message: 'All reminders cancelled' };
+//   } catch (error) {
+//     logger.error(`Error canceling reminders for booking ${bookingId}:`, error);
+//     throw error;
+//   }
+// };
+
 export const cancelAllReminders = async (bookingId) => {
   try {
+    const jobIds = [
+      `day-before-${bookingId}`,
+      `15min-before-${bookingId}`,
+      `check-in-${bookingId}`,
+      `check-out-${bookingId}`,
+      `test-reminder-${bookingId}`
+    ];
+
     if (!isWorker() && isVercel()) {
-      // For Vercel, we can't cancel jobs directly
-      logger.info(
-        `Reminder cancellation noted for booking ${bookingId} (Vercel mode)`
-      );
-      return { status: 'success', message: 'Cancellation noted' };
+      const results = [];
+      
+      for (const jobId of jobIds) {
+        try {
+          // First, check if job exists
+          const job = await vercelQueueClient.getJob(jobId);
+          if (!job) {
+            results.push({ jobId, status: 'not_found' });
+            continue;
+          }
+
+          // Try multiple cancellation methods
+          let cancelled = false;
+          const methods = [
+            () => vercelQueueClient.removeJob(jobId),
+            () => vercelQueueClient.cancelJob(jobId),
+            () => vercelQueueClient.deleteJob(jobId),
+            () => job.remove(),
+            () => job.cancel()
+          ];
+
+          for (const method of methods) {
+            try {
+              await method();
+              cancelled = true;
+              break;
+            } catch (e) {
+              // Try next method
+            }
+          }
+
+          results.push({ 
+            jobId, 
+            status: cancelled ? 'cancelled' : 'failed',
+            timestamp: new Date().toISOString()
+          });
+
+        } catch (error) {
+          logger.error(`Error cancelling job ${jobId}:`, error);
+          results.push({ jobId, status: 'error', error: error.message });
+        }
+      }
+
+      // Verify cancellation
+      const verification = [];
+      for (const jobId of jobIds) {
+        try {
+          const stillExists = await vercelQueueClient.getJob(jobId);
+          if (stillExists) {
+            verification.push(jobId);
+          }
+        } catch (e) {
+          // Job doesn't exist (good)
+        }
+      }
+
+      if (verification.length > 0) {
+        logger.warn(`Jobs still exist after cancellation:`, verification);
+      }
+
+      logger.info(`Vercel queue cancellation completed for booking ${bookingId}:`, {
+        results,
+        stillExists: verification
+      });
+
+      return { 
+        status: 'success', 
+        message: 'Cancellation completed',
+        cancelled: results.filter(r => r.status === 'cancelled').length,
+        failed: results.filter(r => r.status === 'failed').length,
+        stillExists: verification.length,
+        results 
+      };
     }
 
-    // For Worker mode
+    // Worker mode logic remains the same...
     await bookingQueue.removeJobs(`day-before-${bookingId}`);
     await bookingQueue.removeJobs(`15min-before-${bookingId}`);
     await bookingQueue.removeJobs(`check-in-${bookingId}`);

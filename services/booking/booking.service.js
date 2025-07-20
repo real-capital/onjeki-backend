@@ -1835,22 +1835,8 @@ class BookingService {
    * This is just a placeholder - implement based on your storage solution
    */
   async uploadFile(file) {
-    // Example implementation for uploading to S3
-    // Replace with your actual file upload logic
     try {
-      // Example using AWS SDK
-      /*
-    const s3 = new AWS.S3();
-    const uploadResult = await s3.upload({
-      Bucket: process.env.AWS_S3_BUCKET,
-      Key: `bookings/${Date.now()}-${file.originalname}`,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-      ACL: 'public-read',
-    }).promise();
-    
-    return uploadResult.Location;
-    */
+   
 
       // For now, return a placeholder URL
       return `https://example.com/uploads/${Date.now()}-${file.originalname}`;
@@ -1957,9 +1943,3 @@ class BookingService {
 }
 
 export default BookingService;
-
-// Cancel existing reminders first
-// await bookingQueue.cancelAllReminders(id);
-
-// Reschedule reminders with new times
-// await bookingQueue.scheduleAllReminders(updatedBooking);
