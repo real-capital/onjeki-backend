@@ -58,6 +58,40 @@ class SubscriptionService {
     }
   }
 
+  async updateUserAndSubscriptionPlan(userId, plan, subscriptionStatus = null) {
+    try {
+      // Update user plan
+      const user = await UserModel.findById(userId);
+      if (user) {
+        user.plan = plan;
+        await user.save();
+        logger.info('User plan updated', { userId, plan });
+      }
+
+      // Update subscription if status is provided
+      if (subscriptionStatus) {
+        const subscription = await SubscriptionModel.findOne({ user: userId });
+        if (subscription) {
+          subscription.plan = plan;
+          subscription.status = subscriptionStatus;
+          await subscription.save();
+          logger.info('Subscription plan updated', {
+            userId,
+            plan,
+            status: subscriptionStatus,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to update user and subscription plan', {
+        userId,
+        plan,
+        error,
+      });
+      throw error;
+    }
+  }
+
   // Initialize Subscription
   async initializeSubscription(userId, plan) {
     try {
@@ -73,7 +107,12 @@ class SubscriptionService {
         subscription = new SubscriptionModel({
           user: userId,
           plan,
-          status: plan === 'basic' ? 'active' : (plan === 'premium' ? 'trial' : 'pending'),
+          status:
+            plan === 'basic'
+              ? 'active'
+              : plan === 'premium'
+              ? 'trial'
+              : 'pending',
           maxListings: planDetails.maxListings,
         });
 
@@ -86,11 +125,12 @@ class SubscriptionService {
         }
 
         await subscription.save();
+        await this.updateUserPlan(userId, plan);
       } else {
         // Update existing subscription
         subscription.plan = plan;
         subscription.maxListings = planDetails.maxListings;
-        
+
         // Update status based on plan
         if (plan === 'basic') {
           subscription.status = 'active';
@@ -103,13 +143,27 @@ class SubscriptionService {
         } else {
           subscription.status = 'pending';
         }
-        
+
         await subscription.save();
+        await this.updateUserPlan(userId, plan);
       }
 
       return subscription;
     } catch (error) {
       logger.error('Failed to initialize subscription', error);
+      throw error;
+    }
+  }
+  async updateUserPlan(userId, plan) {
+    try {
+      const user = await UserModel.findById(userId);
+      if (user) {
+        user.plan = plan;
+        await user.save();
+        logger.info('User plan updated', { userId, plan });
+      }
+    } catch (error) {
+      logger.error('Failed to update user plan', { userId, plan, error });
       throw error;
     }
   }
@@ -198,14 +252,16 @@ class SubscriptionService {
   async verifyPayment(reference) {
     try {
       console.log('🔍 Verifying payment for reference:', reference);
-      
+
       // Verify Paystack transaction
-      const verificationResult = await paystackService.verifyTransaction(reference);
-      
+      const verificationResult = await paystackService.verifyTransaction(
+        reference
+      );
+
       console.log('💳 Paystack verification result:', {
         status: verificationResult.status,
         amount: verificationResult.amount,
-        metadata: verificationResult.metadata
+        metadata: verificationResult.metadata,
       });
 
       // Find subscription by payment history
@@ -220,12 +276,12 @@ class SubscriptionService {
       console.log('📋 Current subscription before update:', {
         plan: subscription.plan,
         status: subscription.status,
-        maxListings: subscription.maxListings
+        maxListings: subscription.maxListings,
       });
 
       // Get the payment record to find the plan
       const paymentRecord = subscription.paymentHistory.find(
-        payment => payment.transactionReference === reference
+        (payment) => payment.transactionReference === reference
       );
 
       if (!paymentRecord) {
@@ -235,7 +291,7 @@ class SubscriptionService {
       console.log('💰 Payment record:', {
         plan: paymentRecord.plan,
         amount: paymentRecord.amount,
-        status: paymentRecord.status
+        status: paymentRecord.status,
       });
 
       // Check if payment is already successfully processed
@@ -250,16 +306,18 @@ class SubscriptionService {
       }
 
       // Update payment history status
-      paymentRecord.status = verificationResult.status === 'success' ? 'success' : 'failed';
+      paymentRecord.status =
+        verificationResult.status === 'success' ? 'success' : 'failed';
       paymentRecord.date = new Date();
 
       // Check payment status
       if (verificationResult.status === 'success') {
         // Use plan from payment record (most reliable) or fall back to metadata or current plan
-        const planToUpdate = paymentRecord.plan || 
-                            verificationResult.metadata?.plan || 
-                            subscription.plan;
-        
+        const planToUpdate =
+          paymentRecord.plan ||
+          verificationResult.metadata?.plan ||
+          subscription.plan;
+
         console.log('🎯 Plan to update to:', planToUpdate);
 
         // Update subscription details
@@ -273,16 +331,18 @@ class SubscriptionService {
 
         await subscription.save();
 
+        await this.updateUserPlan(subscription.user, planToUpdate);
+
         console.log('✅ Subscription after update:', {
           plan: subscription.plan,
           status: subscription.status,
-          maxListings: subscription.maxListings
+          maxListings: subscription.maxListings,
         });
 
         logger.info('Subscription updated successfully', {
           reference,
           plan: planToUpdate,
-          status: 'active'
+          status: 'active',
         });
 
         return {
@@ -333,6 +393,8 @@ class SubscriptionService {
       subscription.status = 'cancelled';
       await subscription.save();
 
+      await this.updateUserPlan(userId, 'basic');
+
       return {
         success: true,
         message: 'Subscription cancelled successfully',
@@ -355,6 +417,8 @@ class SubscriptionService {
       if (subscription.plan === 'basic') {
         subscription.status = 'active'; // ✅ Fixed: basic should be active, not pending
         await subscription.save();
+
+        await this.updateUserPlan(userId, 'basic');
         return {
           success: true,
           message: 'Subscription reactivated',
@@ -383,6 +447,8 @@ class SubscriptionService {
           maxListings: 1,
         });
         await subscription.save();
+
+        await this.updateUserPlan(userId, 'basic');
       }
 
       // Basic plan listing limit check
@@ -415,6 +481,11 @@ class SubscriptionService {
         subscription.currentPeriodEnd &&
         new Date() > subscription.currentPeriodEnd
       ) {
+        await this.updateUserPlan(userId, 'basic');
+        subscription.plan = 'basic';
+        subscription.status = 'active';
+        subscription.maxListings = 1;
+        await subscription.save();
         return {
           eligible: false,
           reason: 'Subscription expired',
@@ -455,10 +526,12 @@ class SubscriptionService {
         subscription = new SubscriptionModel({
           user: userId,
           plan: 'basic',
-          status: 'active',  // ✅ Basic is free, so immediately active
+          status: 'active', // ✅ Basic is free, so immediately active
           maxListings: 1,
         });
         await subscription.save();
+
+        await this.updateUserPlan(userId, 'basic');
       }
 
       return subscription;
@@ -625,6 +698,7 @@ class SubscriptionService {
   async handleRenewalFailure(subscription) {
     subscription.status = 'expired';
     await subscription.save();
+    await this.updateUserPlan(subscription.user, 'basic');
 
     // Send notification to user about failed renewal
     // Implement email or SMS notification logic here
