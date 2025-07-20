@@ -409,11 +409,6 @@ class BookingService {
     }
   }
 
-  // async getCallback(status, reference) {
-
-  // }
-
-  // Method to verify payment
   async verifyPayment(reference, userId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -1851,95 +1846,7 @@ class BookingService {
       );
     }
   }
-  /**
-   * Send notifications after checkout
-   */
-  // async sendCheckoutNotifications(booking) {
-  //   try {
-  //     // Notify guest
-  //     await notificationService.sendNotification({
-  //       type: 'CHECKOUT_COMPLETE',
-  //       recipient: booking.guest._id,
-  //       title: 'Checkout Complete',
-  //       message: `You've successfully checked out of ${booking.property.title}. Thank you for staying!`,
-  //       booking: booking._id,
-  //     });
 
-  //     // Notify host
-  //     await notificationService.sendNotification({
-  //       type: 'GUEST_CHECKED_OUT',
-  //       recipient: booking.host,
-  //       title: 'Guest Checked Out',
-  //       message: `Your guest has checked out from ${booking.property.title}.`,
-  //       booking: booking._id,
-  //     });
-
-  //     // Optionally send emails
-  //     await this.sendCheckoutEmails(booking);
-
-  //     logger.info('Checkout notifications sent successfully', {
-  //       bookingId: booking._id,
-  //       guestId: booking.guest._id,
-  //       hostId: booking.host,
-  //     });
-  //   } catch (error) {
-  //     logger.error('Error sending checkout notifications', {
-  //       error,
-  //       bookingId: booking._id,
-  //     });
-  //     // Don't throw error here - notifications are supplementary
-  //   }
-  // }
-
-  /**
-   * Send checkout emails
-   */
-  // async sendCheckoutEmails(booking) {
-  //   try {
-  //     // Guest email
-  //     await emailService.sendEmail({
-  //       to: booking.guest.email,
-  //       subject: 'Checkout Complete - Thank You for Staying!',
-  //       template: 'checkout-complete-guest',
-  //       templateData: {
-  //         guestName: booking.guest.name,
-  //         propertyName: booking.property.title,
-  //         checkInDate: booking.checkIn,
-  //         checkOutDate: booking.checkOut,
-  //         bookingId: booking._id,
-  //         totalAmount: booking.pricing.total,
-  //         reviewLink: `${process.env.FRONTEND_URL}/bookings/${booking._id}/review`,
-  //       },
-  //     });
-
-  //     // Host email
-  //     await emailService.sendEmail({
-  //       to: booking.host.email,
-  //       subject: 'Guest Has Checked Out',
-  //       template: 'checkout-complete-host',
-  //       templateData: {
-  //         hostName: booking.host.name,
-  //         guestName: booking.guest.name,
-  //         propertyName: booking.property.title,
-  //         checkInDate: booking.checkIn,
-  //         checkOutDate: booking.checkOut,
-  //         bookingId: booking._id,
-  //         totalAmount: booking.pricing.total,
-  //         earnings: booking.pricing.total - booking.pricing.serviceFee,
-  //       },
-  //     });
-
-  //     logger.info('Checkout emails sent successfully', {
-  //       bookingId: booking._id,
-  //     });
-  //   } catch (error) {
-  //     logger.error('Error sending checkout emails', {
-  //       error,
-  //       bookingId: booking._id,
-  //     });
-  //     // Don't throw error - emails are supplementary
-  //   }
-  // }
 }
 
 export default BookingService;

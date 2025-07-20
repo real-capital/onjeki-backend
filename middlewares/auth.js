@@ -5,7 +5,7 @@ import Jwt from '../utils/jwt.js'; // Adjust the path if necessary
 
 export const isAuthenticated = async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  console.log(token);
+  // console.log(token);
 
   if (!token) {
     return res.status(StatusCodes.UNAUTHORIZED).json({

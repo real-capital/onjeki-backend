@@ -372,7 +372,7 @@ class BookingController {
       booking.status = BookingStatus.CANCELLED;
       booking.cancellation = {
         ...booking.cancellation,
-        refundAmount: parseFloat(data.amount) / 100, 
+        refundAmount: parseFloat(data.amount) / 100,
         refundStatus: 'Completed',
         refundedAt: new Date(),
       };
@@ -456,8 +456,6 @@ class BookingController {
       throw error;
     }
   }
-
- 
 
   // Convert methods to arrow functions to automatically bind them
   calculatePrice = async (req, res, next) => {
@@ -564,6 +562,7 @@ class BookingController {
   async callback(req, res) {
     try {
       const { reference, status } = req.query;
+      console.log('reference');
       console.log(reference);
 
       if (!reference) {
@@ -592,21 +591,40 @@ class BookingController {
         if (subscription) {
           // Subscription-related callback
           if (verificationResult.status === 'success') {
-            // Update subscription
+            // Get plan from metadata
+            const planFromMetadata = verificationResult.metadata?.plan;
+
+            // Update subscription with the new plan
             subscription.status = 'active';
             subscription.currentPeriodStart = new Date();
             subscription.currentPeriodEnd = new Date(
-              Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+              Date.now() + 30 * 24 * 60 * 60 * 1000
             );
-            subscription.renewalTransactionReference = null;
-            subscription.manualRenewalTransactionReference = null;
+
+            // Update plan if provided in metadata
+            if (
+              planFromMetadata &&
+              ['premium', 'enterprise'].includes(planFromMetadata)
+            ) {
+              subscription.plan = planFromMetadata;
+              subscription.maxListings =
+                subscriptionService.getMaxListings(planFromMetadata);
+            }
+
+            // Update payment history
+            const paymentIndex = subscription.paymentHistory.findIndex(
+              (p) => p.transactionReference === reference
+            );
+            if (paymentIndex !== -1) {
+              subscription.paymentHistory[paymentIndex].status = 'success';
+            }
+
             await subscription.save();
 
             redirectUrl = `onjeki://app/payment?reference=${reference}&status=success&type=subscription`;
           } else {
-            subscription.status = 'renewal_failed';
+            subscription.status = 'payment_failed';
             await subscription.save();
-
             redirectUrl = `onjeki://app/payment?reference=${reference}&status=failed&type=subscription`;
           }
         } else {
@@ -770,7 +788,6 @@ class BookingController {
     }
   };
 
-  
   completeBooking = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -792,7 +809,6 @@ class BookingController {
       next(error);
     }
   };
-
 
   guestCheckout = async (req, res, next) => {
     try {
@@ -876,7 +892,6 @@ class BookingController {
     }
   };
 
-
   /**
    * @route GET /api/bookings/host/earnings
    * @desc Get host's booking history with earnings data
@@ -909,7 +924,6 @@ class BookingController {
     }
   };
 
-
   checkPayoutEligibility = async (req, res, next) => {
     try {
       const hostId = req.user._id;
@@ -929,7 +943,7 @@ class BookingController {
       next(error);
     }
   };
- 
+
   getHostTodayBookings = async (req, res, next) => {
     try {
       const hostId = req.user._id;
@@ -1013,7 +1027,7 @@ class BookingController {
       next(error);
     }
   };
-  
+
   checkInGuest = async (req, res, next) => {
     try {
       const bookingId = req.params.id;
@@ -1047,7 +1061,7 @@ class BookingController {
       next(error);
     }
   };
- 
+
   checkOutGuest = async (req, res, next) => {
     try {
       const bookingId = req.params.id;

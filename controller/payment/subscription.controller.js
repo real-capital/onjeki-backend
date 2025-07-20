@@ -1,3 +1,6 @@
+
+
+
 import SubscriptionService from '../../services/payment/subscription.service.js';
 
 const subscriptionService = new SubscriptionService();
@@ -46,7 +49,7 @@ class SubscriptionController {
       const { plan } = req.body;
       const userId = req.user.id;
 
-      const paymentDetails = await subscriptionService.initiatePayment(
+      const paymentDetails = await subscriptionService.initiateSubscriptionPayment(
         userId,
         plan
       );
@@ -78,6 +81,69 @@ class SubscriptionController {
     }
   }
 
+  // Get Current Subscription
+  async getCurrentSubscription(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const subscription = await subscriptionService.getCurrentSubscription(userId);
+
+      res.status(200).json({
+        success: true,
+        data: subscription,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Get Subscription History
+  async getSubscriptionHistory(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const history = await subscriptionService.getSubscriptionHistory(userId);
+
+      res.status(200).json({
+        success: true,
+        data: history,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Cancel Subscription
+  async cancelSubscription(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const result = await subscriptionService.cancelSubscription(userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Reactivate Subscription
+  async reactivateSubscription(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const result = await subscriptionService.reactivateSubscription(userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default SubscriptionController;
