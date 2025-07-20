@@ -31,6 +31,7 @@ class SubscriptionService {
       },
     };
   }
+
   // Plan Pricing
   getPlanPrice(plan) {
     switch (plan) {
@@ -49,7 +50,7 @@ class SubscriptionService {
       case 'basic':
         return 1;
       case 'premium':
-        return 100;
+        return 1000;
       case 'enterprise':
         return 1000000;
       default:
@@ -57,6 +58,7 @@ class SubscriptionService {
     }
   }
 
+  // Initialize Subscription
   async initializeSubscription(userId, plan) {
     try {
       const planDetails = this.getPlanDetails()[plan];
@@ -71,7 +73,7 @@ class SubscriptionService {
         subscription = new SubscriptionModel({
           user: userId,
           plan,
-          status: plan === 'premium' ? 'trial' : 'basic',
+          status: plan === 'basic' ? 'active' : (plan === 'premium' ? 'trial' : 'pending'),
           maxListings: planDetails.maxListings,
         });
 
@@ -88,6 +90,20 @@ class SubscriptionService {
         // Update existing subscription
         subscription.plan = plan;
         subscription.maxListings = planDetails.maxListings;
+        
+        // Update status based on plan
+        if (plan === 'basic') {
+          subscription.status = 'active';
+        } else if (plan === 'premium') {
+          subscription.status = 'trial';
+          subscription.trialStartDate = new Date();
+          subscription.trialEndDate = new Date(
+            Date.now() + planDetails.trialDays * 24 * 60 * 60 * 1000
+          );
+        } else {
+          subscription.status = 'pending';
+        }
+        
         await subscription.save();
       }
 
@@ -98,6 +114,12 @@ class SubscriptionService {
     }
   }
 
+  // Initiate Payment (the missing method)
+  async initiatePayment(userId, plan) {
+    return await this.initiateSubscriptionPayment(userId, plan);
+  }
+
+  // Initiate Subscription Payment
   async initiateSubscriptionPayment(userId, plan) {
     const planDetails = this.getPlanDetails()[plan];
     if (!planDetails) {
@@ -151,12 +173,13 @@ class SubscriptionService {
         },
       });
 
-      // Add to payment history
+      // Add to payment history WITH PLAN
       subscription.paymentHistory.push({
         transactionReference: paymentInitiation.reference,
         amount: planPrices[plan],
         status: 'pending',
         date: new Date(),
+        plan: plan, // ✅ Store the plan in payment history
       });
 
       await subscription.save();
@@ -171,12 +194,19 @@ class SubscriptionService {
     }
   }
 
+  // Verify Payment
   async verifyPayment(reference) {
     try {
+      console.log('🔍 Verifying payment for reference:', reference);
+      
       // Verify Paystack transaction
-      const verificationResult = await paystackService.verifyTransaction(
-        reference
-      );
+      const verificationResult = await paystackService.verifyTransaction(reference);
+      
+      console.log('💳 Paystack verification result:', {
+        status: verificationResult.status,
+        amount: verificationResult.amount,
+        metadata: verificationResult.metadata
+      });
 
       // Find subscription by payment history
       const subscription = await SubscriptionModel.findOne({
@@ -187,20 +217,29 @@ class SubscriptionService {
         throw new Error('Subscription not found for this transaction');
       }
 
-      // Get the payment metadata to determine the plan
-      const paymentHistory = subscription.paymentHistory.find(
-        (payment) => payment.transactionReference === reference
+      console.log('📋 Current subscription before update:', {
+        plan: subscription.plan,
+        status: subscription.status,
+        maxListings: subscription.maxListings
+      });
+
+      // Get the payment record to find the plan
+      const paymentRecord = subscription.paymentHistory.find(
+        payment => payment.transactionReference === reference
       );
 
-      if (!paymentHistory) {
+      if (!paymentRecord) {
         throw new Error('Payment history not found for this transaction');
       }
 
-      // Get plan from Paystack metadata (more reliable)
-      const planFromMetadata = verificationResult.metadata?.plan;
+      console.log('💰 Payment record:', {
+        plan: paymentRecord.plan,
+        amount: paymentRecord.amount,
+        status: paymentRecord.status
+      });
 
       // Check if payment is already successfully processed
-      if (paymentHistory.status === 'success') {
+      if (paymentRecord.status === 'success') {
         logger.info('Payment already processed successfully', { reference });
         return {
           success: true,
@@ -211,29 +250,40 @@ class SubscriptionService {
       }
 
       // Update payment history status
-      paymentHistory.status =
-        verificationResult.status === 'success' ? 'success' : 'failed';
-      paymentHistory.date = new Date();
+      paymentRecord.status = verificationResult.status === 'success' ? 'success' : 'failed';
+      paymentRecord.date = new Date();
 
       // Check payment status
       if (verificationResult.status === 'success') {
-        // Update subscription details INCLUDING the plan
+        // Use plan from payment record (most reliable) or fall back to metadata or current plan
+        const planToUpdate = paymentRecord.plan || 
+                            verificationResult.metadata?.plan || 
+                            subscription.plan;
+        
+        console.log('🎯 Plan to update to:', planToUpdate);
+
+        // Update subscription details
         subscription.status = 'active';
+        subscription.plan = planToUpdate; // Update to the paid plan
+        subscription.maxListings = this.getMaxListings(planToUpdate);
         subscription.currentPeriodStart = new Date();
         subscription.currentPeriodEnd = new Date(
           Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
         );
 
-        // Update the plan and maxListings based on the paid plan
-        if (
-          planFromMetadata &&
-          ['premium', 'enterprise'].includes(planFromMetadata)
-        ) {
-          subscription.plan = planFromMetadata;
-          subscription.maxListings = this.getMaxListings(planFromMetadata);
-        }
-
         await subscription.save();
+
+        console.log('✅ Subscription after update:', {
+          plan: subscription.plan,
+          status: subscription.status,
+          maxListings: subscription.maxListings
+        });
+
+        logger.info('Subscription updated successfully', {
+          reference,
+          plan: planToUpdate,
+          status: 'active'
+        });
 
         return {
           success: true,
@@ -251,119 +301,13 @@ class SubscriptionService {
         };
       }
     } catch (error) {
+      console.error('❌ Verification error:', error);
       logger.error('Failed to verify payment', error);
       throw error;
     }
   }
 
-  // async verifyPayment(reference) {
-
-  //   try {
-  //     // Verify Paystack transaction
-  //     const verificationResult = await paystackService.verifyTransaction(
-  //       reference
-  //     );
-
-  //     // Find subscription by payment history
-  //     const subscription = await SubscriptionModel.findOne({
-  //       'paymentHistory.transactionReference': reference,
-  //     });
-
-  //     if (!subscription) {
-  //       throw new Error('Subscription not found for this transaction');
-  //     }
-
-  //     // Update payment history status
-  //     const paymentIndex = subscription.paymentHistory.findIndex(
-  //       (payment) => payment.transactionReference === reference
-  //     );
-
-  //     if (paymentIndex !== -1) {
-  //       subscription.paymentHistory[paymentIndex].status =
-  //         verificationResult.status === 'success' ? 'success' : 'failed';
-  //       subscription.paymentHistory[paymentIndex].date = new Date(); // Update date
-  //     }
-
-  //     // Check payment status
-  //     if (verificationResult.status === 'success') {
-  //       // Update subscription details
-  //       subscription.status = 'active';
-  //       subscription.currentPeriodStart = new Date();
-  //       subscription.currentPeriodEnd = new Date(
-  //         Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
-  //       );
-
-  //       await subscription.save();
-
-  //       return {
-  //         success: true,
-  //         message: 'Subscription activated successfully',
-  //         subscription,
-  //       };
-  //     } else {
-  //       // Update subscription status to failed
-  //       subscription.status = 'payment_failed';
-  //       await subscription.save();
-
-  //       return {
-  //         success: false,
-  //         message: 'Payment verification failed',
-  //         subscription,
-  //       };
-  //     }
-  //   } catch (error) {
-  //     logger.error('Failed to verify payment', error);
-  //     throw error;
-  //   }
-  // }
-
-  async verifySubscriptionPayment(reference) {
-    try {
-      // Verify Paystack transaction
-      const verificationResult = await paystackService.verifyTransaction(
-        reference
-      );
-
-      // Find subscription by reference
-      const subscription = await SubscriptionModel.findOne({
-        transactionReference: reference,
-      });
-
-      if (!subscription) {
-        throw new Error('Subscription not found');
-      }
-
-      // Check payment status
-      if (verificationResult.status === 'success') {
-        // Update subscription details
-        subscription.status = 'active';
-        subscription.currentPeriodStart = new Date();
-        subscription.currentPeriodEnd = new Date(
-          Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
-        );
-
-        await subscription.save();
-
-        return {
-          success: true,
-          message: 'Subscription activated successfully',
-          subscription,
-        };
-      } else {
-        // Update subscription status to failed
-        subscription.status = 'payment_failed';
-        await subscription.save();
-
-        return {
-          success: false,
-          message: 'Payment verification failed',
-        };
-      }
-    } catch (error) {
-      this.logger.error('Subscription payment verification failed', error);
-      throw error;
-    }
-  }
+  // Get Subscription History
   async getSubscriptionHistory(userId) {
     try {
       const subscriptions = await SubscriptionModel.find({ user: userId }).sort(
@@ -376,6 +320,7 @@ class SubscriptionService {
     }
   }
 
+  // Cancel Subscription
   async cancelSubscription(userId) {
     try {
       const subscription = await SubscriptionModel.findOne({ user: userId });
@@ -398,6 +343,7 @@ class SubscriptionService {
     }
   }
 
+  // Reactivate Subscription
   async reactivateSubscription(userId) {
     try {
       const subscription = await SubscriptionModel.findOne({ user: userId });
@@ -407,7 +353,7 @@ class SubscriptionService {
       }
 
       if (subscription.plan === 'basic') {
-        subscription.status = 'basic';
+        subscription.status = 'active'; // ✅ Fixed: basic should be active, not pending
         await subscription.save();
         return {
           success: true,
@@ -416,44 +362,11 @@ class SubscriptionService {
       }
 
       // For paid plans, initiate payment
-      return await this.initiatePayment(userId, subscription.plan);
+      return await this.initiateSubscriptionPayment(userId, subscription.plan); // ✅ Fixed method name
     } catch (error) {
       logger.error('Failed to reactivate subscription', error);
       throw error;
     }
-  }
-
-  // Initialize Subscription
-
-  async initializeSubscription(userId, plan) {
-    const planDetails = this.getPlanDetails()[plan];
-    if (!planDetails) {
-      throw new Error('Invalid subscription plan');
-    }
-
-    // Find or create subscription
-    let subscription = await SubscriptionModel.findOne({ user: userId });
-
-    if (!subscription) {
-      subscription = new SubscriptionModel({
-        user: userId,
-        plan,
-        status: plan === 'premium' ? 'trial' : 'basic',
-        maxListings: planDetails.maxListings,
-      });
-
-      // Set trial period for premium
-      if (plan === 'premium') {
-        subscription.trialStartDate = new Date();
-        subscription.trialEndDate = new Date(
-          Date.now() + planDetails.trialDays * 24 * 60 * 60 * 1000
-        );
-      }
-
-      await subscription.save();
-    }
-
-    return subscription;
   }
 
   // Check Subscription Eligibility
@@ -466,7 +379,7 @@ class SubscriptionService {
         subscription = new SubscriptionModel({
           user: userId,
           plan: 'basic',
-          status: 'basic',
+          status: 'active', // ✅ Basic plan is immediately active (free)
           maxListings: 1,
         });
         await subscription.save();
@@ -487,12 +400,8 @@ class SubscriptionService {
         }
       }
 
-      // Check active subscription
-      if (
-        subscription.status !== 'active' &&
-        subscription.status !== 'trial' &&
-        subscription.status !== 'basic'
-      ) {
+      // Check if subscription is active/valid
+      if (subscription.status !== 'active' && subscription.status !== 'trial') {
         return {
           eligible: false,
           reason: 'Inactive subscription',
@@ -500,8 +409,9 @@ class SubscriptionService {
         };
       }
 
-      // Check if subscription is still valid (only for paid plans)
+      // Check if paid subscription is still valid (only for paid plans)
       if (
+        subscription.plan !== 'basic' && // ✅ Only check expiry for paid plans
         subscription.currentPeriodEnd &&
         new Date() > subscription.currentPeriodEnd
       ) {
@@ -534,6 +444,8 @@ class SubscriptionService {
       throw error;
     }
   }
+
+  // Get Current Subscription
   async getCurrentSubscription(userId) {
     try {
       let subscription = await SubscriptionModel.findOne({ user: userId });
@@ -543,7 +455,7 @@ class SubscriptionService {
         subscription = new SubscriptionModel({
           user: userId,
           plan: 'basic',
-          status: 'basic',
+          status: 'active',  // ✅ Basic is free, so immediately active
           maxListings: 1,
         });
         await subscription.save();
@@ -556,85 +468,6 @@ class SubscriptionService {
     }
   }
 
-  // Initiate Payment
-  async checkSubscriptionEligibility(userId) {
-    try {
-      let subscription = await SubscriptionModel.findOne({ user: userId });
-
-      // If no subscription exists, create a basic one
-      if (!subscription) {
-        subscription = new SubscriptionModel({
-          user: userId,
-          plan: 'basic',
-          status: 'basic',
-          maxListings: 1,
-        });
-        await subscription.save();
-      }
-
-      // Basic plan listing limit check
-      if (subscription.plan === 'basic') {
-        const listingCount = await PropertyModel.countDocuments({
-          owner: userId,
-        });
-
-        if (listingCount >= subscription.maxListings) {
-          return {
-            eligible: false,
-            reason: 'Listing limit reached',
-            action: 'upgrade_plan',
-          };
-        }
-      }
-
-      // Check active subscription
-      if (
-        subscription.status !== 'active' &&
-        subscription.status !== 'trial' &&
-        subscription.status !== 'basic'
-      ) {
-        return {
-          eligible: false,
-          reason: 'Inactive subscription',
-          action: 'reactivate',
-        };
-      }
-
-      // Check if subscription is still valid (only for paid plans)
-      if (
-        subscription.currentPeriodEnd &&
-        new Date() > subscription.currentPeriodEnd
-      ) {
-        return {
-          eligible: false,
-          reason: 'Subscription expired',
-          action: 'renew',
-        };
-      }
-
-      // Trial period check
-      if (subscription.status === 'trial' && subscription.trialEndDate) {
-        const now = new Date();
-        if (now > subscription.trialEndDate) {
-          return {
-            eligible: false,
-            reason: 'Trial expired',
-            action: 'initiate_payment',
-          };
-        }
-      }
-
-      return {
-        eligible: true,
-        plan: subscription.plan,
-        maxListings: subscription.maxListings,
-      };
-    } catch (error) {
-      logger.error('Failed to check subscription eligibility', error);
-      throw error;
-    }
-  }
-
   // Update Payment Method
   async updatePaymentMethod(userId, paymentDetails) {
     try {
@@ -643,8 +476,8 @@ class SubscriptionService {
       // Create/Update Paystack Customer
       const customerResponse = await this.paystackClient.customer.create({
         email: user.email,
-        first_name: user.name.split[0],
-        last_name: user.name.split[1],
+        first_name: user.name.split(' ')[0],
+        last_name: user.name.split(' ')[1],
         phone: user.phoneNumber,
       });
 
@@ -730,7 +563,7 @@ class SubscriptionService {
       try {
         await this.automaticRenewal(subscription);
       } catch (error) {
-        this.logger.error(
+        logger.error(
           `Renewal failed for subscription ${subscription._id}`,
           error
         );
