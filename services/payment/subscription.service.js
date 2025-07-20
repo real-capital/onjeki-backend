@@ -220,6 +220,7 @@ class SubscriptionService {
   }
 
   // Initialize Subscription
+  
   async initializeSubscription(userId, plan) {
     const planDetails = this.getPlanDetails()[plan];
     if (!planDetails) {
