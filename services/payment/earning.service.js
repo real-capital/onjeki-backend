@@ -345,7 +345,7 @@ class EarningService {
       status: 'pending',
     };
 
-    const [totalStats, monthlyStats, pendingStats, paidStats] =
+    const [totalStats, monthlyStats, pendingStats, availableStats, paidStats] =
       await Promise.all([
         // Total earnings (all time or filtered by period)
         EarningModel.aggregate([
@@ -390,6 +390,21 @@ class EarningService {
           {
             $match: {
               ...baseQuery,
+              status: 'available',
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              availableAmount: { $sum: '$netAmount' },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+        EarningModel.aggregate([
+          {
+            $match: {
+              ...baseQuery,
               status: { $in: ['paid', 'completed'] }, // Adjust status values as needed
             },
           },
@@ -417,8 +432,8 @@ class EarningService {
         count: 0,
       },
       pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
+      available: availableStats[0] || { availableAmount: 0, count: 0 }, // ✅ Add this
       paid: paidStats[0] || { paidAmount: 0, count: 0 },
-      // Add the period used for filtering to the response
       periodUsed: period || 'all',
     };
   }
