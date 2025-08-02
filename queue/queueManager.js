@@ -1,10 +1,6 @@
 
-
-// // queue/queueManager.js
 // import { logger } from '../utils/logger.js';
 // import { isWorker, isVercel } from '../utils/environment.js';
-
-
 
 // export const connectToAllQueues = async () => {
 //   if (isVercel()) {
@@ -12,23 +8,23 @@
 //     return true;
 //   }
 
+//   if (!isWorker()) {
+//     logger.info('Not in worker mode, skipping queue connection');
+//     return true;
+//   }
+
 //   try {
-//     // Dynamic import only when needed
+//     // Only import when we're actually going to use it
 //     const { default: bookingQueue } = await import('./bookingQueue.js');
 
 //     if (bookingQueue.bookingQueue) {
 //       await bookingQueue.bookingQueue.waitUntilReady();
 //       logger.info('Connected to all Redis queues successfully');
-//         //  await bookingQueue.clearQueue();
 //     }
 //     return true;
 //   } catch (error) {
 //     logger.error('Failed to connect to Redis queues:', error);
-//     // Don't throw on Vercel
-//     if (!isVercel()) {
-//       throw error;
-//     }
-//     return false;
+//     throw error;
 //   }
 // };
 
@@ -39,12 +35,9 @@
 //   }
 
 //   try {
-//     // Dynamic imports for worker mode only
+//     // Only import in worker mode
 //     const { default: bookingQueue } = await import('./bookingQueue.js');
-//     const { default: bookingWorker } = await import(
-//       '../workers/bookingWorker.js'
-//     );
- 
+//     const { default: bookingWorker } = await import('../workers/bookingWorker.js');
 
 //     await bookingQueue.startBookingQueue();
 //     logger.info('All queues and workers started successfully');
@@ -71,15 +64,7 @@
 //   }
 // };
 
-// export default {
-//   connectToAllQueues,
-//   startAllQueuesAndWorkers,
-//   stopAllQueuesAndWorkers,
-// };
 
-
-
-// queue/queueManager.js
 import { logger } from '../utils/logger.js';
 import { isWorker, isVercel } from '../utils/environment.js';
 
@@ -96,15 +81,13 @@ export const connectToAllQueues = async () => {
 
   try {
     // Only import when we're actually going to use it
-    const { default: bookingQueue } = await import('./bookingQueue.js');
-
-    if (bookingQueue.bookingQueue) {
-      await bookingQueue.bookingQueue.waitUntilReady();
-      logger.info('Connected to all Redis queues successfully');
-    }
+    const { startBookingQueue } = await import('./bookingQueue.js');
+    
+    await startBookingQueue();
+    logger.info('✅ Connected to all Redis queues successfully');
     return true;
   } catch (error) {
-    logger.error('Failed to connect to Redis queues:', error);
+    logger.error('❌ Failed to connect to Redis queues:', error);
     throw error;
   }
 };
@@ -116,15 +99,22 @@ export const startAllQueuesAndWorkers = async () => {
   }
 
   try {
-    // Only import in worker mode
-    const { default: bookingQueue } = await import('./bookingQueue.js');
-    const { default: bookingWorker } = await import('../workers/bookingWorker.js');
+    // Import both queue and worker
+    const { startBookingQueue } = await import('./bookingQueue.js');
+    const bookingWorker = await import('../workers/bookingWorker.js');
 
-    await bookingQueue.startBookingQueue();
-    logger.info('All queues and workers started successfully');
+    // Start the queue first
+    await startBookingQueue();
+    
+    // Worker is automatically started when imported in worker mode
+    if (bookingWorker.default) {
+      logger.info('✅ Booking worker is running');
+    }
+    
+    logger.info('✅ All queues and workers started successfully');
     return true;
   } catch (error) {
-    logger.error('Failed to start queues and workers:', error);
+    logger.error('❌ Failed to start queues and workers:', error);
     throw error;
   }
 };
@@ -135,12 +125,22 @@ export const stopAllQueuesAndWorkers = async () => {
   }
 
   try {
-    const { default: bookingQueue } = await import('./bookingQueue.js');
-    await bookingQueue.stopBookingQueue();
-    logger.info('All queues and workers stopped successfully');
+    const { stopBookingQueue } = await import('./bookingQueue.js');
+    const bookingWorker = await import('../workers/bookingWorker.js');
+    
+    // Stop worker first
+    if (bookingWorker.default) {
+      await bookingWorker.default.close();
+      logger.info('✅ Booking worker stopped');
+    }
+    
+    // Then stop queue
+    await stopBookingQueue();
+    
+    logger.info('✅ All queues and workers stopped successfully');
     return true;
   } catch (error) {
-    logger.error('Failed to stop queues and workers:', error);
+    logger.error('❌ Failed to stop queues and workers:', error);
     throw error;
   }
 };
