@@ -344,6 +344,10 @@ class EarningService {
       ...baseQuery,
       status: 'pending',
     };
+    const availableQuery = {
+      ...baseQuery,
+      status: 'available', // Make sure this matches your earning statuses
+    };
 
     const [totalStats, monthlyStats, pendingStats, availableStats, paidStats] =
       await Promise.all([
@@ -387,12 +391,7 @@ class EarningService {
           },
         ]),
         EarningModel.aggregate([
-          {
-            $match: {
-              ...baseQuery,
-              status: 'available',
-            },
-          },
+          { $match: availableQuery },
           {
             $group: {
               _id: null,
@@ -401,6 +400,7 @@ class EarningService {
             },
           },
         ]),
+
         EarningModel.aggregate([
           {
             $match: {
@@ -417,8 +417,7 @@ class EarningService {
           },
         ]),
       ]);
-
-    return {
+    const result = {
       total: totalStats[0] || {
         totalEarnings: 0,
         totalServiceFees: 0,
@@ -432,12 +431,21 @@ class EarningService {
         count: 0,
       },
       pending: pendingStats[0] || { pendingAmount: 0, count: 0 },
-      available: availableStats[0] || { availableAmount: 0, count: 0 }, // ✅ Add this
+      available: availableStats[0] || { availableAmount: 0, count: 0 }, // Add this
       paid: paidStats[0] || { paidAmount: 0, count: 0 },
       periodUsed: period || 'all',
     };
-  }
 
+    // Add debugging
+    console.log('Earnings Summary Debug:', {
+      hostId,
+      period,
+      availableQuery,
+      result,
+    });
+
+    return result;
+  }
   /**
    * Update earnings to available status after hold period
    */

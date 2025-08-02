@@ -184,6 +184,16 @@ class PayoutService {
         host: hostId,
         status: 'available',
       }).session(session);
+      console.log('Available Earnings Debug:', {
+        hostId,
+        availableEarningsCount: availableEarnings.length,
+        availableEarnings: availableEarnings.map((e) => ({
+          id: e._id,
+          amount: e.netAmount,
+          status: e.status,
+          availableDate: e.availableDate,
+        })),
+      });
 
       if (availableEarnings.length === 0) {
         throw new Error('No available earnings to payout');
