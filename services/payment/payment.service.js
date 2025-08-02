@@ -44,6 +44,38 @@ class PaystackService {
       //   throw new Error(`Paystack initialization failed: ${error.message}`);
     }
   }
+  async createTransferRecipient(name, accountNumber, bankCode) {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/transferrecipient`,
+        {
+          type: 'nuban',
+          name,
+          account_number: accountNumber,
+          bank_code: bankCode,
+          currency: 'NGN',
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.paystackSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      return response.data.data;
+    } catch (error) {
+      console.log(
+        'Paystack Transfer Recipient Error:',
+        error.response?.data || error.message
+      );
+      throw new Error(
+        `Failed to create transfer recipient: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    }
+  }
 
   async verifyTransaction(reference) {
     console.log('reference here');
@@ -76,6 +108,40 @@ class PaystackService {
       throw new Error(
         `Paystack verification failed: ${
           error.response?.data?.message || error
+        }`
+      );
+    }
+  }
+  async initiateTransfer(recipientCode, amount, reason) {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/transfer`,
+        {
+          source: 'balance',
+          amount: Math.round(amount * 100), // convert to kobo
+          recipient: recipientCode,
+          reason,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.paystackSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      return {
+        transferCode: response.data.data.transfer_code,
+        reference: response.data.data.reference,
+      };
+    } catch (error) {
+      console.log(
+        'Paystack Transfer Error:',
+        error.response?.data || error.message
+      );
+      throw new Error(
+        `Failed to initiate transfer: ${
+          error.response?.data?.message || error.message
         }`
       );
     }

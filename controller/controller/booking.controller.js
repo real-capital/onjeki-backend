@@ -130,7 +130,7 @@ class BookingController {
       }
 
       const event = req.body;
-      console.log(event);
+      console.log('Webhook event:', event.event);
 
       // Enhanced event handling
       switch (event.event) {

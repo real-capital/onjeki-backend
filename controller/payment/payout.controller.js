@@ -9,37 +9,91 @@ class PayoutController {
     this.payoutService = new PayoutService();
   }
 
+  // requestPayout = async (req, res, next) => {
+  //   try {
+  //     const hostId = req.user._id;
+  //     const payoutData = {
+  //       paymentMethod: req.body.paymentMethod,
+  //       accountName: req.body.accountName,
+  //       accountNumber: req.body.accountNumber,
+  //       bankCode: req.body.bankCode,
+  //       bankName: req.body.bankName
+  //     };
 
+  //     // Validate input
+  //     if (!payoutData.paymentMethod || !payoutData.accountNumber || !payoutData.bankCode) {
+  //       throw new HttpException(
+  //         StatusCodes.BAD_REQUEST,
+  //         'Missing required payout information'
+  //       );
+  //     }
+
+  //     const payout = await this.payoutService.requestPayout(hostId, payoutData);
+
+  //     return res.status(StatusCodes.CREATED).json({
+  //       status: 'success',
+  //       data: payout
+  //     });
+  //   } catch (error) {
+  //     logger.error('Error requesting payout', { error, userId: req.user._id });
+  //     next(error);
+  //   }
+  // }
   requestPayout = async (req, res, next) => {
     try {
       const hostId = req.user._id;
       const payoutData = {
-        paymentMethod: req.body.paymentMethod,
+        bankAccountId: req.body.bankAccountId, // Optional - for existing bank accounts
+        paymentMethod: req.body.paymentMethod || 'bank_transfer',
         accountName: req.body.accountName,
         accountNumber: req.body.accountNumber,
         bankCode: req.body.bankCode,
-        bankName: req.body.bankName
+        bankName: req.body.bankName,
       };
-      
-      // Validate input
-      if (!payoutData.paymentMethod || !payoutData.accountNumber || !payoutData.bankCode) {
+
+      // Validate input - either bankAccountId or account details must be provided
+      if (
+        !payoutData.bankAccountId &&
+        (!payoutData.accountNumber ||
+          !payoutData.bankCode ||
+          !payoutData.accountName)
+      ) {
         throw new HttpException(
-          StatusCodes.BAD_REQUEST, 
-          'Missing required payout information'
+          StatusCodes.BAD_REQUEST,
+          'Either bankAccountId or complete bank account details are required'
         );
       }
-      
+
       const payout = await this.payoutService.requestPayout(hostId, payoutData);
-      
+
       return res.status(StatusCodes.CREATED).json({
         status: 'success',
-        data: payout
+        message: 'Payout request submitted successfully',
+        data: payout,
       });
     } catch (error) {
-      logger.error('Error requesting payout', { error, userId: req.user._id });
+      logger.error('Error requesting payout', {
+        error: error.message,
+        userId: req.user._id,
+      });
+
+      if (error.message.includes('No available earnings')) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: 'error',
+          message: 'No available earnings to payout',
+        });
+      }
+
+      if (error.message.includes('No valid bank account')) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: 'error',
+          message: 'Please setup your bank account details first',
+        });
+      }
+
       next(error);
     }
-  }
+  };
 
   /**
    * Get payout history
@@ -50,20 +104,23 @@ class PayoutController {
       const filters = {
         startDate: req.query.startDate,
         endDate: req.query.endDate,
-        status: req.query.status
+        status: req.query.status,
       };
-      
+
       const payouts = await this.payoutService.getHostPayouts(hostId, filters);
-      
+
       return res.status(StatusCodes.OK).json({
         status: 'success',
-        data: payouts
+        data: payouts,
       });
     } catch (error) {
-      logger.error('Error getting payout history', { error, userId: req.user._id });
+      logger.error('Error getting payout history', {
+        error,
+        userId: req.user._id,
+      });
       next(error);
     }
-  }
+  };
 
   /**
    * Get payout details
@@ -72,22 +129,22 @@ class PayoutController {
     try {
       const hostId = req.user._id;
       const payoutId = req.params.payoutId;
-      
+
       const payout = await this.payoutService.getPayoutById(payoutId, hostId);
-      
+
       return res.status(StatusCodes.OK).json({
         status: 'success',
-        data: payout
+        data: payout,
       });
     } catch (error) {
-      logger.error('Error getting payout details', { 
-        error, 
+      logger.error('Error getting payout details', {
+        error,
         userId: req.user._id,
-        payoutId: req.params.payoutId 
+        payoutId: req.params.payoutId,
       });
       next(error);
     }
-  }
+  };
 
   /**
    * Check payout setup status
@@ -96,16 +153,19 @@ class PayoutController {
     try {
       const hostId = req.user._id;
       const hasSetup = await this.payoutService.hasPayoutMethodSetup(hostId);
-      
+
       return res.status(StatusCodes.OK).json({
         status: 'success',
-        data: { hasPayoutMethodSetup: hasSetup }
+        data: { hasPayoutMethodSetup: hasSetup },
       });
     } catch (error) {
-      logger.error('Error checking payout setup', { error, userId: req.user._id });
+      logger.error('Error checking payout setup', {
+        error,
+        userId: req.user._id,
+      });
       next(error);
     }
-  }
+  };
 }
 
 export default PayoutController;

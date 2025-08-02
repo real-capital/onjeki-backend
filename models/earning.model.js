@@ -20,14 +20,17 @@ const earningSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true,
+      min: 0,
     },
     serviceFee: {
       type: Number,
       required: true,
+      min: 0,
     },
     netAmount: {
       type: Number,
       required: true,
+      min: 0,
     },
     currency: {
       type: String,
@@ -42,6 +45,10 @@ const earningSchema = new mongoose.Schema(
       type: Date,
     },
     paidDate: Date,
+    payoutId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payout',
+    },
     paymentReference: String,
     paymentMethod: {
       type: String,
@@ -64,6 +71,7 @@ earningSchema.virtual('total').get(function () {
 // Index for efficient queries
 earningSchema.index({ host: 1, status: 1 });
 earningSchema.index({ createdAt: 1 });
+earningSchema.index({ booking: 1 });
 
 const EarningModel = mongoose.model('Earning', earningSchema);
 

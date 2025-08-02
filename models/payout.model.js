@@ -1,5 +1,3 @@
-
-
 import mongoose from 'mongoose';
 
 // Updated payout schema
@@ -13,6 +11,7 @@ const payoutSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true,
+      min: 0,
     },
     currency: {
       type: String,
@@ -29,21 +28,26 @@ const payoutSchema = new mongoose.Schema(
       required: true,
     },
     bankDetails: {
-      accountName: String,
+      accountName: {
+        type: String,
+        required: true,
+      },
       accountNumber: {
         type: String,
+        required: true,
         validate: {
           validator: function (v) {
-            // Nigerian bank account numbers are typically 10 digits
             return /^\d{10}$/.test(v);
           },
-          message: (props) =>
-            `${props.value} is not a valid Nigerian bank account number!`,
+          message: 'Invalid Nigerian bank account number format',
         },
       },
-      bankCode: String,
+      bankCode: {
+        type: String,
+        required: true,
+      },
       bankName: String,
-      recipientCode: String, // Paystack transfer recipient code
+      recipientCode: String,
     },
     transactionReference: String,
     paystackReference: String, // Paystack reference
@@ -65,6 +69,7 @@ const payoutSchema = new mongoose.Schema(
     attempts: {
       type: Number,
       default: 0,
+      max: 3,
     },
     lastAttemptDate: Date,
     sessionId: String,
@@ -81,13 +86,14 @@ const payoutSchema = new mongoose.Schema(
 );
 
 // Add virtual for time since request
-payoutSchema.virtual('timeSinceRequest').get(function () {
-  return Date.now() - this.requestedDate;
-});
+// payoutSchema.virtual('timeSinceRequest').get(function () {
+//   return Date.now() - this.requestedDate;
+// });
 
 // Index for better query performance
 payoutSchema.index({ host: 1, status: 1 });
 payoutSchema.index({ createdAt: 1 });
+payoutSchema.index({ paystackReference: 1 });
 
 const PayoutModel = mongoose.model('Payout', payoutSchema);
 
