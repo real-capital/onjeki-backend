@@ -135,6 +135,7 @@ class RentOrSalesService {
     }
   }
 
+  // Update your buildSearchQuery method in rent/sales service
   buildSearchQuery(filters) {
     const query = { status: 'AVAILABLE' };
 
@@ -147,23 +148,18 @@ class RentOrSalesService {
     if (filters.status) {
       query.status = filters.status;
     }
-
-    // if (filters.category) {
-    //   query.category = filters.category;
-    // }
-
-    if (filters.priceRange) {
-      query['price.amount'] = {
-        $gte: filters.priceRange.min,
-        $lte: filters.priceRange.max,
-      };
+    if (filters.propertyType) {
+      query.propertyType = filters.propertyType;
     }
 
-    // Price range filter
-    if (filters.minPrice || filters.maxPrice) {
+    if (filters.priceRange) {
       query['price.amount'] = {};
-      if (filters.minPrice) query['price.amount'].$gte = filters.minPrice;
-      if (filters.maxPrice) query['price.amount'].$lte = filters.maxPrice;
+      if (filters.priceRange.min !== undefined) {
+        query['price.amount'].$gte = filters.priceRange.min;
+      }
+      if (filters.priceRange.max !== undefined) {
+        query['price.amount'].$lte = filters.priceRange.max;
+      }
     }
 
     if (filters.location) {
@@ -176,35 +172,16 @@ class RentOrSalesService {
       if (filters.location.state) {
         query['location.state'] = new RegExp(filters.location.state, 'i');
       }
-      query['location.coordinates'] = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [
-              filters.location.longitude,
-              filters.location.latitude,
-            ],
-          },
-          $maxDistance: filters.location.radius || 5000, // 5km default radius
-        },
-      };
     }
 
-    if (filters.features) {
-      // if (filters.features.bedrooms) {
-      //   query['features.bedrooms'] = { $gte: filters.bedrooms };
-      // }
-      // if (filters.features.bathrooms) {
-      //   query['features.bathrooms'] = { $gte: filters.bedrooms };
-      // }
-      // if (filters.features.furnished !== undefined)
-      //   query.furnished = filters.furnished;
-
-      Object.entries(filters.features).forEach(([key, value]) => {
-        if (value !== undefined) {
-          query[`features.${key}`] = value;
-        }
-      });
+    if (filters.bedrooms) {
+      query['features.bedrooms'] = { $gte: filters.bedrooms };
+    }
+    if (filters.bathrooms) {
+      query['features.bathrooms'] = { $gte: filters.bathrooms };
+    }
+    if (filters.furnished !== undefined) {
+      query['features.furnished'] = filters.furnished;
     }
 
     if (filters.amenities?.length) {
@@ -212,20 +189,19 @@ class RentOrSalesService {
     }
 
     if (filters.search) {
+      const regex = new RegExp(filters.search, 'i');
       query.$or = [
-        { title: { $regex: filters.search, $options: 'i' } },
-        { description: { $regex: filters.search, $options: 'i' } },
-        { 'location.address': { $regex: filters.search, $options: 'i' } },
+        { title: regex },
+        { description: regex },
+        { 'location.address': regex },
+        { 'location.city': regex },
+        { 'location.state': regex },
+        { 'location.country': regex },
       ];
-    }
-
-    if (filters.propertyType) {
-      query.propertyType = filters.propertyType;
     }
 
     return query;
   }
-
   buildSortQuery(sort) {
     switch (sort) {
       case 'price_asc':

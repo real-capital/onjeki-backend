@@ -71,66 +71,70 @@ class RentOrSalesController {
       next(error);
     }
   };
+parseSearchParams = async (req) => {
+  const {
+    page = 1,
+    limit = 10,
+    type,
+    propertyType,
+    space,
+    minPrice,
+    maxPrice,
+    city,
+    state,
+    country,
+    amenities,
+    bedrooms,
+    bathrooms,
+    furnished,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status = 'AVAILABLE',
+    listStatus = 'Approved',
+    search,
+  } = req.query;
 
-  parseSearchParams = (req) => {
-    const {
-      page = 1,
-      limit = 10,
-      type,
-      propertyType,
-      space,
-      minPrice,
-      maxPrice,
-      city,
-      state,
-      country,
-      // amenities,
-      // guests,
-      // bedrooms,
-      sortBy = 'date',
-      sortOrder = 'asc',
-      status,
-      listStatus = 'Approved',
-      // isBooked,
-      // isFurnished,
-    } = req.query;
+  const filters = {};
 
-    const filters = {};
-    const sort = `${sortBy}_${sortOrder}`;
+  if (listStatus) filters.listStatus = listStatus;
+  if (type) filters.type = type;
+  if (propertyType) filters.propertyType = propertyType;
+  if (space) filters.space = space;
+  if (status) filters.status = status;
 
-    if (listStatus) filters.listStatus = listStatus;
-    if (type) filters.type = type;
-    if (propertyType) filters.propertyType = propertyType;
-    if (space) filters.space = space;
-    if (status) filters.status = status;
+  if (search) {
+    filters.search = search;
+  }
 
-    // Price range
-    if (minPrice || maxPrice) {
-      filters.priceRange = {
-        min: minPrice ? Number(minPrice) : undefined,
-        max: maxPrice ? Number(maxPrice) : undefined,
-      };
-    }
-
-    // Location
-    if (city || state || country) {
-      filters.location = {};
-      if (city) filters.location.city = city;
-      if (state) filters.location.state = state;
-      if (country) filters.location.country = country;
-    }
-
-
-    return {
-      filters,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-      },
-      sort,
+  if (minPrice || maxPrice) {
+    filters.priceRange = {
+      min: minPrice ? Number(minPrice) : undefined,
+      max: maxPrice ? Number(maxPrice) : undefined,
     };
-  };
+  }
 
+  if (city || state || country) {
+    filters.location = {};
+    if (city) filters.location.city = city;
+    if (state) filters.location.state = state;
+    if (country) filters.location.country = country;
+  }
+
+  if (amenities) {
+    const amenityArray = amenities.split(',').map(name => name.trim());
+    filters.amenities = amenityArray;
+  }
+
+  if (bedrooms) filters.bedrooms = Number(bedrooms);
+  if (bathrooms) filters.bathrooms = Number(bathrooms);
+  if (furnished !== undefined) filters.furnished = furnished === 'true';
+
+  return {
+    filters,
+    pagination: { page: Number(page), limit: Number(limit) },
+    sort: `${sortBy}_${sortOrder}`,
+  };
+};
   getRentOrSaleAnalytics = async (req, res, next) => {
     try {
       const { propertyId } = req.params;

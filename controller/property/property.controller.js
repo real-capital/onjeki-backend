@@ -505,10 +505,7 @@ class PropertyController {
       if (country) filters.location.country = country;
     }
 
-    // if (amenities) {
-    //   filters.amenities = amenities.split(',').map((id) => id.trim());
-    // }
-    // ✅ Resolve amenity names to ObjectIds
+
     if (amenities) {
       const amenityNames = amenities.split(',').map((name) => name.trim());
       const amenityDocs = await amenityModel
@@ -519,9 +516,7 @@ class PropertyController {
 
       const amenityIds = amenityDocs.map((doc) => doc._id);
 
-      // ❗ Return no matches if no amenities found
       if (amenityIds.length !== amenityNames.length) {
-        // Include a dummy filter that guarantees no matches
         filters._id = { $exists: false };
       } else {
         filters.amenities = amenityIds;
@@ -537,8 +532,7 @@ class PropertyController {
       if (buildingTypeDoc) {
         filters.buildingType = buildingTypeDoc._id;
       } else {
-        // Optional: handle not found case
-        filters._id = { $exists: false }; // Force no results
+        filters._id = { $exists: false };
       }
     }
 
