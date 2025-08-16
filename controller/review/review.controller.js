@@ -7,6 +7,7 @@ import { StatusCodes } from 'http-status-codes';
 import { BookingStatus } from '../../enum/booking.enum.js';
 import UploadService from '../../services/upload/upload.service.js';
 import HttpException from '../../utils/exception.js';
+import PropertyModel from '../../models/properties.model.js';
 
 const uploadService = new UploadService();
 class ReviewController {
