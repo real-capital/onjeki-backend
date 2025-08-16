@@ -8,6 +8,7 @@ import { BookingStatus } from '../../enum/booking.enum.js';
 import UploadService from '../../services/upload/upload.service.js';
 import HttpException from '../../utils/exception.js';
 import PropertyModel from '../../models/properties.model.js';
+import mongoose from 'mongoose';
 
 const uploadService = new UploadService();
 class ReviewController {
