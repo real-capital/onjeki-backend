@@ -104,6 +104,7 @@ import {
   stopAllQueuesAndWorkers,
 } from './queue/queueManager.js';
 import { closeRedisConnection } from './config/redis.js';
+import ReviewRoute from './routes/review/review.routes.js';
 
 // Main application startup
 async function startApplication() {
@@ -128,6 +129,7 @@ async function startApplication() {
       PayoutRoute,
       BankRoute,
       UserBankRoute,
+      ReviewRoute,
     ];
 
     // Validate routes
