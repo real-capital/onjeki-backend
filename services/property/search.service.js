@@ -55,12 +55,76 @@ class SearchService {
   buildSearchQuery(filters) {
     const query = {};
 
-    // Purpose filter (Layover, Rent, Sale)
-    // query.listStatus = 'Approved';
-    // if (filters.listStatus) {
-    //   query.listStatus = filters.listStatus;
-    // }
-    //  ✅ Deep fuzzy search
+    if (filters.listStatus) {
+      query.listStatus = filters.listStatus;
+    }
+
+    if (filters.type) {
+      query.type = filters.type;
+    }
+
+    if (filters.priceRange) {
+      query['price.base'] = {};
+      if (filters.priceRange.min !== undefined) {
+        query['price.base'].$gte = filters.priceRange.min;
+      }
+      if (filters.priceRange.max !== undefined) {
+        query['price.base'].$lte = filters.priceRange.max;
+      }
+    }
+
+    if (filters.location) {
+      if (filters.location.coordinates) {
+        query['location.coordinates'] = {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [
+                filters.location.coordinates.longitude,
+                filters.location.coordinates.latitude,
+              ],
+            },
+            $maxDistance: filters.location.radius || 5000,
+          },
+        };
+      } else {
+        if (filters.location.city)
+          query['location.city'] = new RegExp(filters.location.city, 'i');
+        if (filters.location.state)
+          query['location.state'] = new RegExp(filters.location.state, 'i');
+        if (filters.location.address)
+          query['location.address'] = new RegExp(filters.location.address, 'i');
+        if (filters.location.country)
+          query['location.country'] = new RegExp(filters.location.country, 'i');
+      }
+    }
+
+    if (filters._id) {
+      query._id = filters._id;
+    }
+
+    if (filters.amenities?.length) {
+      query.amenities = { $all: filters.amenities };
+    }
+
+    if (filters.guests) query.guests = { $gte: filters.guests };
+    if (filters.bedrooms) query.bedrooms = { $gte: filters.bedrooms };
+    if (filters.bathrooms) query.bathrooms = { $gte: filters.bathrooms };
+
+    if (filters.buildingType) {
+      query.buildingType = filters.buildingType;
+    }
+
+    if (filters.space) {
+      query.space = filters.space;
+    }
+
+    if (filters.instantBooking) query.instantBooking = filters.instantBooking;
+    if (filters.isFurnished !== undefined)
+      query.isFurnished = filters.isFurnished;
+    if (filters.newlyCreated !== undefined)
+      query.newlyCreated = filters.newlyCreated;
+
     if (
       filters.search &&
       typeof filters.search === 'string' &&
@@ -80,104 +144,35 @@ class SearchService {
         { 'location.country': regex },
         { 'location.address': regex },
         { 'location.town': regex },
-        { 'rules.additionalRules': regex },
+        { 'location.flatOrFloor': regex },
+        { 'location.postCode': regex },
+        { 'rules.additionalRules': { $elemMatch: { $regex: regex } } },
         { 'rules.houseRules.rule': regex },
         { 'directions.written': regex },
         { 'directions.parking': regex },
         { 'directions.publicTransport': regex },
-        { 'directions.landmarks': regex },
+        { 'directions.landmarks': { $elemMatch: { $regex: regex } } },
         { 'photo.images.caption': regex },
         { 'photo.videos.caption': regex },
         { 'price.currency': regex },
         { 'availability.blockedDates.reason': regex },
         { 'availability.calendar.notes': regex },
-        { 'availability.restrictedDays.checkIn': regex },
-        { 'availability.restrictedDays.checkOut': regex },
-        { 'calendarSync.googleCalendarId': regex },
+        {
+          'availability.restrictedDays.checkIn': {
+            $in: [filters.search.toLowerCase()],
+          },
+        },
+        {
+          'availability.restrictedDays.checkOut': {
+            $in: [filters.search.toLowerCase()],
+          },
+        },
       ];
 
-      // IMPORTANT: Add the additional $or conditions from parseSearchParams
       if (filters.$or && Array.isArray(filters.$or)) {
         query.$or = [...query.$or, ...filters.$or];
       }
-
-      console.log('Applied $or search conditions:', query.$or);
     }
-    if (filters.listStatus) {
-      query.listStatus = filters.listStatus;
-    }
-
-    if (filters.type) {
-      query.type = filters.type;
-    }
-
-    // Price range filter
-    if (filters.priceRange) {
-      query['price.base'] = {};
-      if (filters.priceRange.min !== undefined) {
-        query['price.base'].$gte = filters.priceRange.min;
-      }
-      if (filters.priceRange.max !== undefined) {
-        query['price.base'].$lte = filters.priceRange.max;
-      }
-    }
-
-    // Location filter
-    if (filters.location) {
-      if (filters.location.coordinates) {
-        query['location.coordinates'] = {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [
-                filters.location.coordinates.longitude,
-                filters.location.coordinates.latitude,
-              ],
-            },
-            $maxDistance: filters.location.radius || 5000, // 5km default radius
-          },
-        };
-      } else {
-        if (filters.location.city)
-          query['location.city'] = new RegExp(filters.location.city, 'i');
-        if (filters.location.state)
-          query['location.state'] = new RegExp(filters.location.state, 'i');
-        if (filters.location.address)
-          query['location.address'] = new RegExp(filters.location.address, 'i');
-        if (filters.location.country)
-          query['location.country'] = new RegExp(filters.location.country, 'i');
-      }
-    }
-    if (filters._id) {
-      query._id = filters._id;
-    }
-
-    // Amenities filter
-    if (filters.amenities?.length) {
-      query.amenities = { $all: filters.amenities };
-    }
-
-    // Capacity filters
-    if (filters.guests) query.guests = { $gte: filters.guests };
-    if (filters.bedrooms) query.bedrooms = { $gte: filters.bedrooms };
-    if (filters.bathrooms) query.bathrooms = { $gte: filters.bathrooms };
-
-    // Property type filter
-    if (filters.buildingType) {
-      query.buildingType = filters.buildingType;
-    }
-
-    // Space type filter
-    if (filters.space) {
-      query.space = filters.space;
-    }
-
-    // Additional filters
-    if (filters.instantBooking) query.instantBooking = filters.instantBooking;
-    if (filters.isFurnished !== undefined)
-      query.isFurnished = filters.isFurnished;
-    if (filters.newlyCreated !== undefined)
-      query.newlyCreated = filters.newlyCreated;
 
     return query;
   }

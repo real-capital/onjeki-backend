@@ -268,8 +268,6 @@ class PropertyController {
     }
   }
 
-
-
   getListingByuser = async (req, res, next) => {
     try {
       const userId = req.user.id; // Get the logged-in user ID
@@ -387,6 +385,7 @@ class PropertyController {
     }
   };
 
+  // For layover properties
   searchProperties = async (req, res, next) => {
     try {
       console.log('Search request query:', req.query);
@@ -394,7 +393,7 @@ class PropertyController {
       const { filters, pagination, sort } = await this.parseSearchParams(req);
 
       // Add the excludeOwnerId to filters if user is logged in
-      if (req.user) {
+      if (req.user && req.user._id) {
         filters.excludeOwnerId = req.user._id;
       }
 
@@ -417,6 +416,38 @@ class PropertyController {
       });
     } catch (error) {
       console.error('Controller error:', error);
+      next(error);
+    }
+  };
+
+  // For rent/sales properties
+  searchRentOrSales = async (req, res, next) => {
+    try {
+      const { filters, pagination, sort } = this.parseSearchParams(req);
+
+      // Add the excludeOwnerId to filters if user is logged in
+      if (req.user && req.user.id) {
+        filters.excludeOwnerId = req.user.id;
+      }
+
+      console.log('Parsed search parameters:', { filters, pagination, sort });
+
+      const result = await rentOrSalesService.searchRentOrSales(
+        filters,
+        pagination,
+        sort
+      );
+
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: result,
+        metadata: {
+          filters,
+          pagination,
+          sort,
+        },
+      });
+    } catch (error) {
       next(error);
     }
   };
@@ -450,12 +481,11 @@ class PropertyController {
     if (type) filters.type = type;
     if (space) filters.space = space;
     if (listStatus) filters.listStatus = listStatus;
-   
+
     if (search) {
-      filters.search = search; 
+      filters.search = search;
 
       console.log('Searching for:', search);
-
 
       const matchingAmenities = await amenityModel
         .find({
@@ -465,16 +495,13 @@ class PropertyController {
 
       console.log('Matching amenities:', matchingAmenities);
 
-     
       const matchingBuildingTypes = await BuildingModel.find({
         buildingType: new RegExp(search, 'i'),
       }).select('_id buildingType');
 
       console.log('Matching building types:', matchingBuildingTypes);
 
-
       if (matchingAmenities.length > 0 || matchingBuildingTypes.length > 0) {
-     
         filters.$or = filters.$or || [];
 
         if (matchingAmenities.length > 0) {
@@ -482,7 +509,6 @@ class PropertyController {
           filters.$or.push({ amenities: { $in: amenityIds } });
           console.log('Added amenity IDs to $or:', amenityIds);
         }
-
 
         if (matchingBuildingTypes.length > 0) {
           const buildingTypeIds = matchingBuildingTypes.map((doc) => doc._id);
@@ -504,7 +530,6 @@ class PropertyController {
       if (state) filters.location.state = state;
       if (country) filters.location.country = country;
     }
-
 
     if (amenities) {
       const amenityNames = amenities.split(',').map((name) => name.trim());
