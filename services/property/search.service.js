@@ -2,55 +2,53 @@
 import PropertyModel from '../../models/properties.model.js';
 
 class SearchService {
-  async searchProperties(filters, pagination, sorting = { createdAt: -1 }) {
-    // Extract excludeOwnerId from filters
-    const { excludeOwnerId, ...searchFilters } = filters;
-
-    // Build the query with the remaining filters
+async searchProperties(filters, pagination, sorting = { createdAt: -1 }) {
+  try {
+    const { excludeOwnerId, ...searchFilters } = filters || {};
     const query = this.buildSearchQuery(searchFilters);
 
     if (excludeOwnerId) {
       query.owner = { $ne: excludeOwnerId };
     }
 
-    const { page = 1, limit = 10 } = pagination;
+    const { page = 1, limit = 10 } = pagination || {};
     const skip = (page - 1) * limit;
 
     console.log('Built query:', JSON.stringify(query, null, 2));
 
-    try {
-      const [properties, total] = await Promise.all([
-        PropertyModel.find(query)
-          .populate({
-            path: 'amenities',
-            select: 'amenity _id',
-          })
-          .populate({
-            path: 'buildingType',
-            select: 'buildingType _id',
-          })
-          .populate('owner', 'name email')
-          .sort(sorting)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        PropertyModel.countDocuments(query),
-      ]);
+    const [properties, total] = await Promise.all([
+      PropertyModel.find(query)
+        .populate({
+          path: 'amenities',
+          select: 'amenity _id',
+        })
+        .populate({
+          path: 'buildingType',
+          select: 'buildingType _id',
+        })
+        .populate('owner', 'name email')
+        .sort(sorting)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      PropertyModel.countDocuments(query),
+    ]);
 
-      return {
-        properties,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
-          hasMore: skip + properties.length < total,
-        },
-      };
-    } catch (error) {
-      throw new Error(error);
-    }
+    return {
+      properties,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + properties.length < total,
+      },
+    };
+  } catch (error) {
+    console.error('SearchService error:', error);
+    throw new Error(`Search failed: ${error.message}`);
   }
+}
 
   buildSearchQuery(filters) {
     const query = {};

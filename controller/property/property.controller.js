@@ -386,39 +386,48 @@ class PropertyController {
   };
 
   // For layover properties
-  searchProperties = async (req, res, next) => {
-    try {
-      console.log('Search request query:', req.query);
+searchProperties = async (req, res, next) => {
+  try {
+    console.log('Search request query:', req.query);
 
-      const { filters, pagination, sort } = await this.parseSearchParams(req);
+    const result = await this.parseSearchParams(req);
+    
+    if (!result || !result.filters) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        status: 'error',
+        message: 'Invalid search parameters',
+      });
+    }
 
-      // Add the excludeOwnerId to filters if user is logged in
-      if (req.user && req.user._id) {
-        filters.excludeOwnerId = req.user._id;
-      }
+    const { filters, pagination, sort } = result;
 
-      console.log('Parsed search parameters:', { filters, pagination, sort });
+    if (req.user && req.user._id) {
+      filters.excludeOwnerId = req.user._id;
+    }
 
-      const result = await searchService.searchProperties(
+    console.log('Parsed search parameters:', { filters, pagination, sort });
+
+    const searchResult = await searchService.searchProperties(
+      filters,
+      pagination,
+      sort
+    );
+
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      data: searchResult,
+      metadata: {
         filters,
         pagination,
-        sort
-      );
+        sort,
+      },
+    });
+  } catch (error) {
+    console.error('Controller error:', error);
+    next(error);
+  }
+};
 
-      res.status(StatusCodes.OK).json({
-        status: 'success',
-        data: result,
-        metadata: {
-          filters,
-          pagination,
-          sort,
-        },
-      });
-    } catch (error) {
-      console.error('Controller error:', error);
-      next(error);
-    }
-  };
 
   // For rent/sales properties
   searchRentOrSales = async (req, res, next) => {
@@ -451,42 +460,42 @@ class PropertyController {
       next(error);
     }
   };
+parseSearchParams = async (req) => {
+  const {
+    page = 1,
+    limit = 10,
+    type,
+    buildingType,
+    space,
+    minPrice,
+    maxPrice,
+    city,
+    state,
+    country,
+    amenities,
+    guests,
+    bedrooms,
+    bathrooms,
+    beds,
+    sortBy = 'createdAt',
+    sortOrder = 'asc',
+    listStatus,
+    isBooked,
+    isFurnished,
+    search,
+  } = req.query;
 
-  parseSearchParams = async (req) => {
-    const {
-      page = 1,
-      limit = 10,
-      type,
-      buildingType,
-      space,
-      minPrice,
-      maxPrice,
-      city,
-      state,
-      country,
-      amenities,
-      guests,
-      bedrooms,
-      sortBy = 'createdAt',
-      sortOrder = 'asc',
-      listStatus,
-      isBooked,
-      isFurnished,
-      search, // ✅ your search query
-    } = req.query;
+  const filters = {};
 
-    const filters = {};
-    if (listStatus) filters.listStatus = listStatus;
+  if (listStatus) filters.listStatus = listStatus;
+  if (type) filters.type = type;
+  if (space) filters.space = space;
+  if (search) {
+    filters.search = search;
 
-    if (type) filters.type = type;
-    if (space) filters.space = space;
-    if (listStatus) filters.listStatus = listStatus;
+    console.log('Searching for:', search);
 
-    if (search) {
-      filters.search = search;
-
-      console.log('Searching for:', search);
-
+    try {
       const matchingAmenities = await amenityModel
         .find({
           amenity: new RegExp(search, 'i'),
@@ -516,22 +525,27 @@ class PropertyController {
           console.log('Added building type IDs to $or:', buildingTypeIds);
         }
       }
+    } catch (error) {
+      console.error('Error in search processing:', error);
     }
-    if (minPrice || maxPrice) {
-      filters.priceRange = {
-        min: minPrice ? Number(minPrice) : undefined,
-        max: maxPrice ? Number(maxPrice) : undefined,
-      };
-    }
+  }
 
-    if (city || state || country) {
-      filters.location = {};
-      if (city) filters.location.city = city;
-      if (state) filters.location.state = state;
-      if (country) filters.location.country = country;
-    }
+  if (minPrice || maxPrice) {
+    filters.priceRange = {
+      min: minPrice ? Number(minPrice) : undefined,
+      max: maxPrice ? Number(maxPrice) : undefined,
+    };
+  }
 
-    if (amenities) {
+  if (city || state || country) {
+    filters.location = {};
+    if (city) filters.location.city = city;
+    if (state) filters.location.state = state;
+    if (country) filters.location.country = country;
+  }
+
+  if (amenities) {
+    try {
       const amenityNames = amenities.split(',').map((name) => name.trim());
       const amenityDocs = await amenityModel
         .find({
@@ -546,10 +560,13 @@ class PropertyController {
       } else {
         filters.amenities = amenityIds;
       }
+    } catch (error) {
+      console.error('Error processing amenities:', error);
     }
+  }
 
-    // Backend code (for reference)
-    if (buildingType) {
+  if (buildingType) {
+    try {
       const buildingTypeDoc = await BuildingModel.findOne({
         buildingType: buildingType,
       });
@@ -559,19 +576,24 @@ class PropertyController {
       } else {
         filters._id = { $exists: false };
       }
+    } catch (error) {
+      console.error('Error processing building type:', error);
     }
+  }
 
-    if (guests) filters.guests = Number(guests);
-    if (bedrooms) filters.bedrooms = Number(bedrooms);
-    if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
-    if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
+  if (guests) filters.guests = Number(guests);
+  if (bedrooms) filters.bedrooms = Number(bedrooms);
+  if (bathrooms) filters.bathrooms = Number(bathrooms);
+  if (beds) filters.beds = Number(beds);
+  if (isBooked !== undefined) filters.isBooked = isBooked === 'true';
+  if (isFurnished !== undefined) filters.isFurnished = isFurnished === 'true';
 
-    return {
-      filters,
-      pagination: { page: Number(page), limit: Number(limit) },
-      sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 },
-    };
+  return {
+    filters,
+    pagination: { page: Number(page), limit: Number(limit) },
+    sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 },
   };
+};
 
   async bulkUpdateCalendar(req, res) {
     try {

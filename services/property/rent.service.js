@@ -92,48 +92,51 @@ class RentOrSalesService {
     }
   }
 
-  async searchRentOrSales(filters, pagination, sort) {
-    try {
-      console.log('Received filters:', filters);
-      console.log('Pagination:', pagination);
-      console.log('Sort:', sort);
-      const { excludeOwnerId, ...searchFilters } = filters;
-      const query = this.buildSearchQuery(searchFilters);
+async searchRentOrSales(filters, pagination, sort) {
+  try {
+    console.log('Received filters:', filters);
+    console.log('Pagination:', pagination);
+    console.log('Sort:', sort);
+    
+    const { excludeOwnerId, ...searchFilters } = filters || {};
+    const query = this.buildSearchQuery(searchFilters);
 
-      if (excludeOwnerId) {
-        query.owner = { $ne: excludeOwnerId };
-      }
-      const { page = 1, limit = 10 } = pagination;
-      const skip = (page - 1) * limit;
-      const sortQuery = this.buildSortQuery(sort);
-      // const skip = (pagination.page - 1) * pagination.limit;
-      const [properties, total] = await Promise.all([
-        RentAndSales.find(query)
-          .populate('owner', 'name email phoneNumber')
-          .sort(sortQuery)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        RentAndSales.countDocuments(query),
-      ]);
-
-      return {
-        properties,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
-          hasMore: skip + properties.length < total,
-        },
-      };
-    } catch (error) {
-      throw new HttpException(
-        StatusCodes.BAD_REQUEST,
-        error.message || 'Error searching properties'
-      );
+    if (excludeOwnerId) {
+      query.owner = { $ne: excludeOwnerId };
     }
+    
+    const { page = 1, limit = 10 } = pagination || {};
+    const skip = (page - 1) * limit;
+    const sortQuery = this.buildSortQuery(sort);
+    
+    const [properties, total] = await Promise.all([
+      RentAndSales.find(query)
+        .populate('owner', 'name email phoneNumber')
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      RentAndSales.countDocuments(query),
+    ]);
+
+    return {
+      properties,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        hasMore: skip + properties.length < total,
+      },
+    };
+  } catch (error) {
+    console.error('RentOrSalesService error:', error);
+    throw new HttpException(
+      StatusCodes.BAD_REQUEST,
+      error.message || 'Error searching properties'
+    );
   }
+}
 
 buildSearchQuery(filters) {
   const query = {};
