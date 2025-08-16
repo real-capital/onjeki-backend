@@ -682,6 +682,7 @@ class ReviewController {
                 ],
               },
             },
+            
             reviewsAsGuest: {
               $sum: {
                 $cond: [
