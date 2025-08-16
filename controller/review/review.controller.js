@@ -163,7 +163,7 @@ class ReviewController {
       const averageRatings = await Review.aggregate([
         {
           $match: {
-            property: mongoose.Types.ObjectId(propertyId),
+            property: new mongoose.Types.ObjectId(propertyId),
             status: 'published',
           },
         },
@@ -655,7 +655,7 @@ class ReviewController {
           $match: {
             status: 'published',
             $or: [
-              { reviewer: mongoose.Types.ObjectId(userId) },
+              { reviewer: new mongoose.Types.ObjectId(userId) },
               { property: { $in: propertyIds } },
               ...(hostBookingIds.length > 0
                 ? [{ booking: { $in: hostBookingIds } }]
@@ -685,7 +685,7 @@ class ReviewController {
             reviewsAsGuest: {
               $sum: {
                 $cond: [
-                  { $eq: ['$reviewer', mongoose.Types.ObjectId(userId)] },
+                  { $eq: ['$reviewer', new mongoose.Types.ObjectId(userId)] },
                   1,
                   0,
                 ],
