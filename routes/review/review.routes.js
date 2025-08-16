@@ -1,9 +1,17 @@
+import multer from 'multer';
 import express from 'express';
-import { Route } from '../../interfaces/route.interface';
-import ReviewController from '../../controller/review/review.controller';
-import { upload } from '../../middlewares/upload.middleware';
-import { isAuthenticated } from '../../middlewares/auth';
+import { Route } from '../../interfaces/route.interface.js';
+import ReviewController from '../../controller/review/review.controller.js';
+// import { upload } from '../../middlewares/upload.middleware.js';
+import { isAuthenticated } from '../../middlewares/auth.js';
 
+const storage = multer.diskStorage({
+  filename: function (req, file, callback) {
+    callback(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 class ReviewRoute extends Route {
   constructor() {
     super(express.Router());
@@ -15,7 +23,7 @@ class ReviewRoute extends Route {
   initializeRoute() {
     this.router.post(
       `/bookings/:bookingId/reviews`,
-      upload('reviews', 5),
+      upload.array('reviews', 5),
       isAuthenticated,
       this.controller.createReview
     );

@@ -1,11 +1,13 @@
-import { uploadMultipleImages } from '../../services/upload/upload.service.js';
+// import { uploadMultipleImages } from '../../services/upload/upload.service.js';
 import Review from '../../models/review.model.js';
 import BookingModel from '../../models/booking.model.js';
 import User from '../../models/user.model.js';
 import Property from '../../models/properties.model.js';
 import { StatusCodes } from 'http-status-codes';
 import { BookingStatus } from '../../enum/booking.enum.js';
+import UploadService from '../../services/upload/upload.service.js';
 
+const uploadService = new UploadService();
 class ReviewController {
   createReview = async (req, res, next) => {
     try {
@@ -42,7 +44,7 @@ class ReviewController {
 
       let photos = [];
       if (req.files?.length) {
-        const uploadedPhotos = await uploadMultipleImages(req.files, 'reviews');
+        const uploadedPhotos = await uploadService.uploadMultipleImages(req.files, 'reviews');
         photos = uploadedPhotos.map((url) => ({ url }));
       }
 
