@@ -43,11 +43,14 @@ class ReviewRoute extends Route {
     );
 
     this.router.get(
-      `/properties/:propertyId/reviews`,
+      `${this.path}/properties/:propertyId/reviews`,
       this.controller.getPropertyReviews
     );
 
-    this.router.get(`/users/:userId/reviews`, this.controller.getUserReviews);
+    this.router.get(
+      `${this.path}/users/:userId/reviews`,
+      this.controller.getUserReviews
+    );
 
     this.router.post(
       `${this.path}/:reviewId/response`,
@@ -62,23 +65,23 @@ class ReviewRoute extends Route {
     );
 
     this.router.get(
-      `/users/:userId/reviews`,
+      `${this.path}/users/:userId/reviews`,
       this.controller.getUserReviewsById
     );
 
     this.router.get(
-      `/users/:userId/reviews/summary`,
+      `${this.path}/users/:userId/reviews/summary`,
       this.controller.getUserReviewsSummary
     );
 
     this.router.get(
-      `/bookings/:bookingId/can-review`,
+      `${this.path}/bookings/:bookingId/can-review`,
       isAuthenticated,
       this.controller.canReviewBooking
     );
 
     this.router.get(
-      `/bookings/:bookingId/review`,
+      `${this.path}/bookings/:bookingId/review`,
       isAuthenticated,
       this.controller.getBookingReview
     );
