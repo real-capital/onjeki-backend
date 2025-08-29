@@ -56,7 +56,7 @@ class PropertyService {
     console.log(images);
     console.log('uploading');
     let uploadedImages = [];
-    let imageUrls = []; 
+    let imageUrls = [];
     try {
       if (images && Array.isArray(images)) {
         uploadedImages = await uploadService.uploadMultipleImages(
@@ -71,7 +71,7 @@ class PropertyService {
       console.log(uploadedImages);
       console.log(imageUrls);
 
-      return imageUrls;
+      return uploadedImages;
     } catch (error) {
       if (uploadedImages.length > 0) {
         try {
@@ -124,19 +124,19 @@ class PropertyService {
         };
       }
 
-    let initialListStatus = EListStatus.UNDER_REVIEW;
+      let initialListStatus = EListStatus.UNDER_REVIEW;
 
-     if (
+      if (
         user.verification_status === 'verified' ||
         (user.isEmailVerified && user.isPhoneVerified)
-     ) {
+      ) {
         initialListStatus = EListStatus.APPROVED;
       }
 
       const property = new PropertyModel({
         ...propertyData,
         owner: userId,
-        listStatus: initialListStatus, 
+        listStatus: initialListStatus,
       });
 
       await property.save();
@@ -150,9 +150,9 @@ class PropertyService {
           userId,
           {
             'hostProfile.joinedAt': new Date(),
-            'hostProfile.responseRate': 100, 
-            'hostProfile.responseTime': 60, 
-            'hostProfile.acceptanceRate': 100, 
+            'hostProfile.responseRate': 100,
+            'hostProfile.responseTime': 60,
+            'hostProfile.acceptanceRate': 100,
           },
           { new: true }
         );

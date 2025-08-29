@@ -15,115 +15,7 @@ class PayoutService {
   /**
    * Request a payout for available earnings
    */
-  // async requestPayout(hostId, payoutData) {
-  //   const session = await mongoose.startSession();
-  //   session.startTransaction();
 
-  //   try {
-  //     // Find bank account details
-  //     let bankAccount;
-
-  //     if (payoutData.bankAccountId) {
-  //       // If specific bank account ID is provided
-  //       bankAccount = await BankAccountModel.findOne({
-  //         _id: payoutData.bankAccountId,
-  //         user: hostId,
-  //         isActive: true,
-  //         isVerified: true,
-  //       }).session(session);
-  //     } else {
-  //       // Otherwise use default bank account
-  //       bankAccount = await BankAccountModel.findOne({
-  //         user: hostId,
-  //         isDefault: true,
-  //         isActive: true,
-  //         isVerified: true,
-  //       }).session(session);
-  //     }
-
-  //     if (!bankAccount) {
-  //       throw new Error('No valid bank account found for payout');
-  //     }
-
-  //     // Get available earnings
-  //     const availableEarnings = await EarningModel.find({
-  //       host: hostId,
-  //       status: 'available',
-  //     }).session(session);
-
-  //     if (availableEarnings.length === 0) {
-  //       throw new Error('No available earnings to payout');
-  //     }
-
-  //     // Calculate total payout amount
-  //     const totalAmount = availableEarnings.reduce(
-  //       (sum, earning) => sum + earning.netAmount,
-  //       0
-  //     );
-
-  //     // Create payout record
-  //     const payout = new PayoutModel({
-  //       host: hostId,
-  //       amount: totalAmount,
-  //       currency: 'NGN',
-  //       status: 'processing',
-  //       paymentMethod: 'bank_transfer',
-  //       bankDetails: {
-  //         accountName: bankAccount.accountName,
-  //         accountNumber: bankAccount.accountNumber,
-  //         bankCode: bankAccount.bankCode,
-  //         bankName: bankAccount.bankName,
-  //         recipientCode: bankAccount.recipientCode,
-  //       },
-  //       earnings: availableEarnings.map((earning) => earning._id),
-  //       processingDate: new Date(),
-  //     });
-
-  //     await payout.save({ session });
-
-  //     // Update earnings status
-  //     await EarningModel.updateMany(
-  //       { _id: { $in: availableEarnings.map((e) => e._id) } },
-  //       { status: 'pending', payoutId: payout._id },
-  //       { session }
-  //     );
-
-  //     // Update bank account last used date
-  //     bankAccount.lastUsed = new Date();
-  //     await bankAccount.save({ session });
-
-  //     // Initiate the transfer via Paystack
-  //     if (bankAccount.recipientCode) {
-  //       const transferResponse = await this.paystackService.initiateTransfer(
-  //         bankAccount.recipientCode,
-  //         totalAmount,
-  //         `Payout to ${bankAccount.accountName}`
-  //       );
-
-  //       payout.transferCode = transferResponse.transferCode;
-  //       payout.paystackReference = transferResponse.reference;
-  //       await payout.save({ session });
-  //     } else {
-  //       // If no recipient code, we need to create one
-  //       logger.warn('No recipient code found for bank account', {
-  //         bankAccountId: bankAccount._id,
-  //         hostId,
-  //       });
-
-  //       // This would normally be handled earlier during bank account verification
-  //       throw new Error('Bank account not properly set up for transfers');
-  //     }
-
-  //     await session.commitTransaction();
-  //     return payout;
-  //   } catch (error) {
-  //     await session.abortTransaction();
-  //     logger.error('Error processing payout request', { error, hostId });
-  //     throw error;
-  //   } finally {
-  //     session.endSession();
-  //   }
-  // }
   async requestPayout(hostId, payoutData) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -280,36 +172,7 @@ class PayoutService {
    * Create a transfer recipient in Paystack
    * This is a placeholder implementation
    */
-  // async createTransferRecipient(name, accountNumber, bankCode) {
-  //   try {
-  //     const response = await fetch(
-  //       `${this.paystackBaseUrl}/transferrecipient`,
-  //       {
-  //         method: 'POST',
-  //         headers: {
-  //           Authorization: `Bearer ${this.paystackSecretKey}`,
-  //           'Content-Type': 'application/json',
-  //         },
-  //         body: JSON.stringify({
-  //           type: 'nuban',
-  //           name,
-  //           account_number: accountNumber,
-  //           bank_code: bankCode,
-  //           currency: 'NGN',
-  //         }),
-  //       }
-  //     );
 
-  //     const data = await response.json();
-  //     return data.data.recipient_code;
-  //   } catch (error) {
-  //     logger.error('Error creating transfer recipient', {
-  //       error,
-  //       accountNumber,
-  //     });
-  //     throw new Error('Failed to create transfer recipient');
-  //   }
-  // }
   async createTransferRecipient(name, accountNumber, bankCode) {
     try {
       const response = await this.paystackService.createTransferRecipient(

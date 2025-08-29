@@ -18,6 +18,7 @@ import { SMS } from '@vonage/messages';
 import UserVerification from '../../models/userVerification.model.js';
 import PropertyModel from '../../models/properties.model.js';
 import { EListStatus } from '../../enum/house.enum.js';
+import RentAndSales from '../../models/rentAndSales.model.js';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -907,16 +908,27 @@ class AuthService {
         }
       );
 
+      const rentAndSales = await RentAndSales.updateMany(
+        {
+          owner: userId,
+          listStatus: EListStatus.UNDER_REVIEW,
+        },
+        {
+          listStatus: EListStatus.APPROVED,
+        }
+      );
+
       console.log(
-        `Published ${result.modifiedCount} listings for user ${userId}`
+        `Published ${
+          result.modifiedCount + rentAndSales.modifiedCount
+        } listings for user ${userId}`
       );
       return {
         message: 'Listings published successfully',
-        publishedCount: result.modifiedCount,
+        publishedCount: result.modifiedCount + rentAndSales.modifiedCount,
       };
     } catch (error) {
       console.error('Error publishing listings:', error);
-      // Don't rethrow to prevent blocking phone verification
     }
   }
 }

@@ -9,36 +9,7 @@ class PayoutController {
     this.payoutService = new PayoutService();
   }
 
-  // requestPayout = async (req, res, next) => {
-  //   try {
-  //     const hostId = req.user._id;
-  //     const payoutData = {
-  //       paymentMethod: req.body.paymentMethod,
-  //       accountName: req.body.accountName,
-  //       accountNumber: req.body.accountNumber,
-  //       bankCode: req.body.bankCode,
-  //       bankName: req.body.bankName
-  //     };
 
-  //     // Validate input
-  //     if (!payoutData.paymentMethod || !payoutData.accountNumber || !payoutData.bankCode) {
-  //       throw new HttpException(
-  //         StatusCodes.BAD_REQUEST,
-  //         'Missing required payout information'
-  //       );
-  //     }
-
-  //     const payout = await this.payoutService.requestPayout(hostId, payoutData);
-
-  //     return res.status(StatusCodes.CREATED).json({
-  //       status: 'success',
-  //       data: payout
-  //     });
-  //   } catch (error) {
-  //     logger.error('Error requesting payout', { error, userId: req.user._id });
-  //     next(error);
-  //   }
-  // }
   requestPayout = async (req, res, next) => {
     try {
       const hostId = req.user._id;
